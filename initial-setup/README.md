@@ -124,17 +124,8 @@ EOF
 ### Create Git repos
 1. Clone `multi-cluster-gitops` repo from the AWS Samples GitHub organization:
 ```bash
-git clone git@github.com:iamahgoub/multi-cluster-gitops.git
+git clone https://github.com/aws-samples/multi-cluster-gitops.git
 ```
-(TODO: replace the URL above with the URL of the public GitHub/AWS Samples after
-publishing).
-
-NOTE: During testing, and before publishing this sample implementation publicly,
-the repo in the AWS GitLab instance will contain the most up-to-date content.
-However, to allow contributors/interested individuals to deploy the sample
-implementation in their environment, a copy of the content will be kept in
-GitHub as a private repo under `iamahgoub` account. Please reachout to mahgisla@
-for granting you access to the GitHub repo.
 
 2. Log in with the Github CLI, choosing the Cloud9 publish SSH key as the
    authentication protocol
