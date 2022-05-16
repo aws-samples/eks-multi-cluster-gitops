@@ -1,0 +1,20 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: commercial-prod-eks-cluster
+  namespace: flux-system
+spec:
+  interval: 30s
+  path: ./clusters-config/commercial-prod/def
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  healthChecks:
+  - kind: Secret
+    apiVersion: v1
+    name: commercial-prod-eks-connection
+    namespace: flux-system
+  validation: client
+  timeout: 2m

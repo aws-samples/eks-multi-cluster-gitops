@@ -1,0 +1,22 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: crossplane-aws-provider-config
+  namespace: flux-system
+spec:
+  dependsOn:
+  - name: crossplane-aws-provider
+  interval: 3m0s
+  path: ./tools/crossplane/crossplane-aws-provider-config
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  healthChecks:
+  - apiVersion: aws.crossplane.io/v1beta1
+    kind: ProviderConfig
+    name: default
+  validation: client
+  timeout: 2m
+

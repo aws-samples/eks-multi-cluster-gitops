@@ -1,0 +1,25 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: cluster-name-intialization
+  namespace: flux-system
+spec:
+  dependsOn:
+  - name: cluster-name-eks-cluster
+  interval: 3m0s
+  path: ./clusters-config/cluster-name/initialization
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  healthChecks:
+  - kind: Namespace
+    apiVersion: v1
+    name: flux-system
+  kubeConfig:
+    secretRef:
+      name: cluster-name-eks-connection
+  validation: client
+  timeout: 2m
+---

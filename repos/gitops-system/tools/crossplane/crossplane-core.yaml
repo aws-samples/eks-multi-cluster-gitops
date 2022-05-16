@@ -1,0 +1,32 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: crossplane-core
+  namespace: flux-system
+spec:
+  interval: 3m0s
+  path: ./tools/crossplane/crossplane-core
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  #
+  # A Kustomization can contain a series of health checks used to determine the rollout status of the deployed workloads and the ready status of custom resources.
+  # A health check entry can reference either one of the Kubernetes builtin types or GitOps Toolkit types such as HelmRelease, HelmRepository, GitRepository, etc.
+  # When a Kustomization contains HelmRelease objects, instead of checking the underling Deployments, you can define a health check that waits for the HelmReleases to be reconciled with
+  #
+  healthChecks:
+  - apiVersion: helm.toolkit.fluxcd.io/v2beta1
+    kind: HelmRelease
+    name: crossplane-core
+    namespace: crossplane-system
+  - kind: Deployment
+    name: crossplane
+    namespace: crossplane-system
+  - kind: Deployment
+    name: crossplane-rbac-manager
+    namespace: crossplane-system
+  validation: client
+  timeout: 2m
+
