@@ -44,9 +44,9 @@ The pre-defined public/private key pair for Sealed Secrets is created as part of
 This repository contains the configuration of the management cluster and Kubernetes manifests representing the workload clusters, their configuration and the applications running within them. While these are represented as directories within this single repositories, the system assumes that they are split into multiple separate repositories - which allows for finer-grained permissions and version control over each separate part. The directories should be divided into the following repositories:
 
 ## Deployment
-Please refer to [the initial setup](https://gitlab.aws.dev/mahgisla/multi-cluster-gitops/-/tree/main/initial-setup) for deploying the system. Also refer to [scenarios](https://gitlab.aws.dev/mahgisla/multi-cluster-gitops/-/blob/main/scenarios.md) for the instructions related to various scenarios (e.g. creating a new workload cluster, deleting a workload cluster, onboarding a new microservice/application and deploying it to one or more of the workload clusters).
+Please refer to [the initial setup](./initial-setup) for deploying the system. Also refer to [scenarios](./scenarios.md) for the instructions related to various scenarios (e.g. creating a new workload cluster, deleting a workload cluster, onboarding a new microservice/application and deploying it to one or more of the workload clusters).
 
-Please refer to [Clean-up](https://gitlab.aws.dev/mahgisla/multi-cluster-gitops/-/tree/main/clean-up) for un-deploying the system.
+Please refer to [Clean-up](./clean-up) for un-deploying the system.
 
 ## Security
 
