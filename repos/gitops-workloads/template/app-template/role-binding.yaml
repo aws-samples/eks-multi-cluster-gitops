@@ -1,8 +1,6 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  labels:
-    toolkit.fluxcd.io/tenant: app-name-team
   name: app-name-gotk-reconciler
   namespace: flux-system
 roleRef:
@@ -19,8 +17,6 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  labels:
-    toolkit.fluxcd.io/tenant: app-name-team
   name: infra-reconciler
   namespace: flux-system
 roleRef:
