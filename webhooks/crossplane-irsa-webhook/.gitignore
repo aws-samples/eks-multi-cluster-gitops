@@ -1,0 +1,9 @@
+*.swp
+.idea
+.vscode
+crossplane-irsa-webhook
+deploy/mutatingwebhook-ca-bundle.yaml
+deploy/deployment.yaml
+build
+/certs/
+coverage.out

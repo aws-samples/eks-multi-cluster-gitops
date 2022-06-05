@@ -1,0 +1,9 @@
+*.swp
+.idea
+.vscode
+crossplane-irsa-webhook
+deploy
+deploy
+build
+/certs/
+coverage.out

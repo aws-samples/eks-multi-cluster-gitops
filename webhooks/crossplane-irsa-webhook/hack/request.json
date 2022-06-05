@@ -1,0 +1,39 @@
+{
+    "kind": "AdmissionReview",
+    "request": {
+        "uid": "918ef1dc-928f-4525-99ef-988389f263c3",
+        "kind": {
+            "group": "iam.aws.crossplane.io",
+            "version": "v1beta1",
+            "kind": "Role"
+        },
+        "operation": "CREATE",
+        "userInfo": {
+            "username": "kubernetes-admin",
+            "uid": "heptio-authenticator-aws:111122223333:AROAR2TG44V5CLZCFPOZO",
+            "groups": [
+                "system:authenticated",
+                "system:masters"
+            ]
+        },
+        "object": {
+            "apiVersion": "iam.aws.crossplane.io/v1beta1",
+            "kind": "Role",
+            "metadata": {
+                "name": "sample-irsa-role",
+                "uid": "be8695c4-4ad0-4038-8786-c508853aa255",
+                "labels": {
+                    "type": "sample-irsa-role"
+                }
+            },
+            "spec": {
+                "forProvider": {
+                    "assumeRolePolicyDocument": "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\": \"Allow\",\n      \"Principal\": {\n        \"Federated\": \"arn:aws:iam::${ACCOUNT_ID}:oidc-provider/${OIDC_PROVIDER}\"\n      },\n      \"Action\": \"sts:AssumeRoleWithWebIdentity\",\n      \"Condition\": {\n        \"StringEquals\": {\n          \"${OIDC_PROVIDER}:aud\": \"sts.amazonaws.com\",\n          \"${OIDC_PROVIDER}:sub\": \"system:serviceaccount:my-namespace:my-service-account\"\n        }\n      }\n    }\n  ]\n}"
+                },
+                "providerConfigRef": {
+                    "name": "default"
+                }
+            }
+        }
+    }
+}

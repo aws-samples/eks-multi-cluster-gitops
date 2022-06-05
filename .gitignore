@@ -8,3 +8,5 @@ repos/gitops-workloads/.DS_Store
 repos/app-manifests/payment-app/.DS_Store
 initial-setup/.DS_Store
 repos/.DS_Store
+webhooks/.DS_Store
+.vscode
