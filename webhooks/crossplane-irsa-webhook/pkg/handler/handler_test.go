@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func TestMutateRole(t *testing.T) {
+func TestMutators(t *testing.T) {
 	modifier := NewModifier()
 	cases := []struct {
 		caseName string
@@ -37,16 +37,18 @@ func TestMutateRole(t *testing.T) {
 		},
 	}
 
-	for _, c := range cases {
-		t.Run(c.caseName, func(t *testing.T) {
-			response := modifier.MutateRole(c.input)
+	for k, mutator := range Mutators {
+		for _, c := range cases {
+			t.Run(c.caseName+k, func(t *testing.T) {
+				response := mutator.Mutate(c.input, modifier)
 
-			if !reflect.DeepEqual(response, c.response) {
-				got, _ := json.MarshalIndent(response, "", "  ")
-				want, _ := json.MarshalIndent(c.response, "", "  ")
-				t.Errorf("Unexpected response. Got \n%s\n wanted \n%s", string(got), string(want))
-			}
-		})
+				if !reflect.DeepEqual(response, c.response) {
+					got, _ := json.MarshalIndent(response, "", "  ")
+					want, _ := json.MarshalIndent(c.response, "", "  ")
+					t.Errorf("Unexpected response. Got \n%s\n wanted \n%s", string(got), string(want))
+				}
+			})
+		}
 	}
 }
 
@@ -73,73 +75,131 @@ var rawRoleWithPlaceholders = []byte(`
 }
 `)
 
+var rawServiceAccountWithPlaceholders = []byte(`
+{
+  "apiVersion": "v1",
+  "kind": "ServiceAccount",
+  "metadata": {
+    "annotations": {
+      "eks.amazonaws.com/role-arn": "arn:aws:iam::${ACCOUNT_ID}:role/my-sample-irsa-role"
+    },
+    "name": "my-sample-irsa-sa",
+    "namespace": "crossplane-system"
+  }
+}
+`)
+
+var rawPolicyWithPlaceholders = []byte(`
+{
+  "apiVersion": "iam.aws.crossplane.io/v1beta1",
+  "kind": "Policy",
+  "metadata": {
+    "name": "crossplane-irsa-webhook-policy"
+  },
+  "spec": {
+    "forProvider": {
+      "name": "crossplane-irsa-webhook-policy",
+      "document": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"eks:DescribeCluster\",],\"Resource\":[\"arn:aws:eks:${AWS_REGION}:${ACCOUNT_ID}:cluster/${CLUSTER_NAME}\"]}]}"
+    },
+    "providerConfigRef": {
+      "name": "default"
+    }
+  }
+}
+`)
+
+const AWS_REGION = "eu-west-1"
 const ACCOUNT_ID string = "123456789012"
+const CLUSTER_NAME string = "staging"
 const CLUSTER_OIDC string = "oidc.eks.eu-west-1.amazonaws.com/id/6A0A07D566C756AECD797B338FAA4A4D"
 
-var validPatchIfPlaceholdersPresent = []byte(
+var rolePatch = []byte(
 	fmt.Sprintf(
 		`[{"op":"replace","path":"/spec/forProvider/assumeRolePolicyDocument","value":"{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Federated\":\"arn:aws:iam::%[1]s:oidc-provider/%[2]s\"},\"Action\":\"sts:AssumeRoleWithWebIdentity\",\"Condition\":{\"StringEquals\":{\"%[2]s:aud\":\"sts.amazonaws.com\",\"%[2]s:sub\":\"system:serviceaccount:my-namespace:my-service-account\"}}}]}"}]`,
 		ACCOUNT_ID,
 		CLUSTER_OIDC,
-	))
+	),
+)
+
+var serviceAccountPatch = []byte(
+	fmt.Sprintf(
+		`[{"op":"replace","path":"/metadata/annotations/eks.amazonaws.com~1role-arn","value":"arn:aws:iam::%[1]s:role/my-sample-irsa-role"}]`,
+		ACCOUNT_ID,
+	),
+)
+
+var policyPatch = []byte(
+	fmt.Sprintf(
+		`[{"op":"replace","path":"/spec/forProvider/document","value":"{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"eks:DescribeCluster\",],\"Resource\":[\"arn:aws:eks:%[2]s:%[1]s:cluster/%[3]s\"]}]}"}]`,
+		ACCOUNT_ID,
+		AWS_REGION,
+		CLUSTER_NAME,
+	),
+)
 
 const REQUEST_UID string = "918ef1dc-928f-4525-99ef-988389f263c3"
 
-var validHandlerResponseWithReplacements = &v1.AdmissionResponse{
-	UID:       types.UID(REQUEST_UID),
-	Allowed:   true,
-	Patch:     validPatchIfPlaceholdersPresent,
-	PatchType: &jsonPatchType,
-}
-
-const ALT_ACCOUNT_ID string = "210987654321"
-const ALT_CLUSTER_OIDC string = "oidc.eks.eu-west-1.amazonaws.com/id/BA1A07D566C756AECD797B338FAA4C4F"
-
-var rawRoleWithoutPlaceholders = []byte(
-	fmt.Sprintf(
-		`
+var rawRoleWithoutPlaceholders = []byte(`
 {
 	"apiVersion": "iam.aws.crossplane.io/v1beta1",
 	"kind": "Role",
 	"metadata": {
-		"name": "sample-irsa-role",
+		"name": "eks-cluster-role",
 		"labels": {
-			"type": "sample-irsa-role"
+			"type": "eks-cluster-role"
 		}
 	},
 	"spec": {
 		"forProvider": {
-			"assumeRolePolicyDocument": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Federated\":\"arn:aws:iam::%[1]s:oidc-provider/%[2]s\"},\"Action\":\"sts:AssumeRoleWithWebIdentity\",\"Condition\":{\"StringEquals\":{\"%[2]s:aud\":\"sts.amazonaws.com\",\"%[2]s:sub\":\"system:serviceaccount:my-namespace:my-service-account\"}}}]}"
+			"assumeRolePolicyDocument": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"eks.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
 		},
 		"providerConfigRef": {
 			"name": "default"
 		}
 	}
 }
-`,
-		ALT_ACCOUNT_ID,
-		ALT_CLUSTER_OIDC,
-	))
+`)
 
-var validHandlerResponseWithoutReplacements = &v1.AdmissionResponse{
+var rawServiceAccountWithoutPlaceholders = []byte(`
+{
+  "apiVersion": "v1",
+  "kind": "ServiceAccount",
+  "metadata": {
+    "name": "my-simple-sa"
+  }
+}
+`)
+
+var rawPolicyWithoutPlaceholders = []byte(`
+{
+  "apiVersion": "iam.aws.crossplane.io/v1beta1",
+  "kind": "Policy",
+  "metadata": {
+    "name": "secrets-manager-policy"
+  },
+  "spec": {
+    "forProvider": {
+      "name": "secrets-manager-policy",
+      "document": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"secretsmanager:GetResourcePolicy\",\"secretsmanager:GetSecretValue\",\"secretsmanager:DescribeSecret\",\"secretsmanager:ListSecretVersionIds\"],\"Resource\":[\"arn:aws:secretsmanager:*:*:secret:sealed-secrets*\"]}]}"
+    },
+    "providerConfigRef": {
+      "name": "default"
+    }
+  }
+}
+`)
+
+var validResponseNoPatch = &v1.AdmissionResponse{
 	UID:     types.UID(REQUEST_UID),
 	Allowed: true,
 }
 
-func getValidReview(role []byte) *v1.AdmissionReview {
+func getValidReview(gvr *metav1.GroupVersionResource, gvk *metav1.GroupVersionKind, raw []byte) *v1.AdmissionReview {
 	return &v1.AdmissionReview{
 		Request: &v1.AdmissionRequest{
-			UID: types.UID(REQUEST_UID),
-			Resource: metav1.GroupVersionResource{
-				Group:    "iam.aws.crossplane.io",
-				Version:  "v1beta1",
-				Resource: "roles",
-			},
-			Kind: metav1.GroupVersionKind{
-				Group:   "iam.aws.crossplane.io",
-				Kind:    "Role",
-				Version: "v1beta1",
-			},
+			UID:       types.UID(REQUEST_UID),
+			Resource:  *gvr,
+			Kind:      *gvk,
 			Operation: "CREATE",
 			UserInfo: authenticationv1.UserInfo{
 				Username: "kubernetes-admin",
@@ -147,7 +207,7 @@ func getValidReview(role []byte) *v1.AdmissionReview {
 				Groups:   []string{"system:authenticated", "system:masters"},
 			},
 			Object: runtime.RawExtension{
-				Raw: role,
+				Raw: raw,
 			},
 			DryRun: nil,
 		},
@@ -155,8 +215,8 @@ func getValidReview(role []byte) *v1.AdmissionReview {
 	}
 }
 
-func serializeAdmissionReview(t *testing.T, want *v1.AdmissionReview) []byte {
-	wantedBytes, err := json.Marshal(want)
+func serializeAdmissionReview(t *testing.T, ar *v1.AdmissionReview) []byte {
+	wantedBytes, err := json.Marshal(ar)
 	if err != nil {
 		t.Errorf("Failed to marshal desired response: %v", err)
 		return nil
@@ -164,9 +224,20 @@ func serializeAdmissionReview(t *testing.T, want *v1.AdmissionReview) []byte {
 	return wantedBytes
 }
 
+func getValidResponseWithPatch(validPatch []byte) *v1.AdmissionResponse {
+	return &v1.AdmissionResponse{
+		UID:       types.UID(REQUEST_UID),
+		Allowed:   true,
+		Patch:     validPatch,
+		PatchType: &jsonPatchType,
+	}
+}
+
 func TestModifierHandler(t *testing.T) {
 	modifier := NewModifier(
 		WithAccountID(ACCOUNT_ID),
+		WithRegion(AWS_REGION),
+		WithClusterName(CLUSTER_NAME),
 		WithOidcProvider(CLUSTER_OIDC),
 	)
 
@@ -224,27 +295,165 @@ func TestModifierHandler(t *testing.T) {
 			[]byte(`{"kind":"AdmissionReview","apiVersion":"admission.k8s.io/v1","response":{"uid":"","allowed":false,"status":{"metadata":{},"message":"Could not identify request resource as any registered target types."}}}`),
 		},
 		{
-			"ValidRequestSuccessWithoutPlaceholders",
-			serializeAdmissionReview(t, getValidReview(rawRoleWithoutPlaceholders)),
+			"ValidRoleNoPatch",
+			serializeAdmissionReview(
+				t,
+				getValidReview(
+					&metav1.GroupVersionResource{
+						Group:    "iam.aws.crossplane.io",
+						Version:  "v1beta1",
+						Resource: "roles",
+					},
+					&metav1.GroupVersionKind{
+						Group:   "iam.aws.crossplane.io",
+						Version: "v1beta1",
+						Kind:    "Role",
+					},
+					rawRoleWithoutPlaceholders,
+				),
+			),
 			"application/json",
 			serializeAdmissionReview(t, &v1.AdmissionReview{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "AdmissionReview",
 					APIVersion: "admission.k8s.io/v1",
 				},
-				Response: validHandlerResponseWithoutReplacements,
+				Response: validResponseNoPatch,
 			}),
 		},
 		{
-			"ValidRequestSuccessWithPlaceholders",
-			serializeAdmissionReview(t, getValidReview(rawRoleWithPlaceholders)),
+			"ValidRolePatched",
+			serializeAdmissionReview(
+				t,
+				getValidReview(
+					&metav1.GroupVersionResource{
+						Group:    "iam.aws.crossplane.io",
+						Version:  "v1beta1",
+						Resource: "roles",
+					},
+					&metav1.GroupVersionKind{
+						Group:   "iam.aws.crossplane.io",
+						Version: "v1beta1",
+						Kind:    "Role",
+					},
+					rawRoleWithPlaceholders,
+				),
+			),
 			"application/json",
 			serializeAdmissionReview(t, &v1.AdmissionReview{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "AdmissionReview",
 					APIVersion: "admission.k8s.io/v1",
 				},
-				Response: validHandlerResponseWithReplacements,
+				Response: getValidResponseWithPatch(rolePatch),
+			}),
+		},
+		{
+			"ValidServiceAccountNoPatch",
+			serializeAdmissionReview(
+				t,
+				getValidReview(
+					&metav1.GroupVersionResource{
+						Group:    "",
+						Version:  "v1",
+						Resource: "serviceaccounts",
+					},
+					&metav1.GroupVersionKind{
+						Group:   "",
+						Version: "v1",
+						Kind:    "ServiceAccount",
+					},
+					rawServiceAccountWithoutPlaceholders,
+				),
+			),
+			"application/json",
+			serializeAdmissionReview(t, &v1.AdmissionReview{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "AdmissionReview",
+					APIVersion: "admission.k8s.io/v1",
+				},
+				Response: validResponseNoPatch,
+			}),
+		},
+		{
+			"ValidServiceAccountPatched",
+			serializeAdmissionReview(
+				t,
+				getValidReview(
+					&metav1.GroupVersionResource{
+						Group:    "",
+						Version:  "v1",
+						Resource: "serviceaccounts",
+					},
+					&metav1.GroupVersionKind{
+						Group:   "",
+						Kind:    "ServiceAccount",
+						Version: "v1",
+					},
+					rawServiceAccountWithPlaceholders,
+				),
+			),
+			"application/json",
+			serializeAdmissionReview(t, &v1.AdmissionReview{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "AdmissionReview",
+					APIVersion: "admission.k8s.io/v1",
+				},
+				Response: getValidResponseWithPatch(serviceAccountPatch),
+			}),
+		},
+		{
+			"ValidPolicyNoPatch",
+			serializeAdmissionReview(
+				t,
+				getValidReview(
+					&metav1.GroupVersionResource{
+						Group:    "iam.aws.crossplane.io",
+						Version:  "v1beta1",
+						Resource: "policies",
+					},
+					&metav1.GroupVersionKind{
+						Group:   "iam.aws.crossplane.io",
+						Version: "v1beta1",
+						Kind:    "Policy",
+					},
+					rawPolicyWithoutPlaceholders,
+				),
+			),
+			"application/json",
+			serializeAdmissionReview(t, &v1.AdmissionReview{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "AdmissionReview",
+					APIVersion: "admission.k8s.io/v1",
+				},
+				Response: validResponseNoPatch,
+			}),
+		},
+		{
+			"ValidPolicyPatched",
+			serializeAdmissionReview(
+				t,
+				getValidReview(
+					&metav1.GroupVersionResource{
+						Group:    "iam.aws.crossplane.io",
+						Version:  "v1beta1",
+						Resource: "policies",
+					},
+					&metav1.GroupVersionKind{
+						Group:   "iam.aws.crossplane.io",
+						Kind:    "Policy",
+						Version: "v1beta1",
+					},
+					rawPolicyWithPlaceholders,
+				),
+			),
+			"application/json",
+			serializeAdmissionReview(t, &v1.AdmissionReview{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "AdmissionReview",
+					APIVersion: "admission.k8s.io/v1",
+				},
+				Response: getValidResponseWithPatch(policyPatch),
 			}),
 		},
 	}

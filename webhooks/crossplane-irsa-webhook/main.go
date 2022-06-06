@@ -83,7 +83,9 @@ func main() {
 	initializer.Initialize()
 
 	mod := handler.NewModifier(
+		handler.WithRegion(*awsRegion),
 		handler.WithAccountID(initializer.AccountID),
+		handler.WithClusterName(*clusterName),
 		handler.WithOidcProvider(initializer.OidcProvider),
 	)
 

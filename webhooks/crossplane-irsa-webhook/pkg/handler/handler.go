@@ -24,11 +24,13 @@ func init() {
 }
 
 var (
-	runtimeScheme  = runtime.NewScheme()
-	codecs         = serializer.NewCodecFactory(runtimeScheme)
-	deserializer   = codecs.UniversalDeserializer()
-	accountIdRegex = regexp.MustCompile(`\$\{ACCOUNT_ID}|\$ACCOUNT_ID`)
-	oidcRegex      = regexp.MustCompile(`\$\{OIDC_PROVIDER}|\$OIDC_PROVIDER`)
+	runtimeScheme    = runtime.NewScheme()
+	codecs           = serializer.NewCodecFactory(runtimeScheme)
+	deserializer     = codecs.UniversalDeserializer()
+	accountIdRegex   = regexp.MustCompile(`\$\{ACCOUNT_ID}|\$ACCOUNT_ID`)
+	regionRegex      = regexp.MustCompile(`\$\{AWS_REGION}|\$AWS_REGION`)
+	clusterNameRegex = regexp.MustCompile(`\$\{CLUSTER_NAME}|\$CLUSTER_NAME`)
+	oidcRegex        = regexp.MustCompile(`\$\{OIDC_PROVIDER}|\$OIDC_PROVIDER`)
 )
 
 // ModifierOpt is an option type for setting up a Modifier
@@ -37,6 +39,16 @@ type ModifierOpt func(*Modifier)
 // WithAccountID sets the AWS account ID
 func WithAccountID(a string) ModifierOpt {
 	return func(m *Modifier) { m.AccountID = a }
+}
+
+// WithRegion sets the AWS Region
+func WithRegion(r string) ModifierOpt {
+	return func(m *Modifier) { m.Region = r }
+}
+
+// WithClusterName sets the EKS cluster name
+func WithClusterName(cn string) ModifierOpt {
+	return func(m *Modifier) { m.ClusterName = cn }
 }
 
 // WithOidcProvider sets the cluster OIDC
@@ -58,6 +70,8 @@ func NewModifier(opts ...ModifierOpt) *Modifier {
 // Modifier holds configuration values for pod modifications
 type Modifier struct {
 	AccountID    string
+	Region       string
+	ClusterName  string
 	OidcProvider string
 }
 
@@ -81,8 +95,15 @@ func logContext(roleName, roleGenerateName, namespace string) string {
 		namespace)
 }
 
+type Mutator interface {
+	Mutate(ar *v1.AdmissionReview, m *Modifier) *v1.AdmissionResponse
+}
+
+type RoleMutator struct {
+}
+
 // getRoleSpecPatch gets the patch operation to be applied to the given Role
-func (m *Modifier) getRoleSpecPatch(role *iamv1beta1.Role) ([]patchOperation, bool) {
+func (rm RoleMutator) getRoleSpecPatch(role *iamv1beta1.Role, m *Modifier) ([]patchOperation, bool) {
 	patch := []patchOperation{}
 
 	updatedDoc, changed := m.replacePlaceholders(role.Spec.ForProvider.AssumeRolePolicyDocument)
@@ -98,7 +119,7 @@ func (m *Modifier) getRoleSpecPatch(role *iamv1beta1.Role) ([]patchOperation, bo
 	return patch, changed
 }
 
-func (m *Modifier) MutateRole(ar *v1.AdmissionReview) *v1.AdmissionResponse {
+func (rm RoleMutator) Mutate(ar *v1.AdmissionReview, m *Modifier) *v1.AdmissionResponse {
 	badRequest := &v1.AdmissionResponse{
 		Result: &metav1.Status{
 			Message: "bad content",
@@ -123,7 +144,7 @@ func (m *Modifier) MutateRole(ar *v1.AdmissionReview) *v1.AdmissionResponse {
 		}
 	}
 
-	patch, changed := m.getRoleSpecPatch(&role)
+	patch, changed := rm.getRoleSpecPatch(&role, m)
 
 	if changed {
 		klog.V(3).Infof("Role was mutated. %s",
@@ -156,8 +177,89 @@ func (m *Modifier) MutateRole(ar *v1.AdmissionReview) *v1.AdmissionResponse {
 	}
 }
 
+type PolicyMutator struct {
+}
+
+// getPolicySpecPatch gets the patch operation to be applied to the given Policy
+func (pm PolicyMutator) getPolicySpecPatch(policy *iamv1beta1.Policy, m *Modifier) ([]patchOperation, bool) {
+	patch := []patchOperation{}
+
+	updatedDoc, changed := m.replacePlaceholders(policy.Spec.ForProvider.Document)
+
+	if changed {
+		policyDocumentPatch := patchOperation{
+			Op:    "replace",
+			Path:  "/spec/forProvider/document",
+			Value: updatedDoc,
+		}
+		patch = append(patch, policyDocumentPatch)
+	}
+	return patch, changed
+}
+
+func (pm PolicyMutator) Mutate(ar *v1.AdmissionReview, m *Modifier) *v1.AdmissionResponse {
+	badRequest := &v1.AdmissionResponse{
+		Result: &metav1.Status{
+			Message: "bad content",
+		},
+	}
+	if ar == nil {
+		return badRequest
+	}
+	req := ar.Request
+	if req == nil {
+		return badRequest
+	}
+
+	var policy iamv1beta1.Policy
+	if err := json.Unmarshal(req.Object.Raw, &policy); err != nil {
+		klog.Errorf("Could not unmarshal raw object: %v", err)
+		klog.Errorf("Object: %v", string(req.Object.Raw))
+		return &v1.AdmissionResponse{
+			Result: &metav1.Status{
+				Message: err.Error(),
+			},
+		}
+	}
+
+	patch, changed := pm.getPolicySpecPatch(&policy, m)
+
+	if changed {
+		klog.V(3).Infof("Policy was mutated. %s",
+			logContext(policy.Name, policy.GenerateName, policy.Namespace))
+	} else {
+		klog.V(3).Infof("Policy was not mutated. Reason: "+
+			"Replacement placeholders not found. %s",
+			logContext(policy.Name, policy.GenerateName, policy.Namespace))
+		return &v1.AdmissionResponse{
+			Allowed: true,
+		}
+	}
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		klog.Errorf("Error marshaling policy update: %v", err.Error())
+		return &v1.AdmissionResponse{
+			Result: &metav1.Status{
+				Message: err.Error(),
+			},
+		}
+	}
+
+	return &v1.AdmissionResponse{
+		Allowed: true,
+		Patch:   patchBytes,
+		PatchType: func() *v1.PatchType {
+			pt := v1.PatchTypeJSONPatch
+			return &pt
+		}(),
+	}
+}
+
+type ServiceAccountMutator struct {
+}
+
 // getServiceAccountSpecPatch gets the patch operation to be applied to the given ServiceAccount
-func (m *Modifier) getServiceAccountSpecPatch(sa *corev1.ServiceAccount) ([]patchOperation, bool) {
+func (sam ServiceAccountMutator) getServiceAccountSpecPatch(sa *corev1.ServiceAccount, m *Modifier) ([]patchOperation, bool) {
 	patch := []patchOperation{}
 	var updatedDoc string
 	changed := false
@@ -178,7 +280,7 @@ func (m *Modifier) getServiceAccountSpecPatch(sa *corev1.ServiceAccount) ([]patc
 	return patch, changed
 }
 
-func (m *Modifier) MutateServiceAccount(ar *v1.AdmissionReview) *v1.AdmissionResponse {
+func (sam ServiceAccountMutator) Mutate(ar *v1.AdmissionReview, m *Modifier) *v1.AdmissionResponse {
 	badRequest := &v1.AdmissionResponse{
 		Result: &metav1.Status{
 			Message: "bad content",
@@ -203,7 +305,7 @@ func (m *Modifier) MutateServiceAccount(ar *v1.AdmissionReview) *v1.AdmissionRes
 		}
 	}
 
-	patch, changed := m.getServiceAccountSpecPatch(&sa)
+	patch, changed := sam.getServiceAccountSpecPatch(&sa, m)
 
 	if changed {
 		klog.V(3).Infof("ServiceAccount was mutated. %s",
@@ -218,7 +320,7 @@ func (m *Modifier) MutateServiceAccount(ar *v1.AdmissionReview) *v1.AdmissionRes
 	}
 	patchBytes, err := json.Marshal(patch)
 	if err != nil {
-		klog.Errorf("Error marshaling role update: %v", err.Error())
+		klog.Errorf("Error marshaling serviceaccount update: %v", err.Error())
 		return &v1.AdmissionResponse{
 			Result: &metav1.Status{
 				Message: err.Error(),
@@ -234,6 +336,12 @@ func (m *Modifier) MutateServiceAccount(ar *v1.AdmissionReview) *v1.AdmissionRes
 			return &pt
 		}(),
 	}
+}
+
+var Mutators map[string]Mutator = map[string]Mutator{
+	"{iam.aws.crossplane.io v1beta1 roles}":    RoleMutator{},
+	"{iam.aws.crossplane.io v1beta1 policies}": PolicyMutator{},
+	"{ v1 serviceaccounts}":                    ServiceAccountMutator{},
 }
 
 func (m *Modifier) Handle(w http.ResponseWriter, r *http.Request) {
@@ -262,24 +370,18 @@ func (m *Modifier) Handle(w http.ResponseWriter, r *http.Request) {
 				Message: err.Error(),
 			},
 		}
-	} else if ar.Request != nil &&
-		ar.Request.Resource.Group == "" &&
-		ar.Request.Resource.Version == "v1" &&
-		ar.Request.Resource.Resource == "serviceaccounts" {
-
-		admissionResponse = m.MutateServiceAccount(&ar)
-	} else if ar.Request != nil &&
-		ar.Request.Resource.Group == "iam.aws.crossplane.io" &&
-		ar.Request.Resource.Version == "v1beta1" &&
-		ar.Request.Resource.Resource == "roles" {
-
-		admissionResponse = m.MutateRole(&ar)
 	} else if ar.Request != nil {
-		admissionResponse = &v1.AdmissionResponse{
-			Result: &metav1.Status{
-				Message: "Could not identify request resource as any registered target types.",
-			},
+		res := fmt.Sprintf("%s", ar.Request.Resource)
+		if mutator, ok := Mutators[res]; ok {
+			admissionResponse = mutator.Mutate(&ar, m)
+		} else {
+			admissionResponse = &v1.AdmissionResponse{
+				Result: &metav1.Status{
+					Message: "Could not identify request resource as any registered target types.",
+				},
+			}
 		}
+
 	} else {
 		admissionResponse = &v1.AdmissionResponse{
 			Result: &metav1.Status{
@@ -314,9 +416,12 @@ func (m *Modifier) Handle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m Modifier) replacePlaceholders(doc string) (string, bool) {
-	docWithAccountIDReplaced, accountIDUpdated := m.replaceAccountID(doc)
-	docWithOIDCReplaced, oidcUpdated := m.replaceOIDC(docWithAccountIDReplaced)
-	return docWithOIDCReplaced, accountIDUpdated || oidcUpdated
+	docWithRegionReplaced, regionReplaced := m.replaceRegion(doc)
+	docWithAccountIDReplaced, accountIDReplaced := m.replaceAccountID(docWithRegionReplaced)
+	docWithClusterNameReplaced, clusterNameReplaced := m.replaceClusterName(docWithAccountIDReplaced)
+	docWithOIDCReplaced, oidcReplaced := m.replaceOIDC(docWithClusterNameReplaced)
+
+	return docWithOIDCReplaced, (regionReplaced || accountIDReplaced || clusterNameReplaced || oidcReplaced)
 }
 
 func (m Modifier) replaceAccountID(str string) (string, bool) {
@@ -327,6 +432,26 @@ func (m Modifier) replaceAccountID(str string) (string, bool) {
 	}
 	changed = true
 	return accountIdRegex.ReplaceAllString(str, m.AccountID), changed
+}
+
+func (m Modifier) replaceRegion(str string) (string, bool) {
+	loc := regionRegex.FindStringIndex(str)
+	changed := false
+	if loc == nil {
+		return str, changed
+	}
+	changed = true
+	return regionRegex.ReplaceAllString(str, m.Region), changed
+}
+
+func (m Modifier) replaceClusterName(str string) (string, bool) {
+	loc := clusterNameRegex.FindStringIndex(str)
+	changed := false
+	if loc == nil {
+		return str, changed
+	}
+	changed = true
+	return clusterNameRegex.ReplaceAllString(str, m.ClusterName), changed
 }
 
 func (m Modifier) replaceOIDC(str string) (string, bool) {

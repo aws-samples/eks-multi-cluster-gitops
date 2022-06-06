@@ -17,7 +17,7 @@ webhooks:
       - operations: ["CREATE", "UPDATE"]
         apiGroups: ["iam.aws.crossplane.io"]
         apiVersions: ["v1beta1"]
-        resources: ["roles"]
+        resources: ["roles", "policies"]
         scope: "Cluster"
       - operations: ["CREATE", "UPDATE"]
         apiGroups: [""]

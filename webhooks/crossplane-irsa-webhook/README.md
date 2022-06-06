@@ -31,21 +31,65 @@ The webhook needs an IAM identity (user or role) with the following IAM permissi
 ### Network access to AWS EKS API
 By default the initializer routine introspects the EKS cluster by invoking `eks:DescribeCluster` with the `cluster-name` provided as a bootstrap argument. The network configuration for the cluster should allow HTTPS calls to EKS API from within the cluster.
 
-***Note:*** This will not work in private cluster setups as EKS does not provide VPC endpoints as of this writing. As an enhancement launch arguments may be added in the future to allow cluster provisioners to supply `--account-id` and `--cluster-oidc` values as boostrap arguments to allow deployment in private clusters.
+***Note:*** This will not work in private cluster setups as EKS does not provide VPC endpoints as of this writing. As an enhancement boostrap arguments may be added in the future to allow cluster provisioners to supply `--account-id` and `--cluster-oidc` values as boostrap arguments to allow deployment in private clusters.
 
-## Placeholder replacements
+## Replacements
+### Placeholders
 The webhook recognizes the following placeholders for replacement.
 
 | Placeholder     | Alternate Form | Replacements   |
 |-----------------|----------------|----------------|
-| `${ACCOUNT_ID}`   | `$ACCOUNT_ID`    | Account ID of the AWS account in which the EKS cluster is deployed. The initializer invokes `eks:DescribeCluster` API action  and extracts the account ID from the returned ARN of the cluster. |
+| `${ACCOUNT_ID}` | `$ACCOUNT_ID`  | Account ID of the AWS account in which the EKS cluster is deployed. The initializer invokes `eks:DescribeCluster` API action  and extracts the account ID from the returned ARN of the cluster. |
+| `${AWS_REGION}` | `$AWS_REGION`  | The AWS region where the cluster is deployed. |
+| `${CLUSTER_NAME}` | `$CLUSTER_NAME` | The name of the EKS cluster where the webhook is deployed. | 
 | `${OIDC_PROVIDER}` | `$OIDC_PROVIDER`  | The OIDC provider for the EKS cluster in which the webhook is deployed. The initializer invokes `eks:DescribeCluster` API action to retrieve the cluster OIDC endpoint. |
 
-### Example for `Role`
-Given:
+### Registered types and patch paths
+
+| Group | Version | Resource | Patch path |
+|-------|---------|----------|-------------|
+|  | `v1` | `serviceaccounts` |  `/metadata/annotations/eks.amazonaws.com~1role-arn` |
+| `iam.aws.crossplane.io` | `v1beta1` | `roles` | `/spec/forProvider/assumeRolePolicyDocument` |
+| `iam.aws.crossplane.io` | `v1beta1` | `policies` | `/spec/forProvider/document` |
+
+#### Example with `ServiceAccount`
+**Given:**
+  - Account id is `012345678901`
+
+**When:**
+  - `ServiceAccount` creation request is submitted with an annotation field named `eks.amazonaws.com/role-arn` as
+  
+```yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::${ACCOUNT_ID}:role/my-sample-irsa-role
+  name: my-sample-irsa-sa
+  namespace: crossplane-system
+```
+
+**Then:**
+  - Webhook will patch the `eks.amazonaws.com/role-arn` annotation field with replacement values like below.
+
+```yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::012345678901:role/my-sample-irsa-role
+  name: my-sample-irsa-sa
+  namespace: crossplane-system
+```
+
+#### Example with `Role`
+**Given:**
   - Account id is `012345678901`
   - EKS cluster OIDC provider is `oidc.eks.eu-west-1.amazonaws.com/id/XXXXXXC756AECD797B338FAA4A4D`
-When:
+
+**When:**
   - `Role` creation request is submitted with `assumeRolePolicyDocument` as
   
 ```yaml
@@ -81,7 +125,7 @@ spec:
     name: default
 ```
 
-Then:
+**Then:**
   - Webhook will patch the `assumeRolePolicyDocument` field with replacement values like below.
 
 ```yaml
@@ -117,36 +161,75 @@ spec:
     name: default
 ```
 
-### Example for `ServiceAccount`
-Given:
+#### Example with `Policy`
+**Given:**
   - Account id is `012345678901`
-When:
-  - `ServiceAccount` creation request is submitted with an annotation field named `eks.amazonaws.com/role-arn` as
+  - AWS region is `eu-west-1`
+  - Cluster name is `staging`
+
+**When:**
+  - `Policy` creation request is submitted with `document` as
   
 ```yaml
 ---
-apiVersion: v1
-kind: ServiceAccount
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: Policy
 metadata:
-  annotations:
-    eks.amazonaws.com/role-arn: arn:aws:iam::${ACCOUNT_ID}:role/my-sample-irsa-role
-  name: my-sample-irsa-sa
-  namespace: crossplane-system
+  name: crossplane-irsa-webhook-policy
+spec:
+  forProvider:
+    name: crossplane-irsa-webhook-policy
+    document: |
+      {
+          "Version": "2012-10-17",
+          "Statement": [
+              {
+                  "Effect": "Allow",
+                  "Action": [
+                      "eks:DescribeCluster",
+                  ],
+                  "Resource": [
+                      "arn:aws:eks:${AWS_REGION}:${ACCOUNT_ID}:cluster/${CLUSTER_NAME}"
+                  ]
+              }
+          ]
+      }
+  providerConfigRef:
+    name: default
 ```
 
-Then:
-  - Webhook will patch the `eks.amazonaws.com/role-arn` annotation field with replacement values like below.
+**Then:**
+  - Webhook will patch the `document` field with replacement values like below.
 
 ```yaml
 ---
-apiVersion: v1
-kind: ServiceAccount
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: Policy
 metadata:
-  annotations:
-    eks.amazonaws.com/role-arn: arn:aws:iam::012345678901:role/my-sample-irsa-role
-  name: my-sample-irsa-sa
-  namespace: crossplane-system
+  name: crossplane-irsa-webhook-policy
+spec:
+  forProvider:
+    name: crossplane-irsa-webhook-policy
+    document: |
+      {
+          "Version": "2012-10-17",
+          "Statement": [
+              {
+                  "Effect": "Allow",
+                  "Action": [
+                      "eks:DescribeCluster",
+                  ],
+                  "Resource": [
+                      "arn:aws:eks:eu-west-1:012345678901:cluster/staging"
+                  ]
+              }
+          ]
+      }
+  providerConfigRef:
+    name: default
 ```
+
+
 
 ## Local build to generate platform binaries
 
@@ -160,14 +243,14 @@ make -f ./Makefile install
 The output binaries are generated at the following location:
 
     webhooks
-      |- crossplane-irsa-webhook
-        |- build
-          |- gopath
-            |- bin
-              |- darwin_amd64
-                |- crossplane-irsa-webhook
-              |- linux_amd64
-                |- crossplane-irsa-webhook
+    |- crossplane-irsa-webhook
+      |- build
+        |- gopath
+          |- bin
+            |- darwin_amd64
+              |- crossplane-irsa-webhook
+            |- linux_amd64
+              |- crossplane-irsa-webhook
     
 
 ## Run tests with coverage report
@@ -182,8 +265,8 @@ make -f ./Makefile test
 The output `coverage.out` report file is generated at the following location:
 
     webhooks
-      |- crossplane-irsa-webhook
-        |- coverage.out
+    |- crossplane-irsa-webhook
+      |- coverage.out
 
 ## Build image and push to repository
 
@@ -191,9 +274,9 @@ The `Makefile` uses variables to locate the coordinates of the image repository.
 
 | Name | Default | Description |
 |------|---------|-------------|
-| `REGISTRY_ID` | `012345678901` | AWS Account ID of the ECR registry. Override the default value by setting an environment variable with the same name and value set to your AWS account id. |
+| `ACCOUNT_ID` | `012345678901` | AWS Account ID of the ECR registry. Override the default value by setting an environment variable with the same name and value set to your AWS account id. |
 | `IMAGE_NAME` | `multi-cluster-gitops/crossplane-irsa-webhook` | Namespaced image name. Create the repository before executing the build. |
-| `REGION` | `eu-west-1` | AWS region where the ECR repository is created. |
+| `AWS_REGION` | `eu-west-1` | AWS region where the ECR repository is created. |
 
 ### `make` command line
 

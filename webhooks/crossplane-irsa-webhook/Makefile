@@ -11,12 +11,12 @@ endif
 
 # Generic make
 # Dummy account ID. Replace with actual account ID.
-REGISTRY_ID?=012345678901
+ACCOUNT_ID?=012345678901
 # Create ECR repo before running the build
 IMAGE_NAME?=multi-cluster-gitops/crossplane-irsa-webhook
 # Update the region
-REGION?=eu-west-1
-IMAGE?=$(REGISTRY_ID).dkr.ecr.$(REGION).amazonaws.com/$(IMAGE_NAME)
+AWS_REGION?=eu-west-1
+IMAGE?=$(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(IMAGE_NAME)
 
 test:
 	go test -coverprofile=coverage.out ./...
@@ -27,8 +27,8 @@ docker:
 	docker build --no-cache -t $(IMAGE) .
 
 push: docker
-	if ! aws ecr get-login-password --region $(REGION) | docker login --username AWS --password-stdin $(REGISTRY_ID).dkr.ecr.$(REGION).amazonaws.com; then \
-		eval $$(aws ecr get-login --registry-ids $(REGISTRY_ID) --no-include-email); \
+	if ! aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com; then \
+		eval $$(aws ecr get-login --registry-ids $(ACCOUNT_ID) --no-include-email); \
 	fi
 	docker push $(IMAGE)
 
