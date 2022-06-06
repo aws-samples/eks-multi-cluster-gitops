@@ -50,7 +50,7 @@ metadata:
   namespace: crossplane-system
 spec:
   secretName: crossplane-irsa-webhook-cert
-  commonName: "crossplane-irsa-webhook.default.svc"
+  commonName: "crossplane-irsa-webhook.crossplane-system.svc"
   dnsNames:
     - "crossplane-irsa-webhook"
     - "crossplane-irsa-webhook.crossplane-system"
