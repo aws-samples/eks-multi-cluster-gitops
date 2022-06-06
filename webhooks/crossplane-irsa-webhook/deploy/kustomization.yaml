@@ -4,7 +4,7 @@ kind: Kustomization
 namespace: crossplane-system
 images:
   - name: IMAGE
-    newName: 283340423557.dkr.ecr.eu-west-1.amazonaws.com/multi-cluster-gitops/crossplane-irsa-webhook
+    newName: 012345678901.dkr.ecr.eu-west-1.amazonaws.com/multi-cluster-gitops/crossplane-irsa-webhook
     newTag: latest
 
 resources:
