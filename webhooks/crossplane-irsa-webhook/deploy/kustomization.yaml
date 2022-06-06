@@ -8,6 +8,7 @@ images:
     newTag: latest
 
 resources:
+  - namespace.yaml
   - auth.yaml
   - deployment-base.yaml
   - service.yaml
