@@ -167,7 +167,7 @@ func serializeAdmissionReview(t *testing.T, want *v1.AdmissionReview) []byte {
 func TestModifierHandler(t *testing.T) {
 	modifier := NewModifier(
 		WithAccountID(ACCOUNT_ID),
-		WithClusterOIDC(CLUSTER_OIDC),
+		WithOidcProvider(CLUSTER_OIDC),
 	)
 
 	ts := httptest.NewServer(

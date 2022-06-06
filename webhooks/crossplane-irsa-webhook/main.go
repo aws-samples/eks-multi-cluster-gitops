@@ -41,8 +41,8 @@ func main() {
 	namespaceName := flag.String("namespace", "crossplane-system", "(in-cluster) The namespace name this webhook, the TLS secret, and configmap resides in")
 	tlsSecret := flag.String("tls-secret", "crossplane-irsa-webhook", "(in-cluster) The secret name for storing the TLS serving cert")
 
-	region := flag.String("region", "", "The AWS region to configure for the AWS API calls")
-	clusterName := flag.String("cluster-name", "", "Name of the cluster to introspect for the OIDC endpoint")
+	awsRegion := flag.String("aws-region", "eu-west-1", "The AWS region to configure for the AWS API calls")
+	clusterName := flag.String("cluster-name", "", "Name of the Amazon EKS cluster to introspect for the OIDC provider")
 
 	version := flag.Bool("version", false, "Display the version and exit")
 
@@ -76,7 +76,7 @@ func main() {
 	}
 
 	initializer := initializer.NewInitializer(
-		initializer.WithRegion(*region),
+		initializer.WithAwsRegion(*awsRegion),
 		initializer.WithClusterName(*clusterName),
 	)
 
@@ -84,7 +84,7 @@ func main() {
 
 	mod := handler.NewModifier(
 		handler.WithAccountID(initializer.AccountID),
-		handler.WithClusterOIDC(initializer.ClusterOIDC),
+		handler.WithOidcProvider(initializer.OidcProvider),
 	)
 
 	addr := fmt.Sprintf(":%d", *port)

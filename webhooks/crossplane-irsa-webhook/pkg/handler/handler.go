@@ -39,9 +39,9 @@ func WithAccountID(a string) ModifierOpt {
 	return func(m *Modifier) { m.AccountID = a }
 }
 
-// WithClusterOIDC sets the cluster OIDC
-func WithClusterOIDC(co string) ModifierOpt {
-	return func(m *Modifier) { m.ClusterOIDC = co }
+// WithOidcProvider sets the cluster OIDC
+func WithOidcProvider(co string) ModifierOpt {
+	return func(m *Modifier) { m.OidcProvider = co }
 }
 
 // NewModifier returns a Modifier with default values
@@ -57,8 +57,8 @@ func NewModifier(opts ...ModifierOpt) *Modifier {
 
 // Modifier holds configuration values for pod modifications
 type Modifier struct {
-	AccountID   string
-	ClusterOIDC string
+	AccountID    string
+	OidcProvider string
 }
 
 type patchOperation struct {
@@ -336,5 +336,5 @@ func (m Modifier) replaceOIDC(str string) (string, bool) {
 		return str, changed
 	}
 	changed = true
-	return oidcRegex.ReplaceAllString(str, m.ClusterOIDC), changed
+	return oidcRegex.ReplaceAllString(str, m.OidcProvider), changed
 }
