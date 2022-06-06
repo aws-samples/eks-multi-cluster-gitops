@@ -1,0 +1,32 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: crossplane-system
+images:
+  - name: IMAGE
+    # Replace account id here
+    newName: 012345678901.dkr.ecr.eu-west-1.amazonaws.com/multi-cluster-gitops/crossplane-irsa-webhook
+    newTag: latest
+
+resources:
+  - crossplane-irsa-webhook-namespace.yaml
+  - crossplane-irsa-webhook-auth.yaml
+  - crossplane-irsa-webhook-deployment-base.yaml
+  - crossplane-irsa-webhook-service.yaml
+  - crossplane-irsa-webhook-mutatingwebhook.yaml
+
+patchesJson6902:
+  - target: # patch bootstrap arguments
+      group: ""
+      version: v1
+      kind: Deployment
+      name: crossplane-irsa-webhook
+      namespace: crossplane-system
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/command
+        value:
+          - /webhook
+          - --in-cluster=false
+          - --aws-region=eu-west-1
+          - --cluster-name=mgmt

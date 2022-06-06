@@ -7,11 +7,10 @@ metadata:
 spec:
   prune: true
   dependsOn:
-  - name: sealed-secrets
+    - name: crossplane-irsa-webhook
   interval: 3m0s
   path: ./tools/crossplane
   sourceRef:
     kind: GitRepository
     name: flux-system
   validation: client
----

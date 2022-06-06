@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crossplane-irsa-webhook
+  namespace: crossplane-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crossplane-irsa-webhook
+  template:
+    metadata:
+      labels:
+        app: crossplane-irsa-webhook
+    spec:
+      serviceAccountName: crossplane-irsa-webhook
+      containers:
+        - name: crossplane-irsa-webhook
+          image: IMAGE
+          imagePullPolicy: Always
+          command:
+            - /webhook
+            - --in-cluster=false
+            - --aws-region=eu-west-1
+            - --cluster-name=mgmt
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          volumeMounts:
+            - name: cert
+              mountPath: "/etc/webhook/certs"
+              readOnly: true
+      volumes:
+        - name: cert
+          secret:
+            secretName: crossplane-irsa-webhook-cert
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: crossplane-irsa-webhook
+  namespace: crossplane-system
+spec:
+  secretName: crossplane-irsa-webhook-cert
+  commonName: "crossplane-irsa-webhook.default.svc"
+  dnsNames:
+    - "crossplane-irsa-webhook"
+    - "crossplane-irsa-webhook.crossplane-system"
+    - "crossplane-irsa-webhook.crossplane-system.svc"
+    - "crossplane-irsa-webhook.crossplane-system.svc.local"
+  isCA: true
+  duration: 2160h # 90d
+  renewBefore: 360h # 15d
+  issuerRef:
+    name: selfsigned
+    kind: ClusterIssuer

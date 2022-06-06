@@ -1,0 +1,29 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: crossplane-irsa-webhook
+  namespace: crossplane-system
+  annotations:
+    cert-manager.io/inject-ca-from: crossplane-system/crossplane-irsa-webhook
+webhooks:
+  - name: crossplane-irsa-webhook.amazonaws.com
+    failurePolicy: Ignore
+    clientConfig:
+      service:
+        name: crossplane-irsa-webhook
+        namespace: crossplane-system
+        path: "/mutate"
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["iam.aws.crossplane.io"]
+        apiVersions: ["v1beta1"]
+        resources: ["roles", "policies"]
+        scope: "Cluster"
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["serviceaccounts"]
+        scope: "Namespaced"
+    sideEffects: None
+    admissionReviewVersions: ["v1", "v1beta1"]
+    timeoutSeconds: 5
