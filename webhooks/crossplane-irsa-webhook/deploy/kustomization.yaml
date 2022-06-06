@@ -26,5 +26,5 @@ patchesJson6902:
         value:
           - /webhook
           - --in-cluster=false
-          - --region=eu-west-1
+          - --aws-region=eu-west-1
           - --cluster-name=mgmt

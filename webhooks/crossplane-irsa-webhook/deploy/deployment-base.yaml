@@ -21,7 +21,7 @@ spec:
           command:
             - /webhook
             - --in-cluster=false
-            - --region=eu-west-1
+            - --aws-region=eu-west-1
             - --cluster-name=mgmt
           resources:
             limits:
