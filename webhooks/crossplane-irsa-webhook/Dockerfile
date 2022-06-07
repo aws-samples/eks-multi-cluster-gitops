@@ -1,4 +1,4 @@
-FROM golang AS builder
+FROM golang:1.18.3 AS builder
 
 WORKDIR $GOPATH/src/github.com/aws-samples/multi-cluster-gitops-crossplane-irsa-webhook
 COPY . ./
