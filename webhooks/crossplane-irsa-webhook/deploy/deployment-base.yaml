@@ -20,7 +20,6 @@ spec:
           imagePullPolicy: Always
           command:
             - /webhook
-            - --in-cluster=false
             - --aws-region=eu-west-1
             - --cluster-name=mgmt
           resources:

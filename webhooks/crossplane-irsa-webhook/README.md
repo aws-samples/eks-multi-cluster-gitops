@@ -294,24 +294,18 @@ Update the image name and tag in `./deploy/kustomization.yaml`
         --alsologtostderr                  log to standard error as well as files
         --aws-region string                The AWS region to configure for the AWS API calls (default "eu-west-1")
         --cluster-name string              Name of the Amazon EKS cluster to introspect for the OIDC provider
-        --in-cluster                       Use in-cluster authentication and certificate request API (default true)
-        --kube-api string                  (out-of-cluster) The url to the API server
-        --kubeconfig string                (out-of-cluster) Absolute path to the API server kubeconfig file
         --log_backtrace_at traceLocation   when logging hits line file:N, emit a stack trace (default :0)
         --log_dir string                   If non-empty, write log files in this directory
         --log_file string                  If non-empty, use this log file
         --log_file_max_size uint           Defines the maximum size a log file can grow to. Unit is megabytes. If the value is 0, the maximum file size is unlimited. (default 1800)
         --logtostderr                      log to standard error instead of files (default true)
         --metrics-port int                 Port to listen on for metrics and healthz (http) (default 9999)
-        --namespace string                 (in-cluster) The namespace name this webhook, the TLS secret, and configmap resides in (default "crossplane-system")
         --port int                         Port to listen on (default 443)
-        --service-name string              (in-cluster) The service name fronting this webhook (default "crossplane-irsa-webhook")
         --skip_headers                     If true, avoid header prefixes in the log messages
         --skip_log_headers                 If true, avoid headers when opening log files
         --stderrthreshold severity         logs at or above this threshold go to stderr (default 2)
-        --tls-cert string                  (out-of-cluster) TLS certificate file path (default "/etc/webhook/certs/tls.crt")
-        --tls-key string                   (out-of-cluster) TLS key file path (default "/etc/webhook/certs/tls.key")
-        --tls-secret string                (in-cluster) The secret name for storing the TLS serving cert (default "crossplane-irsa-webhook")
+        --tls-cert string                  Externally generated TLS certificate file path (default "/etc/webhook/certs/tls.crt")
+        --tls-key string                   Externally generated TLS key file path (default "/etc/webhook/certs/tls.key")
     -v, --v Level                          number for the log level verbosity
         --version                          Display the version and exit
         --vmodule moduleSpec               comma-separated list of pattern=N settings for file-filtered logging

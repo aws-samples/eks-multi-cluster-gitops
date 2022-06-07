@@ -26,6 +26,5 @@ patchesJson6902:
         path: /spec/template/spec/containers/0/command
         value:
           - /webhook
-          - --in-cluster=false
           - --aws-region=eu-west-1
           - --cluster-name=mgmt
