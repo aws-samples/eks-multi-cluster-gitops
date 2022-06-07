@@ -14,6 +14,7 @@ This document will assume all resources are created in `eu-west-1`.
    volume to 30GB
 3. [Disable Cloud9 managed temporary credentials][disable-c9-creds]
 4. Install Kubernetes CLI (`kubectl`)
+
 ```bash
 sudo curl --silent --location -o /usr/local/bin/kubectl \
    https://amazon-eks.s3.us-west-2.amazonaws.com/1.19.6/2021-01-05/bin/linux/amd64/kubectl
@@ -58,6 +59,9 @@ sudo mv /tmp/eksctl /usr/local/bin
     https://pcluster-sarus-gromacs.workshop.aws/setup/cloud9/disable-cred.html
 
 ## Create a secret in AWS Secret Manager for Sealed Secrets keys
+
+**Note:** Make sure you're using the same region as defined in multi-cluster-gitops/initial-setup/config/mgmt-cluster-eksctl.yaml
+
 1. Generate 4096 bit RSA key pair using openssl.
 ```bash
 cd ~/environment
