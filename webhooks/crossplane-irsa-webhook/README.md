@@ -233,10 +233,18 @@ spec:
 
 ## Local build to generate platform binaries
 
+The `Makefile` uses variables to identify the build type and build version.
+
+| Name | Default | Description |
+|------|---------|-------------|
+| `BUILD_TYPE` | `release` | Can be either `dev` or `release`. |
+| `VERSION` | `v0.1.0` | Version of the build. |
+
 ### `make` command line
 
 ```bash
 cd ~/environment/multi-cluster-gitops/webhooks/crossplane-irsa-webhook
+export VERSION=v0.2.0
 make -f ./Makefile install
 ```
 
@@ -270,18 +278,23 @@ The output `coverage.out` report file is generated at the following location:
 
 ## Build image and push to repository
 
-The `Makefile` uses variables to locate the coordinates of the image repository.
+The `Makefile` uses variables to identify the image repository, build type and build version.
 
 | Name | Default | Description |
 |------|---------|-------------|
 | `ACCOUNT_ID` | `012345678901` | AWS Account ID of the ECR registry. Override the default value by setting an environment variable with the same name and value set to your AWS account id. |
 | `IMAGE_NAME` | `multi-cluster-gitops/crossplane-irsa-webhook` | Namespaced image name. Create the repository before executing the build. |
 | `AWS_REGION` | `eu-west-1` | AWS region where the ECR repository is created. |
+| `BUILD_TYPE` | `release` | Can be either `dev` or `release`. |
+| `VERSION` | `v0.1.0` | Version of the build. |
 
 ### `make` command line
 
 ```bash
 cd ~/environment/multi-cluster-gitops/webhooks/crossplane-irsa-webhook
+export ACCOUNT_ID=012345678901
+export AWS_REGION=us-east-1
+export VERSION=v0.2.0
 make -f ./Makefile push
 ```
 
