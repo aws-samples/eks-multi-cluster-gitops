@@ -108,7 +108,7 @@ var rawPolicyWithPlaceholders = []byte(`
 }
 `)
 
-const AWS_REGION = "eu-west-1"
+const AWS_REGION string = "eu-west-1"
 const ACCOUNT_ID string = "123456789012"
 const CLUSTER_NAME string = "staging"
 const CLUSTER_OIDC string = "oidc.eks.eu-west-1.amazonaws.com/id/6A0A07D566C756AECD797B338FAA4A4D"

@@ -258,8 +258,8 @@ func (pm PolicyMutator) Mutate(ar *v1.AdmissionReview, m *Modifier) *v1.Admissio
 type ServiceAccountMutator struct {
 }
 
-// getServiceAccountSpecPatch gets the patch operation to be applied to the given ServiceAccount
-func (sam ServiceAccountMutator) getServiceAccountSpecPatch(sa *corev1.ServiceAccount, m *Modifier) ([]patchOperation, bool) {
+// getServiceAccountAnnotationPatch gets the patch operation to be applied to the given ServiceAccount
+func (sam ServiceAccountMutator) getServiceAccountAnnotationPatch(sa *corev1.ServiceAccount, m *Modifier) ([]patchOperation, bool) {
 	patch := []patchOperation{}
 	var updatedDoc string
 	changed := false
@@ -305,7 +305,7 @@ func (sam ServiceAccountMutator) Mutate(ar *v1.AdmissionReview, m *Modifier) *v1
 		}
 	}
 
-	patch, changed := sam.getServiceAccountSpecPatch(&sa, m)
+	patch, changed := sam.getServiceAccountAnnotationPatch(&sa, m)
 
 	if changed {
 		klog.V(3).Infof("ServiceAccount was mutated. %s",
