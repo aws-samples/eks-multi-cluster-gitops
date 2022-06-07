@@ -321,5 +321,5 @@ Update the image name and tag in `./deploy/kustomization.yaml`
 
 | Name | Optional | Default |
 |------|----------|---------|
-| `--aws-region` | No | -NA- |
-| `--cluster-name` | Yes | `eu-west-1` |
+| `--aws-region` | Yes | `eu-west-1` |
+| `--cluster-name` | No | -NA- |
