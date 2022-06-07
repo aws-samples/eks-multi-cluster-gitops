@@ -1,13 +1,25 @@
+GOVERSION=$(shell go version | cut -d ' ' -f 3)
+# BUILD_TYPE should be one of (dev, release).
+BUILD_TYPE?=release
+GIT_SHA=$(shell git rev-parse --short HEAD)
+
+BUILD_INFO_IMPORT_PATH=github.com/aws-samples/multi-cluster-gitops/crossplane-irsa-webhook/pkg/version
+BUILD_X1=-X $(BUILD_INFO_IMPORT_PATH).GitCommit=$(GIT_SHA)
+VERSION?=v0.1.0
+BUILD_X2=-X $(BUILD_INFO_IMPORT_PATH).Version=$(VERSION)
+BUILD_X3=-X $(BUILD_INFO_IMPORT_PATH).BuildType=$(BUILD_TYPE)
+BUILD_X4=-X $(BUILD_INFO_IMPORT_PATH).GoVersion=$(GOVERSION)
+BUILD_INFO=-ldflags "${BUILD_X1} ${BUILD_X2} ${BUILD_X3} ${BUILD_X4} -s -w -buildid=\"\""
+
 export CGO_ENABLED=0
 export T=github.com/aws-samples/multi-cluster-gitops/crossplane-irsa-webhook
 UNAME_S = $(shell uname -s)
-GO_LDFLAGS = -ldflags='-s -w -buildid=""'
 
 install:: build
 ifeq ($(UNAME_S), Darwin)
-	GOOS=darwin GOARCH=amd64 go build -o build/gopath/bin/darwin_amd64/crossplane-irsa-webhook $(GO_LDFLAGS) $V $T
+	GOOS=darwin GOARCH=amd64 go build -o build/gopath/bin/darwin_amd64/crossplane-irsa-webhook $(BUILD_INFO) $V $T
 endif
-	GOOS=linux GOARCH=amd64 go build -o build/gopath/bin/linux_amd64/crossplane-irsa-webhook $(GO_LDFLAGS) $V $T
+	GOOS=linux GOARCH=amd64 go build -o build/gopath/bin/linux_amd64/crossplane-irsa-webhook $(BUILD_INFO) $V $T
 
 # Generic make
 # Dummy account ID. Replace with actual account ID.
@@ -16,7 +28,8 @@ ACCOUNT_ID?=012345678901
 IMAGE_NAME?=multi-cluster-gitops/crossplane-irsa-webhook
 # Update the region
 AWS_REGION?=eu-west-1
-IMAGE?=$(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(IMAGE_NAME)
+IMAGE_LATEST=$(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(IMAGE_NAME):latest
+IMAGE=$(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(IMAGE_NAME):${VERSION}
 
 test:
 	go test -coverprofile=coverage.out ./...
@@ -24,13 +37,21 @@ test:
 
 docker:
 	@echo 'Building image $(IMAGE)...'
-	docker build --no-cache -t $(IMAGE) .
+	docker build \
+		--no-cache \
+		--build-arg BUILD_TYPE=$(BUILD_TYPE) \
+		--build-arg GIT_SHA=$(GIT_SHA) \
+		--build-arg VERSION=$(VERSION) \
+		-t $(IMAGE) \
+		.
+	docker tag $(IMAGE) $(IMAGE_LATEST)
 
 push: docker
 	if ! aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com; then \
 		eval $$(aws ecr get-login --registry-ids $(ACCOUNT_ID) --no-include-email); \
 	fi
 	docker push $(IMAGE)
+	docker push $(IMAGE_LATEST)
 
 crossplane-irsa-webhook:
 	go build

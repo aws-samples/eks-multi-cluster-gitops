@@ -21,9 +21,8 @@ import (
 	"github.com/aws-samples/multi-cluster-gitops/crossplane-irsa-webhook/pkg/cert"
 	"github.com/aws-samples/multi-cluster-gitops/crossplane-irsa-webhook/pkg/handler"
 	"github.com/aws-samples/multi-cluster-gitops/crossplane-irsa-webhook/pkg/initializer"
+	ver "github.com/aws-samples/multi-cluster-gitops/crossplane-irsa-webhook/pkg/version"
 )
-
-var webhookVersion = "v0.1.0"
 
 func main() {
 	port := flag.Int("port", 443, "Port to listen on")
@@ -58,9 +57,11 @@ func main() {
 	_ = goflag.CommandLine.Parse([]string{})
 
 	if *version {
-		fmt.Println(webhookVersion)
+		fmt.Println(ver.Info())
 		os.Exit(0)
 	}
+
+	klog.Info(ver.Info())
 
 	config, err := clientcmd.BuildConfigFromFlags(*apiURL, *kubeconfig)
 	if err != nil {
