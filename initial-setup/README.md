@@ -3,7 +3,7 @@
 
 Each cluster you create requires 1 VPC (with an Internet Gateway attached), 2
 Public Subnets, 2 Private Subnets, 2 NAT Gateways, and 2 Elastic IP Addresses
-(attached to the NAT Gateways). Please make sure that the quotes of the AWS
+(attached to the NAT Gateways). Please make sure that the quotas of the AWS
 account you use for deploying this sample implementation can accommodate that.
 
 This document will assume all resources are created in `eu-west-1`.
