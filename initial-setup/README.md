@@ -130,6 +130,11 @@ OR
 
 [Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit.md#create-and-prepare-the-git-repositories)
 
+You can watch this to see once it's ready by using:
+```bash
+watch -n 30 -d flux get all
+```
+
 ## Connect to cluster
 1. Connect to `<cluster-name>`  cluster using `kubeconfig` stored as a `Secret`
 ```bash
