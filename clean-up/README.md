@@ -5,4 +5,4 @@
 ```
 eksctl delete cluster --name mgmt --region eu-west-1
 ```
-4. Remove the repos you created in your GitHub account.
+4. Remove the GitHub repos or AWS CodeCommit repos you created.
