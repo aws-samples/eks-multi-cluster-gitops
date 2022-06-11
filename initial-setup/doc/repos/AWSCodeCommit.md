@@ -76,7 +76,7 @@ EOF
 ### Create Git repos
 1. Clone `multi-cluster-gitops` repo from the AWS Samples GitHub organization:
 ```bash
-git clone https://github.com/aws-samples/multi-cluster-gitops.git
+git clone git@github.com:aws-samples/multi-cluster-gitops.git
 ```
 
 2. Create the following empty CodeCommit repos in your AWS account: `gitops-system`,

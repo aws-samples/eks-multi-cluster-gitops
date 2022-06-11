@@ -33,7 +33,7 @@ EOF
 ### Create Git repos
 1. Clone `multi-cluster-gitops` repo from the AWS Samples GitHub organization:
 ```bash
-git clone https://github.com/aws-samples/multi-cluster-gitops.git
+git clone git@github.com:aws-samples/multi-cluster-gitops.git
 ```
 
 2. Log in with the Github CLI, choosing the Cloud9 publish SSH key as the
