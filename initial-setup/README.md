@@ -3,7 +3,7 @@
 
 Each cluster you create requires 1 VPC (with an Internet Gateway attached), 2
 Public Subnets, 2 Private Subnets, 2 NAT Gateways, and 2 Elastic IP Addresses
-(attached to the NAT Gateways). Please make sure that the quotes of the AWS
+(attached to the NAT Gateways). Please make sure that the quotas of the AWS
 account you use for deploying this sample implementation can accommodate that.
 
 This document will assume all resources are created in `eu-west-1`.
@@ -133,11 +133,6 @@ eksctl create cluster -f ~/environment/multi-cluster-gitops/initial-setup/config
 OR
 
 [Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit.md#create-and-prepare-the-git-repositories)
-
-You can watch this to see once it's ready by using:
-```bash
-watch -n 30 -d flux get all
-```
 
 ## Connect to cluster
 1. Connect to `<cluster-name>`  cluster using `kubeconfig` stored as a `Secret`

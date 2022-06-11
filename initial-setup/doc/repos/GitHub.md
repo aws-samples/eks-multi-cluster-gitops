@@ -196,3 +196,7 @@ flux bootstrap github \
 ```bash
 flux get all
 ```
+You can watch this to see once it's ready by using:
+```bash
+watch -n 30 -d flux get all
+```
