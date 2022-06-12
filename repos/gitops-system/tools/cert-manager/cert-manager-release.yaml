@@ -17,9 +17,13 @@ spec:
         name: cert-manager-repository
         namespace: cert-manager
       interval: 1m
+  values:
+    installCRDs: true
   install:
+    crds: CreateReplace
     remediation:
       retries: 3
   upgrade:
+    crds: CreateReplace
     remediation:
       retries: 3
