@@ -4,4 +4,3 @@ kind: Kustomization
 resources:
   - external-secrets-repository.yaml
   - external-secrets-release.yaml
-  - external-secrets-namespace.yaml
