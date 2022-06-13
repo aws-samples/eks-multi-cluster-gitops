@@ -151,29 +151,41 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
    aws iam attach-user-policy --user-name crossplane --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
    ```
    **Note:** You can fine-tune the permissions granted to the created IAM user, and only select those that you want to grant to Crossplane.
+   
+### Create a `SealedSecret` for Crossplane AWS Credentials
 
-### Update the AWS Credentials `SealedSecret`
-1. Create `aws-credentials.conf`.
-```
-cd ~/environment
-echo -e "[default]\naws_access_key_id = <access-key-id>\naws_secret_access_key = <secret-access-key>" > aws-credentials.conf
-```
-(Replace `<access-key-id>` and `<secret-access-key>` with the Access Key ID and
-the Secret Access Key you created above).
+1. Extract the access key credentials for the *crossplane* user you created in the previous section:
+   ```
+   ACCESS_KEY_ID=$(echo $ACCESS_KEY | yq e ".AccessKey.AccessKeyId")
+   SECRET_ACCESS_KEY=$(echo $ACCESS_KEY | yq e ".AccessKey.SecretAccessKey")
+   ```
 
-2. Create `secret` resource that contains the AWS credentials, and create a
+2. Use these credentials to create a file `aws-credentials.conf` as follows:
+   ```
+   cd ~/environment
+   echo -e "[default]\naws_access_key_id = $ACCESS_KEY_ID\naws_secret_access_key = $SECRET_ACCESS_KEY" > aws-credentials.conf
+   ```
+
+3. Create a Kubernetes `Secret` resource that contains the AWS credentials, and create a
    corresponding `SealedSecret` resource.
-```
-kubectl create secret generic aws-credentials -n crossplane-system --dry-run=client --from-file=credentials=./aws-credentials.conf -o yaml >mysecret.yaml
-
-kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <mysecret.yaml > mysealedsecret.yaml
-```
-3. Replace the content of
+   ```
+   kubectl create secret generic aws-credentials \
+     -n crossplane-system \
+     --dry-run=client --from-file=credentials=./aws-credentials.conf \
+     -o yaml \
+     >creds-secret.yaml
+   kubeseal --cert sealed-secrets-keypair-public.pem --format yaml \
+     <creds-secret.yaml >creds-sealedsecret.yaml
+   ```
+4. Replace the content of
    `gitops-system/tools/crossplane/crossplane-aws-provider-config/aws-credentials-sealed.yaml`
-   with the content of `mysealedsecret.yaml`.
+   with the content of `creds-sealedsecret.yaml`.
+   ```
+   cp creds-sealedsecret.yaml gitops-system/tools/crossplane/crossplane-aws-provider-config/aws-credentials-sealed.yaml
+   ```
 
-NOTE: Make sure you do not commit `aws-credentials.conf``` and/or
-`mysecret.yaml` to Git. Otherwise, your AWS credentials will be stored
+**Note:** Make sure you do not commit `aws-credentials.conf` and/or
+`creds-secret.yaml` to Git. Otherwise, your AWS credentials will be stored
 unencrypted in Git!
 
 ## Install the management cluster
