@@ -2,76 +2,123 @@
 ### Create Git SSH keys
 1. Create the SSH key that will be used for interacting with the repos in your
    GitHub account from the Cloud9 environment.
-```bash
-cd ~/.ssh
-ssh-keygen -t ed25519 -C "<youremail@yourcompany.com>" -f gitops-cloud9
-```
-(Replace `<youremail@yourcompany.com>` with your email address).
+   ```bash
+   cd ~/.ssh
+   ssh-keygen -t ed25519 -C "<youremail@yourcompany.com>" -f gitops-cloud9
+   ```
+   (Replace `<youremail@yourcompany.com>` with your email address).
 
-2. Create the SSH key that will be used by Flux for interacting with the repos
-   in your GitHub account. While the same SSH key is used for all the
-   repositories in these instructions, but the structure supports using
-   different SSH keys for different repos.
-```bash
-cd ~/.ssh
-ssh-keygen -t ed25519 -C "gitops@<yourcompany.com>" -f gitops
-```
-(Replace the `<yourcompany.com>` with your company domain).
+2. Create the SSH key that will be used by Flux for interacting
+   with the repos in your GitHub account. Ensure that you do not use a
+   passphrase to protect the key, as this will prevent Flux from being able to use
+   the key.
+
+   **Note:** In order to keep this walkthrough as short as possible, the same SSH
+   key is used for all GitHub repositories. However, the architecture does support
+   use of different SSH keys for different repos.
+   ```bash
+   cd ~/.ssh
+   ssh-keygen -t ed25519 -C "gitops@<yourcompany.com>" -f gitops
+   ```
+   (Replace the `<yourcompany.com>` with your company domain or a fictitious domain).
 
 3. Add the public part of the keys generated above to your GitHub account to
    grant access.
 
 4. Create/edit `config` in `~/.ssh` to use the SSH key in `gitops-cloud9` for
-   the Git commands executed on the Cloud9 environment.
-```bash
-cat << EOF > ~/.ssh/config
-Host github.com
-  AddKeysToAgent yes
-  IdentityFile ~/.ssh/gitops-cloud9
-EOF
-```
+   the Git commands executed in the Cloud9 environment.
+   ```bash
+   cat << EOF > ~/.ssh/config
+   Host github.com
+   AddKeysToAgent yes
+   IdentityFile ~/.ssh/gitops-cloud9
+   EOF
+   ```
+   
 ### Create Git repos
-1. Clone `multi-cluster-gitops` repo from the AWS Samples GitHub organization:
-```bash
-git clone git@github.com:aws-samples/multi-cluster-gitops.git
-```
 
-2. Log in with the Github CLI, choosing the Cloud9 publish SSH key as the
-   authentication protocol
-```bash
-gh auth login
-```
+1. Clone `multi-cluster-gitops` repo from the AWS Samples GitHub organization:
+   ```bash
+   cd ~/environment
+   git clone https://github.com/aws-samples/multi-cluster-gitops.git
+   ```
+
+2. Log in with the Github CLI using:
+   ```bash
+   gh auth login
+   ```
+   1. In response to the prompt for an account, choose **GitHub.com**.
+   2. For preferred protocol, choose **SSH**.
+   3. For the SSH public key, choose **/home/ubuntu/.ssh/gitops-cloud9.pub**.
+   ```
 
 3. Create the following empty repos in your GitHub account: `gitops-system`,
    `gitops-workloads`, and `payment-app-manifests`, and clone them
    into the Cloud9 environment.
-```bash
-cd ~/environment
-git config --global init.defaultBranch main
-repos=( gitops-system gitops-workloads payment-app-manifests )
-for repo in "${repos[@]}"; do
-  gh repo create --private --clone $repo
-done
-```
+   ```bash
+   cd ~/environment
+   git config --global init.defaultBranch main
+   repos=( gitops-system gitops-workloads payment-app-manifests )
+   for repo in "${repos[@]}"; do
+     gh repo create --private --clone $repo
+   done
+   ```
+   
+4. Copy the content of the `multi-cluster-gitops/repos` directories
+   to the corresponding repos you created in the previous step:
+   ```
+   cp -r multi-cluster-gitops/repos/gitops-system/* gitops-system/
+   cp -r multi-cluster-gitops/repos/gitops-workloads/* gitops-workloads/
+   cp -r multi-cluster-gitops/repos/app-manifests/payment-app/* payment-app-manifests/
+   ```
+   
+### Update references to Git repositories
 
-4. Copy the content of the `multi-cluster-gitops/repos` directories to their
-   respective repos you created in your GitHub account as indicated in the [Git
-   Repositories](https://gitlab.aws.dev/mahgisla/multi-cluster-gitops/-/tree/main#git-repositories)
-   section.
+1. Set the variable name `GITHUB_ACCOUNT` to your GitHub account name.
+   ```
+   GITHUB_ACCOUNT=<your-github-account-name>
+   ```
+2. Update the `git-repo.yaml` files in the `workloads` folder of the `gitops-system` repo,
+   replacing the `url` for the `GitRepository` resource with
+   the URL for the `gitpops-workloads` repo created in your account:
+   ```
+   yq e \
+     ".spec.url = \"ssh://git@github.com/$GITHUB_ACCOUNT/gitops-workloads\"" \
+     -i ./gitops-system/workloads/commercial-staging/git-repo.yaml
+   yq e \
+     ".spec.url = \"ssh://git@github.com/$GITHUB_ACCOUNT/gitops-workloads\"" \
+     -i ./gitops-system/workloads/commercial-prod/git-repo.yaml
+   ```
+3. Update the `gotk-sync.yaml` files in the `clusters` folder of the `gitops-system` repo,
+   replacing the `url` for the `GitRepository` resource with
+   the URL for the `gitpops-system` repo created in your account:
+   ```
+   yq e \
+     ".spec.url = \"ssh://git@github.com/$GITHUB_ACCOUNT/gitops-system\"" \
+     -i ./gitops-system/clusters/mgmt/flux-system/gotk-sync.yaml
+   yq e \
+     ".spec.url = \"ssh://git@github.com/$GITHUB_ACCOUNT/gitops-system\"" \
+     -i ./gitops-system/clusters/commercial-prod/flux-system/gotk-sync.yaml
+   yq e \
+     ".spec.url = \"ssh://git@github.com/$GITHUB_ACCOUNT/gitops-system\"" \
+     -i ./gitops-system/clusters/commercial-staging/flux-system/gotk-sync.yaml
+   ```
 
-### Update the references to any repositories
-1. Update the `git-repo.yaml` files, replacing the `url` of the repository with
-   the one created in your account:
-   1. In the `gitops-system` repo:
-     - `./workloads/commercial-staging/git-repo.yaml`
-     - `./workloads/commercial-prod/git-repo.yaml`
-     - `./clusters/mgmt/flux-system/gotk-sync.yaml`
-     - `./clusters/commercial-prod/flux-system/gotk-sync.yaml`
-     - `./clusters/commercial-staging/flux-system/gotk-sync.yaml`
-   2. In the `gitops-workloads` repo:
-     - `./template/app-template/git-repo.yaml`
-     - `./commercial-staging/app-template/git-repo.yaml`
-     - `./commercial-staging/payment-app/git-repo.yaml`
+4. Update the `git-repo.yaml` files in the `gitops-workloads` repo,
+   replacing the `url` for the `GitRepository` resource with
+   the URL for the `payment-app-manifests` repo created in your account:
+   ```
+   yq e \
+     ".spec.url = \"ssh://git@github.com/$GITHUB_ACCOUNT/payment-app-manifests\"" \
+     -i ./gitops-workloads/template/app-template/git-repo.yaml
+   yq e \
+     ".spec.url = \"ssh://git@github.com/$GITHUB_ACCOUNT/payment-app-manifests\"" \
+     -i ./gitops-workloads/commercial-staging/app-template/git-repo.yaml
+   yq e \
+     ".spec.url = \"ssh://git@github.com/$GITHUB_ACCOUNT/payment-app-manifests\"" \
+     -i ./gitops-workloads/commercial-staging/payment-app/git-repo.yaml
+   ```
+
 
 
 ### Update the `SealedSecret` resource that contains the Git Credentials for `gitops-system`
