@@ -50,7 +50,6 @@
    1. In response to the prompt for an account, choose **GitHub.com**.
    2. For preferred protocol, choose **SSH**.
    3. For the SSH public key, choose **/home/ubuntu/.ssh/gitops-cloud9.pub**.
-   ```
 
 3. Create the following empty repos in your GitHub account: `gitops-system`,
    `gitops-workloads`, and `payment-app-manifests`, and clone them
@@ -199,8 +198,7 @@
 
 ### Update the `SealedSecret` resource that contains the Git Credentials for `payment-app-manifests`
 
-1. Copy `git-creds-system.yaml` to `git-creds-app.yaml`, and change the value for `metadata.name` from
-   `flux-system` to `payment-app`.
+1. Copy `git-creds-system.yaml` to `git-creds-app.yaml`, and change the value for `metadata.name` to `payment-app`.
    ```
    cp git-creds-system.yaml git-creds-app.yaml
    yq e '.metadata.name="payment-app"' -i git-creds-app.yaml
