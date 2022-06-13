@@ -6,8 +6,6 @@ metadata:
   namespace: flux-system
 spec:
   prune: true
-  dependsOn:
-    - name: sealed-secrets
   interval: 3m0s
   path: ./tools/cert-manager
   sourceRef:
