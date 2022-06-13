@@ -28,6 +28,8 @@ The webhook needs an IAM identity (user or role) with the following IAM permissi
 }
 ```
 
+**Note:** If node IMDS is allowed then `eks:DescribeCluster` permission is taken care by `AmazonEKSWorkerNodePolicy` attached to the nodes.
+
 ### Network access to AWS EKS API
 By default the initializer routine introspects the EKS cluster by invoking `eks:DescribeCluster` with the `cluster-name` provided as a bootstrap argument. The network configuration for the cluster should allow HTTPS calls to EKS API from within the cluster.
 
