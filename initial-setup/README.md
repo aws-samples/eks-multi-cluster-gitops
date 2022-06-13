@@ -134,14 +134,23 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
 
 ## Create AWS credentials for Crossplane
 
-1. Create the IAM user that will be used by Crossplane for provisioning AWS
-   resources (DynamoDB table, SQS queue, etc.), allow programmatic access, and
-   attach `AdministratorAccess` permissions. Keep a record of the generated
-   access key ID and secret access key as you will use them in a subsequent
-   step.
+1. Create the IAM user that will be used by Crossplane for provisioning AWS resources (DynamoDB table, SQS queue, etc.)
+   ```
+   aws iam create-user --user-name crossplane
+   ```
 
-2. You can fine-tune the permissions granted to the created IAM user, and only
-   select those that you want to grant to Crossplane.
+2. Create a programmatic access key for this user:
+   ```
+   ACCESS_KEY=$(aws iam create-access-key --user-name crossplane)
+   echo $ACCESS_KEY
+   ```
+   Keep a record of the generated access key ID and secret access key as you will use them in a subsequent step.
+
+3. Attach `AdministratorAccess` permissions policy to this user:
+   ```
+   aws iam attach-user-policy --user-name crossplane --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+   ```
+   **Note:** You can fine-tune the permissions granted to the created IAM user, and only select those that you want to grant to Crossplane.
 
 ### Update the AWS Credentials `SealedSecret`
 1. Create `aws-credentials.conf`.
