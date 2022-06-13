@@ -107,25 +107,30 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
 
 **Note:** Make sure you're using the same region as defined in multi-cluster-gitops/initial-setup/config/mgmt-cluster-eksctl.yaml
 
-1. Generate 4096 bit RSA key pair using openssl.
-```bash
-cd ~/environment
-openssl genrsa -out sealed-secrets-keypair.pem 4096
-openssl req -new -x509 -key sealed-secrets-keypair.pem -out sealed-secrets-keypair-public.pem -days 3650
-```
-2. Create a secret with the name `sealed-secrets` in the AWS Secrets Manager
-   that contains the generated private key, and the certificate. Use a JSON file
-   with the following structure for that:
-```json
-{
-  "crt": "-----BEGIN CERTIFICATE-----
-  ....
-  -----END CERTIFICATE-----",
-  "key": "-----BEGIN RSA PRIVATE KEY-----
-  ....
-  -----END RSA PRIVATE KEY-----"
-}
-```
+1. Generate a 4096-bit RSA key pair using *openssl*:
+   ```bash
+   cd ~/environment
+   openssl genrsa -out sealed-secrets-keypair.pem 4096
+   openssl req -new -x509 -key sealed-secrets-keypair.pem -out sealed-secrets-keypair-public.pem -days 3650
+   ```
+   Enter appropriate values (or accept defaults) for the various fields. 
+2. Create a JSON document that contains the certificate and the private key as follows:
+   ```
+   CRT=$(cat sealed-secrets-keypair-public.pem)
+   KEY=$(cat sealed-secrets-keypair.pem)
+   cat <<EoF >secret.json
+   {
+     "crt": "$CRT",
+     "key": "$KEY"
+   }
+   EoF
+   ```
+3. Store this JSON document as a `sealed-secrets` secret in the AWS Secrets Manager:
+   ```
+   aws secretsmanager create-secret \
+     --name sealed-secrets \
+     --secret-string file://secret.json
+   ```
 
 ## Create AWS credentials for Crossplane
 
