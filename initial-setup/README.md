@@ -60,7 +60,7 @@ This document will assume all resources are created in `eu-west-1`.
        ```
 
 
-## Install tools
+## Install tools and workshop files
 
 Having set up your Cloud9 environment, you can now install a number of tools that will be used to build the multi-cluster GitOps environment.
 
@@ -102,6 +102,12 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
    curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
    sudo mv /tmp/eksctl /usr/local/bin
    ```
+     
+7. Clone the workshop git repo:
+   ```
+   cd ~/environment
+   git clone https://github.com/aws-samples/multi-cluster-gitops.git
+   ```
    
 ## Create a secret in AWS Secret Manager for Sealed Secrets keys
 
@@ -132,7 +138,26 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
      --secret-string file://secret.json
    ```
 
+## Create the management cluster
+
+Create the management cluster using `eksctl`
+```bash
+eksctl create cluster -f ~/environment/multi-cluster-gitops/initial-setup/config/mgmt-cluster-eksctl.yaml
+```
+This will take some time. You can proceed to the next section in parallel, using a separate terminal window.
+
+## Setup instructions to initialize git repositories
+
+[Using GitHub as `GitRepository` backend.](doc/repos/GitHub.md#create-and-prepare-the-git-repositories)
+
+OR
+
+[Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit.md#create-and-prepare-the-git-repositories)
+
+
 ## Create AWS credentials for Crossplane
+
+### Create am IAM iser for Crossplane
 
 1. Create the IAM user that will be used by Crossplane for provisioning AWS resources (DynamoDB table, SQS queue, etc.)
    ```
@@ -152,15 +177,7 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
    ```
    **Note:** You can fine-tune the permissions granted to the created IAM user, and only select those that you want to grant to Crossplane.
 
-## Setup instructions to initialize git repositories
-
-[Using GitHub as `GitRepository` backend.](doc/repos/GitHub.md#create-and-prepare-the-git-repositories)
-
-OR
-
-[Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit.md#create-and-prepare-the-git-repositories)
-
-## Create a `SealedSecret` for Crossplane AWS Credentials
+### Create a `SealedSecret` for Crossplane AWS Credentials
 
 1. Extract the access key credentials for the *crossplane* user you created in the previous section:
    ```
@@ -196,14 +213,9 @@ OR
 `creds-secret.yaml` to Git. Otherwise, your AWS credentials will be stored
 unencrypted in Git!
 
-## Install the management cluster
-1. Log into the AWS CLI with AWS credentials that have the privilege to create
-   and connect to an EKS cluster
+## Separate Git push and Flux bootstrap to come here
 
-2. Create the management cluster using `eksctl`
-```bash
-eksctl create cluster -f ~/environment/multi-cluster-gitops/initial-setup/config/mgmt-cluster-eksctl.yaml
-```
+
 
 
 ## Connect to cluster
