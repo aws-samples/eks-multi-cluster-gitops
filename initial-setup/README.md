@@ -9,89 +9,148 @@ account you use for deploying this sample implementation can accommodate that.
 This document will assume all resources are created in `eu-west-1`.
 
 ## Create and prepare the Cloud9 workspace
-1. Create an *Ubuntu 18.04* Cloud9 workspace with the name "gitops"
-2. Follow [these instructions][resize-c9] to increase the volume of the EBS
-   volume to 30GB
-3. [Disable Cloud9 managed temporary credentials][disable-c9-creds]
-4. Install Kubernetes CLI (`kubectl`)
 
-```bash
-sudo curl --silent --location -o /usr/local/bin/kubectl \
-   https://amazon-eks.s3.us-west-2.amazonaws.com/1.19.6/2021-01-05/bin/linux/amd64/kubectl
 
-sudo chmod +x /usr/local/bin/kubectl
-```
+1. Navigate to the [Cloud9 console](https://console.aws.amazon.com/cloud9/).
 
-5. Install Flux CLI
-```bash
-curl -s https://fluxcd.io/install.sh | sudo bash
-```
+2. Create a new Cloud9 environment with the name "gitops", using an EC2 *t2.micro* instance and *Ubuntu 18.04* platform. Leave all other settings as default, and select **Create Environment**.
 
-6. Install `kubeseal`
-```bash
-wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.16.0/kubeseal-linux-amd64 -O kubeseal
-sudo install -m 755 kubeseal /usr/local/bin/kubeseal
-```
+3. While the Cloud9 environment is being created, create an EC2 IAM role for your workspace instance as follows:
+    1. Open another tab to access the [IAM console](https://console.aws.amazon.com/iam/).
+    2. From the menu bar on the left, choose **Roles**.
+    3. Choose **Create Role**.
+    4. For **Trusted entity type** choose **AWS Service**, and then choose the use case **EC2**. Choose **Next**
+    5. On the **Add Permissions** screen, add the *AdministratorAccess* policy, and then choose **Next**. 
+    6. Give the role a name, for example "gitops-workshop", and choose **Create role**. ![](img/iam-create-role.png).
 
-7. Install the Github CLI
-```bash
-curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-sudo apt update
-sudo apt install gh
-```
+4. Attach this IAM role to your Cloud9 EC2 instance as follows:
 
-8. Install `yq`
-```bash
-sudo curl --silent --location -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.24.5/yq_linux_amd64
-sudo chmod +x /usr/local/bin/yq
-```
+    1. Switch to the tab running your Cloud9 IDE.
 
-9. Install `eksctl`
-```bash
-curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
-sudo mv /tmp/eksctl /usr/local/bin
-```
+    2. If it has still not finished being created, then wait until creation is complete.
+    3. Click the grey circle button (in top right corner) and choose  **Manage EC2 Instance**.  ![](img/cloud9-role.png)
+    4. This opens the EC2 console in a separate tab, with a filter applied to show the EC2 instance for your Cloud9 IDE. Select the instance, then choose **Actions / Security / Modify IAM Role**. ![](img/c9instancerole.png)
+    5. On the **Modify IAM role** screen, choose *gitops-workshop* from the IAM role dropdown. ![](img/c9-modify-role.png)
+    6. Choose **Update IAM role**.
+    7. Close the tab and return to your Cloud9 IDE tab.
 
-[resize-c9]:
-    https://docs.aws.amazon.com/cloud9/latest/user-guide/move-environment.html
-[disable-c9-creds]:
-    https://pcluster-sarus-gromacs.workshop.aws/setup/cloud9/disable-cred.html
+5. In a Cloud9 Terminal window, upgrade to the latest AWS CLI using:
+   ```
+   curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+   unzip awscliv2.zip
+   sudo ./aws/install
+   ```
 
+6. Disable Cloud9 managed credentials using:
+   ```
+   aws cloud9 update-environment  --environment-id $C9_PID --managed-credentials-action DISABLE
+   rm -vf ${HOME}/.aws/credentials
+   ```
+
+7. Verify that Cloud9 is using the *gitops-workshop* IAM role you created.
+   ```
+   aws sts get-caller-identity --query Arn | grep gitops-workshop -q && echo "IAM role valid" || echo "IAM role NOT valid"
+   ```
+
+8. Increase the volume of the EBS volume to 30GB as follows.
+    1. Copy the [volume resize script from the Cloud9 documentation](https://docs.aws.amazon.com/cloud9/latest/user-guide/move-environment.html#move-environment-resize) into a file `resize.sh` in your Cloud9 environment.
+    2. Run 
+       ```
+       bash resize.sh 30
+       ```
+
+
+## Install tools
+
+Having set up your Cloud9 environment, you can now install a number of tools that will be used to build the multi-cluster GitOps environment.
+
+1. Install Kubernetes CLI (`kubectl`)
+   ```bash
+   sudo curl --silent --location -o /usr/local/bin/kubectl \
+      https://amazon-eks.s3.us-west-2.amazonaws.com/1.19.6/2021-01-05/bin/linux/amd64/kubectl
+
+   sudo chmod +x /usr/local/bin/kubectl
+   ```
+
+2. Install Flux CLI
+   ```bash
+   curl -s https://fluxcd.io/install.sh | sudo bash
+   ```
+
+3. Install `kubeseal`
+   ```bash
+   wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.16.0/kubeseal-linux-amd64 -O kubeseal
+   sudo install -m 755 kubeseal /usr/local/bin/kubeseal
+   ```
+
+4. Install the Github CLI
+   ```bash
+   curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+   echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+   sudo apt update
+   sudo apt install gh
+   ```
+
+5. Install `yq`
+   ```bash
+   sudo curl --silent --location -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.24.5/yq_linux_amd64
+   sudo chmod +x /usr/local/bin/yq
+   ```
+
+6. Install `eksctl`
+   ```bash
+   curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+   sudo mv /tmp/eksctl /usr/local/bin
+   ```
+   
 ## Create a secret in AWS Secret Manager for Sealed Secrets keys
 
 **Note:** Make sure you're using the same region as defined in multi-cluster-gitops/initial-setup/config/mgmt-cluster-eksctl.yaml
 
-1. Generate 4096 bit RSA key pair using openssl.
-```bash
-cd ~/environment
-openssl genrsa -out sealed-secrets-keypair.pem 4096
-openssl req -new -x509 -key sealed-secrets-keypair.pem -out sealed-secrets-keypair-public.pem -days 3650
-```
-2. Create a secret with the name `sealed-secrets` in the AWS Secrets Manager
-   that contains the generated private key, and the certificate. Use a JSON file
-   with the following structure for that:
-```json
-{
-  "crt": "-----BEGIN CERTIFICATE-----
-  ....
-  -----END CERTIFICATE-----",
-  "key": "-----BEGIN RSA PRIVATE KEY-----
-  ....
-  -----END RSA PRIVATE KEY-----"
-}
-```
+1. Generate a 4096-bit RSA key pair using *openssl*:
+   ```bash
+   cd ~/environment
+   openssl genrsa -out sealed-secrets-keypair.pem 4096
+   openssl req -new -x509 -key sealed-secrets-keypair.pem -out sealed-secrets-keypair-public.pem -days 3650
+   ```
+   Enter appropriate values (or accept defaults) for the various fields. 
+2. Create a JSON document that contains the certificate and the private key as follows:
+   ```
+   CRT=$(cat sealed-secrets-keypair-public.pem)
+   KEY=$(cat sealed-secrets-keypair.pem)
+   cat <<EoF >secret.json
+   {
+     "crt": "$CRT",
+     "key": "$KEY"
+   }
+   EoF
+   ```
+3. Store this JSON document as a `sealed-secrets` secret in the AWS Secrets Manager:
+   ```
+   aws secretsmanager create-secret \
+     --name sealed-secrets \
+     --secret-string file://secret.json
+   ```
 
 ## Create AWS credentials for Crossplane
 
-1. Create the IAM user that will be used by Crossplane for provisioning AWS
-   resources (DynamoDB table, SQS queue, etc.), allow programmatic access, and
-   attach `AdministratorAccess` permissions. Keep a record of the generated
-   access key ID and secret access key as you will use them in a subsequent
-   step.
+1. Create the IAM user that will be used by Crossplane for provisioning AWS resources (DynamoDB table, SQS queue, etc.)
+   ```
+   aws iam create-user --user-name crossplane
+   ```
 
-2. You can fine-tune the permissions granted to the created IAM user, and only
-   select those that you want to grant to Crossplane.
+2. Create a programmatic access key for this user:
+   ```
+   ACCESS_KEY=$(aws iam create-access-key --user-name crossplane)
+   echo $ACCESS_KEY
+   ```
+   Keep a record of the generated access key ID and secret access key as you will use them in a subsequent step.
+
+3. Attach `AdministratorAccess` permissions policy to this user:
+   ```
+   aws iam attach-user-policy --user-name crossplane --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+   ```
+   **Note:** You can fine-tune the permissions granted to the created IAM user, and only select those that you want to grant to Crossplane.
 
 ### Update the AWS Credentials `SealedSecret`
 1. Create `aws-credentials.conf`.
