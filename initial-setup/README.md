@@ -151,8 +151,16 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
    aws iam attach-user-policy --user-name crossplane --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
    ```
    **Note:** You can fine-tune the permissions granted to the created IAM user, and only select those that you want to grant to Crossplane.
-   
-### Create a `SealedSecret` for Crossplane AWS Credentials
+
+## Setup instructions to initialize git repositories
+
+[Using GitHub as `GitRepository` backend.](doc/repos/GitHub.md#create-and-prepare-the-git-repositories)
+
+OR
+
+[Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit.md#create-and-prepare-the-git-repositories)
+
+## Create a `SealedSecret` for Crossplane AWS Credentials
 
 1. Extract the access key credentials for the *crossplane* user you created in the previous section:
    ```
@@ -197,13 +205,6 @@ unencrypted in Git!
 eksctl create cluster -f ~/environment/multi-cluster-gitops/initial-setup/config/mgmt-cluster-eksctl.yaml
 ```
 
-## Setup instructions to initialize git repositories
-
-[Using GitHub as `GitRepository` backend.](doc/repos/GitHub.md#create-and-prepare-the-git-repositories)
-
-OR
-
-[Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit.md#create-and-prepare-the-git-repositories)
 
 ## Connect to cluster
 1. Connect to `<cluster-name>`  cluster using `kubeconfig` stored as a `Secret`
