@@ -12,12 +12,13 @@ spec:
             {
               "Effect": "Allow",
               "Principal": {
-                "Federated": "arn:aws:iam::%s:oidc-provider/%s"
+                "Federated": "arn:aws:iam::${ACCOUNT_ID}:oidc-provider/${OIDC_PROVIDER}"
               },
               "Action": "sts:AssumeRoleWithWebIdentity",
               "Condition": {
                 "StringEquals": {
-                  "%s:sub": "system:serviceaccount:kube-system:aws-load-balancer-controller"
+                  "${OIDC_PROVIDER}:aud": "sts.amazonaws.com",
+                  "${OIDC_PROVIDER}:sub": "system:serviceaccount:kube-system:aws-load-balancer-controller"
                 }
               }
             }
