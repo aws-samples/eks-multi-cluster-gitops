@@ -74,12 +74,8 @@ Host git-codecommit.*.amazonaws.com
 EOF
 ```
 ### Create Git repos
-1. Clone `multi-cluster-gitops` repo from the AWS Samples GitHub organization:
-```bash
-git clone git@github.com:aws-samples/multi-cluster-gitops.git
-```
 
-2. Create the following empty CodeCommit repos in your AWS account: `gitops-system`,
+1. Create the following empty CodeCommit repos in your AWS account: `gitops-system`,
    `gitops-workloads`, and `payment-app-manifests`, and clone them
    into the Cloud9 environment.
 
@@ -96,7 +92,7 @@ for repo in "${repos[@]}"; do
 done
 ```
 
-3. Copy the content of the `multi-cluster-gitops/repos` directories to their
+2. Copy the content of the `multi-cluster-gitops/repos` directories to their
    respective repos you created in your AWS account as indicated in the [Git
    Repositories](https://gitlab.aws.dev/mahgisla/multi-cluster-gitops/-/tree/main#git-repositories)
    section.
@@ -147,7 +143,7 @@ spec:
 ```
 
 
-### Update the `SealedSecret` resource that contains the Git Credentials for `gitops-system`
+### Create a `Secret` resource that contains the Git Credentials for `gitops-system`
 
 1. Create `codecommit_known_hosts` file for AWS CodeCommit regional endpoint
 
@@ -169,106 +165,7 @@ kubectl create secret generic flux-system -n flux-system \
     --from-file=known_hosts=${HOME}/.ssh/codecommit_known_hosts \
     --dry-run=client \
     --output=yaml \
-    >mygitsecret.yaml
+    >git-creds-system.yaml
 ```
 
-3. Create SealedSecret resource for the updated content.
-```bash
-kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <mygitsecret.yaml > mygitsealedsecret.yaml
-```
 
-4. Replace the content of
-   `gitops-system/clusters-config/commercial-staging/secrets/git-secret.yaml` with the
-   content of `mygitsealedsecret.yaml`.
-
-5.  Replace the content of
-    `gitops-system/clusters-config/commercial-prod/secrets/git-secret.yaml` with the
-    content of `mygitsealedsecret.yaml`.
-
-### Update the `SealedSecret` resource that contains the Git Credentials for `gitops-workloads`
-
-1. Change the value for the `metadata.name` field in `mygitsecret.yaml` from
-   `flux-system` to `gitops-workloads`.
-
-2. Create `SealedSecret` resource for the updated content.
-```bash
-kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <mygitsecret.yaml > mygitsealedsecret.yaml
-```
-
-3. Replace the definition of the `SealedSecret` resource in
-   `gitops-system/workloads/commercial-staging/git-repo.yaml` with the content of
-   `mygitsealedsecret.yaml`.
-
-4. Replace the definition of the `SealedSecret` resource in
-   `gitops-system/workloads/commercial-prod/git-repo.yaml` with the content of
-   `mygitsealedsecret.yaml`.
-
-
-### Update the `SealedSecret` resource that contains the Git Credentials for `payment-app-manifests`
-
-4. Change the value for the `metadata.name` field in `mygitsecret.yaml` from
-   `gitops-workloads` to `payment-app`.
-
-5. Create `SealedSecret` resource for the updated content.
-```bash
-kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <mygitsecret.yaml > mygitsealedsecret.yaml
-```
-
-6. Replace the definition of the `SealedSecret` resource in
-   `gitops-workloads/commercial-staging/payment-app/git-repo.yaml` with the content of
-   `mygitsealedsecret.yaml`.
-
-
-### Commit and push the changes.
-1. Commit and push `gitops-system` repo changes 
-```bash
-cd ~/environment/gitops-system
-git add .
-git commit -m "initial commit"
-git push --set-upstream origin main
-```
-
-2. Commit and push `gitops-workloads` repo changes 
-```bash
-cd ~/environment/gitops-workloads
-git add .
-git commit -m "initial commit"
-git push --set-upstream origin main
-```
-3. Commit and push `payment-app-manifests` repo changes 
-```bash
-cd ~/environment/payment-app-manifests
-git add .
-git commit -m "initial commit"
-git push --set-upstream origin main
-```
-
-## Bootstrap the management cluster
-
-1. Bootstrap Flux on the management cluster with the `mgmt` cluster config path. The bootstrap process is customized to support AWS CodeCommit integration.
-
-```bash
-export CLUSTER_NAME=mgmt
-
-cd ~/environment/gitops-system
-
-kubectl apply -f ./clusters/${CLUSTER_NAME}/flux-system/gotk-components.yaml
-
-kubectl create secret generic flux-system -n flux-system \
-    --from-file=identity=${HOME}/.ssh/gitops \
-    --from-file=identity.pub=${HOME}/.ssh/gitops.pub \
-    --from-file=known_hosts=${HOME}/.ssh/codecommit_known_hosts
-
-kubectl apply -f ./clusters/${CLUSTER_NAME}/flux-system/gotk-sync.yaml
-```
-
-3. Wait for the `staging` cluster to start. Track the progress of the Flux
-   deployments using the Flux CLI. This may take >30 minutes due to exponential
-   backoff, however this is only a one-time process.
-```bash
-flux get all
-```
-You can watch this to see once it's ready by using:
-```bash
-watch -n 30 -d flux get all
-```
