@@ -146,7 +146,9 @@ eksctl create cluster -f ~/environment/multi-cluster-gitops/initial-setup/config
 ```
 This will take some time. You can proceed to the next section in parallel, using a separate terminal window.
 
-## Setup instructions to initialize git repositories
+## Create and populate the Git repositories
+
+You can use GitHub or AWS CodeCommit as the backend for your Git repositories.
 
 [Using GitHub as `GitRepository` backend.](doc/repos/GitHub.md#create-and-prepare-the-git-repositories)
 
@@ -154,10 +156,80 @@ OR
 
 [Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit.md#create-and-prepare-the-git-repositories)
 
+## Create sealed secrets for access to Git repos
+
+In this section, you will use the `Secret` manifest you created in the file `git-creds-system.yaml` to create `SealedSecret` manifests for each of the three Git repos.
+
+### Create the `SealedSecret` resource that contains the Git Credentials for `gitops-system`
+
+1. Create a `SealedSecret` resource using `git-creds-system.yaml`
+   ```bash
+   kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-system.yaml >git-creds-sealed-system.yaml
+   ```
+
+2. Replace the content of
+   `gitops-system/clusters-config/commercial-staging/secrets/git-secret.yaml` with the
+   content of `git-creds-sealed-system.yaml`.
+   ```
+   cp git-creds-sealed-system.yaml gitops-system/clusters-config/commercial-staging/secrets/git-secret.yaml
+   ```
+
+3. Replace the content of
+   `gitops-system/clusters-config/commercial-prod/secrets/git-secret.yaml` with the content of `git-creds-sealed-system.yaml`.
+   ```
+   cp git-creds-sealed-system.yaml gitops-system/clusters-config/commercial-prod/secrets/git-secret.yaml
+   ```
+
+### Create the `SealedSecret` resource that contains the Git Credentials for `gitops-workloads`
+
+1. Copy `git-creds-system.yaml` to `git-creds-workloads.yaml`, and change the value for `metadata.name` from
+   `flux-system` to `gitops-workloads`.
+   ```
+   cp git-creds-system.yaml git-creds-workloads.yaml
+   yq e '.metadata.name="gitops-workloads"' -i git-creds-workloads.yaml
+   ```
+
+2. Create a `SealedSecret` resource using  `git-creds-workloads.yaml`.
+   ```bash
+   kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-workloads.yaml >git-creds-sealed-workloads.yaml
+   ```
+
+3. Replace the content of
+   `gitops-system/workloads/commercial-staging/git-secret.yaml` with the content of
+   `git-creds-sealed-workloads.yaml`.
+   ```
+   cp git-creds-sealed-workloads.yaml gitops-system/workloads/commercial-staging/git-secret.yaml
+   ```
+
+4. Replace the content of
+   `gitops-system/workloads/commercial-prod/git-secret.yaml` with the content of
+   `git-creds-sealed-workloads.yaml`.
+   ```
+   cp git-creds-sealed-workloads.yaml gitops-system/workloads/commercial-prod/git-secret.yaml
+   ```
+
+### Create the `SealedSecret` resource that contains the Git Credentials for `payment-app-manifests`
+
+1. Copy `git-creds-system.yaml` to `git-creds-app.yaml`, and change the value for `metadata.name` to `payment-app`.
+   ```
+   cp git-creds-system.yaml git-creds-app.yaml
+   yq e '.metadata.name="payment-app"' -i git-creds-app.yaml
+   ```
+
+2. Create a `SealedSecret` resource using `git-creds-app.yaml`.
+   ```bash
+   kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-app.yaml >git-creds-sealed-app.yaml
+   ```
+
+3. Replace the content of
+   `gitops-workloads/commercial-staging/payment-app/git-secret.yaml` with the content of `git-creds-sealed-app.yaml`.
+   ```
+   cp git-creds-sealed-app.yaml gitops-workloads/commercial-staging/payment-app/git-secret.yaml
+   ```
 
 ## Create AWS credentials for Crossplane
 
-### Create am IAM iser for Crossplane
+### Create an IAM iser for Crossplane
 
 1. Create the IAM user that will be used by Crossplane for provisioning AWS resources (DynamoDB table, SQS queue, etc.)
    ```
@@ -213,9 +285,41 @@ OR
 `creds-secret.yaml` to Git. Otherwise, your AWS credentials will be stored
 unencrypted in Git!
 
-## Separate Git push and Flux bootstrap to come here
 
+## Commit and push the repos
 
+With the local repos now populated and updated, you can now push them to their respective remote upstream repos.
+
+1. Commit and push `gitops-system` repo changes 
+   ```bash
+   cd ~/environment/gitops-system
+   git add .
+   git commit -m "initial commit"
+   git push --set-upstream origin main
+   ```
+
+2. Commit and push `gitops-workloads` repo changes 
+   ```bash
+   cd ~/environment/gitops-workloads
+   git add .
+   git commit -m "initial commit"
+   git push --set-upstream origin main
+   ```
+
+3. Commit and push `payment-app-manifests` repo changes 
+   ```bash
+   cd ~/environment/payment-app-manifests
+   git add .
+   git commit -m "initial commit"
+   git push --set-upstream origin main
+   ```
+
+## Bootstrap the management cluster
+
+Make sure that `eksctl` has finished creating the management cluster. Then proceed with one of the following, depending on your choice of `GitRepository` backend.
+
+- [Using GitHub as `GitRepository` backend.](doc/repos/GitHub-Bootstrap.md)
+- [Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit-Bootstrap.md)
 
 
 ## Connect to cluster

@@ -37,13 +37,7 @@
    
 ### Create Git repos
 
-1. Clone `multi-cluster-gitops` repo from the AWS Samples GitHub organization:
-   ```bash
-   cd ~/environment
-   git clone https://github.com/aws-samples/multi-cluster-gitops.git
-   ```
-
-2. Log in with the Github CLI using:
+1. Log in with the Github CLI using:
    ```bash
    gh auth login
    ```
@@ -51,7 +45,7 @@
    2. For preferred protocol, choose **SSH**.
    3. For the SSH public key, choose **/home/ubuntu/.ssh/gitops-cloud9.pub**.
 
-3. Create the following empty repos in your GitHub account: `gitops-system`,
+2. Create the following empty repos in your GitHub account: `gitops-system`,
    `gitops-workloads`, and `payment-app-manifests`, and clone them
    into the Cloud9 environment.
    ```bash
@@ -63,7 +57,7 @@
    done
    ```
    
-4. Copy the content of the `multi-cluster-gitops/repos` directories
+3. Copy the content of the `multi-cluster-gitops/repos` directories
    to the corresponding repos you created in the previous step:
    ```
    cp -r multi-cluster-gitops/repos/gitops-system/* gitops-system/
@@ -120,7 +114,7 @@
 
 
 
-### Update the `SealedSecret` resource that contains the Git Credentials for `gitops-system`
+### Create a `Secret` resource that contains the Git Credentials for `gitops-system`
 
 1. Copy the content of
    `multi-cluster-gitops/initial-setup/secrets-template/git-credentials.yaml` to
@@ -133,13 +127,13 @@
 2. Replace the value for the field `identity` with the base64
    encoding of the content in `~/.ssh/gitops`
    ```bash
-   KEY=$(cat ~/.ssh/gitops | base64 -w 0) yq -i '.data.identity = strenv(KEY)' mygitsecret.yaml
+   KEY=$(cat ~/.ssh/gitops | base64 -w 0) yq -i '.data.identity = strenv(KEY)' git-creds-system.yaml
    ```
 
 3. Replace the value for the field `identity.pub` with the base64 encoding of
    the content in `~/.ssh/gitops.pub`.
    ```
-   CERT=$(cat ~/.ssh/gitops.pub | base64 -w 0) yq -i '.data."identity.pub" = strenv(CERT)' mygitsecret.yaml
+   CERT=$(cat ~/.ssh/gitops.pub | base64 -w 0) yq -i '.data."identity.pub" = strenv(CERT)' git-creds-system.yaml
    ```
 
 4. Replace the value for the field `known_hosts` with the base64 encoding of the
@@ -147,128 +141,6 @@
    `ecdsa-sha2-nistp256` returned from https://api.github.com/meta.
 
    ```bash
-   HOST=$(echo "github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=" | base64 -w 0) yq -i '.data.known_hosts = strenv(HOST)' mygitsecret.yaml
+   HOST=$(echo "github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=" | base64 -w 0) yq -i '.data.known_hosts = strenv(HOST)' git-creds-system.yaml
    ```
 
-5. Create a SealedSecret resource for the updated content.
-   ```bash
-   kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-system.yaml >git-creds-secret-system.yaml
-   ```
-
-6. Replace the content of
-   `gitops-system/clusters-config/commercial-staging/secrets/git-secret.yaml` with the
-   content of `git-creds-secret-system.yaml`.
-   ```
-   cp git-creds-secret-system.yaml gitops-system/clusters-config/commercial-staging/secrets/git-secret.yaml
-   ```
-
-7. Replace the content of
-   `gitops-system/clusters-config/commercial-prod/secrets/git-secret.yaml` with the content of `git-creds-secret-system.yaml`.
-   ```
-   cp git-creds-secret-system.yaml gitops-system/clusters-config/commercial-prod/secrets/git-secret.yaml
-   ```
-
-### Update the `SealedSecret` resource that contains the Git Credentials for `gitops-workloads`
-
-1. Copy `git-creds-system.yaml` to `git-creds-workloads.yaml`, and change the value for `metadata.name` from
-   `flux-system` to `gitops-workloads`.
-   ```
-   cp git-creds-system.yaml git-creds-workloads.yaml
-   yq e '.metadata.name="gitops-workloads"' -i git-creds-workloads.yaml
-   ```
-
-2. Create a SealedSecret resource for the updated content.
-   ```bash
-   kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-workloads.yaml >git-creds-secret-workloads.yaml
-   ```
-
-3. Replace the content of
-   `gitops-system/workloads/commercial-staging/git-secret.yaml` with the content of
-   `git-creds-secret-workloads.yaml`.
-   ```
-   cp git-creds-secret-workloads.yaml gitops-system/workloads/commercial-staging/git-secret.yaml
-   ```
-
-4. Replace the content of
-   `gitops-system/workloads/commercial-prod/git-secret.yaml` with the content of
-   `git-creds-secret-workloads.yaml`.
-   ```
-   cp git-creds-secret-workloads.yaml gitops-system/workloads/commercial-prod/git-secret.yaml
-   ```
-
-### Update the `SealedSecret` resource that contains the Git Credentials for `payment-app-manifests`
-
-1. Copy `git-creds-system.yaml` to `git-creds-app.yaml`, and change the value for `metadata.name` to `payment-app`.
-   ```
-   cp git-creds-system.yaml git-creds-app.yaml
-   yq e '.metadata.name="payment-app"' -i git-creds-app.yaml
-   ```
-
-2. Create a SealedSecret resource for the updated content.
-   ```bash
-   kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-app.yaml >git-creds-secret-app.yaml
-   ```
-
-3. Replace the content of
-   `gitops-workloads/commercial-staging/payment-app/git-secret.yaml` with the content of `git-creds-secret-app.yaml`.
-   ```
-   cp git-creds-secret-app.yaml gitops-workloads/commercial-staging/payment-app/git-secret.yaml
-   ```
-
-### Commit and push the changes
-
-1. Commit and push `gitops-system` repo changes 
-   ```bash
-   cd ~/environment/gitops-system
-   git add .
-   git commit -m "initial commit"
-   git push --set-upstream origin main
-   ```
-
-2. Commit and push `gitops-workloads` repo changes 
-   ```bash
-   cd ~/environment/gitops-workloads
-   git add .
-   git commit -m "initial commit"
-   git push --set-upstream origin main
-   ```
-
-3. Commit and push `payment-app-manifests` repo changes 
-   ```bash
-   cd ~/environment/payment-app-manifests
-   git add .
-   git commit -m "initial commit"
-   git push --set-upstream origin main
-   ```
-
-## Bootstrap the management cluster
-
-1. Create a GitHub personal access token. Please note that the `repo` scopes are
-   the only ones required for the token used by Flux.
-
-2. Bootstrap Flux on the management cluster with the `mgmt` cluster config path.
-   ```bash
-   export CLUSTER_NAME=mgmt
-   export GITHUB_TOKEN=XXXX
-   export GITHUB_USER=<your-github-username>
-
-   flux bootstrap github \
-   --components-extra=image-reflector-controller,image-automation-controller \
-   --owner=$GITHUB_USER \
-   --namespace=flux-system \
-   --repository=gitops-system \
-   --branch=main \
-   --path=clusters/$CLUSTER_NAME \
-   --personal
-   ```
-
-3. Wait for the `staging` cluster to start. Track the progress of the Flux
-   deployments using the Flux CLI. This may take >30 minutes due to exponential
-   backoff, however this is only a one-time process.
-   ```bash
-   flux get all
-   ```
-   You can watch this to see once it's ready by using:
-   ```bash
-   watch -n 30 -d flux get all
-   ```
