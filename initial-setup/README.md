@@ -172,7 +172,7 @@ The `SealedSecret` manifests are then copied into the correct locations for each
 |||gitops-system/workloads/commercial-prod/git-secret.yaml|
 |payment-app-manifests| payment-app | gitops-workloads/commercial-staging/payment-app/git-secret.yaml |
 
-Use the following acript to generate the `SealedSecret` manifests and copy them to the correct locations:
+Use the following script to generate the `SealedSecret` manifests and copy them to the correct locations:
 ```bash
 kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-system.yaml >git-creds-sealed-system.yaml
 cp git-creds-sealed-system.yaml gitops-system/clusters-config/commercial-staging/secrets/git-secret.yaml
