@@ -32,3 +32,6 @@
    ```bash
    watch -n 30 -d flux get all
    ```
+
+
+Once done, continue to follow setup instructions [here](../../README.md#connect-to-cluster).
