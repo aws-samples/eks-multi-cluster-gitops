@@ -7,6 +7,7 @@
    ssh-keygen -t ed25519 -C "<youremail@yourcompany.com>" -f gitops-cloud9
    ```
    (Replace `<youremail@yourcompany.com>` with your email address).
+   This generates two files: `gitops-cloud9` contains a private key, and `gitops-cloud9.pub` contains the corresponding public key.
 
 2. Create the SSH key that will be used by Flux for interacting
    with the repos in your GitHub account. Ensure that you do not use a
@@ -21,9 +22,11 @@
    ssh-keygen -t ed25519 -C "gitops@<yourcompany.com>" -f gitops
    ```
    (Replace the `<yourcompany.com>` with your company domain or a fictitious domain).
+   This generates two files: `gitops` contains a private key, and `gitops.pub` contains the corresponding public key.
 
-3. Add the public part of the keys generated above to your GitHub account to
-   grant access.
+3. Copy the contents of the public key files generated above (these have a `.pub` suffix) to your GitHub account in order to
+   grant access. To do this, use the GitHub console to access **Settings->SSH and GPG Keys**,
+   and use the **New SSH Key** buttton to add each of the keys in turn.
 
 4. Create/edit `config` in `~/.ssh` to use the SSH key in `gitops-cloud9` for
    the Git commands executed in the Cloud9 environment.
@@ -39,11 +42,11 @@
 
 1. Log in with the Github CLI using:
    ```bash
-   gh auth login
+   gh auth login -p ssh -h GitHub.com
    ```
-   1. In response to the prompt for an account, choose **GitHub.com**.
-   2. For preferred protocol, choose **SSH**.
+<!--
    3. For the SSH public key, choose **/home/ubuntu/.ssh/gitops-cloud9.pub**.
+-->
 
 2. Create the following empty repos in your GitHub account: `gitops-system`,
    `gitops-workloads`, and `payment-app-manifests`, and clone them
@@ -67,19 +70,23 @@
    
 ### Update references to Git repositories
 
-1. Set the variable name `GITHUB_ACCOUNT` to your GitHub user name.
+1. Set the variable `GITHUB_ACCOUNT` to your GitHub user name.
    ```
    GITHUB_ACCOUNT=<your-github-user-name>
    ```
-2. Update the `git-repo.yaml` files in the `workloads` folder of the `gitops-system` repo,
+2. Set the variable `REPO_PREFIX` as follows:
+   ```
+   REPO_PREFIX=ssh://git@github.com/$GITHUB_ACCOUNT
+   ```
+4. Update the `git-repo.yaml` files in the `workloads` folder of the `gitops-system` repo,
    replacing the `url` for the `GitRepository` resource with
    the URL for the `gitpops-workloads` repo created in your account:
    ```
    yq e \
-     ".spec.url = \"ssh://git@github.com/$GITHUB_ACCOUNT/gitops-workloads\"" \
+     ".spec.url = \"$REPO_PREFIX/gitops-workloads\"" \
      -i ./gitops-system/workloads/commercial-staging/git-repo.yaml
    yq e \
-     ".spec.url = \"ssh://git@github.com/$GITHUB_ACCOUNT/gitops-workloads\"" \
+     ".spec.url = \"$REPO_PREFIX/gitops-workloads\"" \
      -i ./gitops-system/workloads/commercial-prod/git-repo.yaml
    ```
 3. Update the `gotk-sync.yaml` files in the `clusters` folder of the `gitops-system` repo,
@@ -87,13 +94,13 @@
    the URL for the `gitpops-system` repo created in your account:
    ```
    yq e \
-     ".spec.url = \"ssh://git@github.com/$GITHUB_ACCOUNT/gitops-system\"" \
+     ".spec.url = \"$REPO_PREFIX/gitops-system\"" \
      -i ./gitops-system/clusters/mgmt/flux-system/gotk-sync.yaml
    yq e \
-     ".spec.url = \"ssh://git@github.com/$GITHUB_ACCOUNT/gitops-system\"" \
+     ".spec.url = \"$REPO_PREFIX/gitops-system\"" \
      -i ./gitops-system/clusters/commercial-prod/flux-system/gotk-sync.yaml
    yq e \
-     ".spec.url = \"ssh://git@github.com/$GITHUB_ACCOUNT/gitops-system\"" \
+     ".spec.url = \"$REPO_PREFIX/gitops-system\"" \
      -i ./gitops-system/clusters/commercial-staging/flux-system/gotk-sync.yaml
    ```
 
@@ -102,13 +109,13 @@
    the URL for the `payment-app-manifests` repo created in your account:
    ```
    yq e \
-     ".spec.url = \"ssh://git@github.com/$GITHUB_ACCOUNT/payment-app-manifests\"" \
+     ".spec.url = \"$REPO_PREFIX/payment-app-manifests\"" \
      -i ./gitops-workloads/template/app-template/git-repo.yaml
    yq e \
-     ".spec.url = \"ssh://git@github.com/$GITHUB_ACCOUNT/payment-app-manifests\"" \
+     ".spec.url = \"$REPO_PREFIX/payment-app-manifests\"" \
      -i ./gitops-workloads/commercial-staging/app-template/git-repo.yaml
    yq e \
-     ".spec.url = \"ssh://git@github.com/$GITHUB_ACCOUNT/payment-app-manifests\"" \
+     ".spec.url = \"$REPO_PREFIX/payment-app-manifests\"" \
      -i ./gitops-workloads/commercial-staging/payment-app/git-repo.yaml
    ```
 
@@ -144,3 +151,4 @@
    HOST=$(echo "github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=" | base64 -w 0) yq -i '.data.known_hosts = strenv(HOST)' git-creds-system.yaml
    ```
 
+When done, continue with the setup process [here](../README.md#create-sealed-secrets-for-access-to-git-repos)
