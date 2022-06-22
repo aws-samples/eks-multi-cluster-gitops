@@ -158,74 +158,35 @@ OR
 
 ## Create sealed secrets for access to Git repos
 
-In this section, you will use the `Secret` manifest you created in the file `git-creds-system.yaml` to create `SealedSecret` manifests for each of the three Git repos.
+Flux needs Git credentials in order to access the Git repos, both for management and workloads. In this section, you use the `Secret` manifest you created in the file `git-creds-system.yaml` to create `SealedSecret` manifests, and then copy these into the correct locations in the repos.
 
-### Create the `SealedSecret` resource that contains the Git Credentials for `gitops-system`
+The same Git credentials are used for all Git repos. However, the `metadata.name` in the `Secret` needs to be adjusted for each repo before creating the `SealedSecret`.
 
-1. Create a `SealedSecret` resource using `git-creds-system.yaml`
-   ```bash
-   kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-system.yaml >git-creds-sealed-system.yaml
-   ```
+The `SealedSecret` manifests are then copied into the correct locations for each of the repos as follows:
 
-2. Replace the content of
-   `gitops-system/clusters-config/commercial-staging/secrets/git-secret.yaml` with the
-   content of `git-creds-sealed-system.yaml`.
-   ```
-   cp git-creds-sealed-system.yaml gitops-system/clusters-config/commercial-staging/secrets/git-secret.yaml
-   ```
+|Repo|metadata.name|Locations|
+|----|-------------|---------|
+|gitops-system | flux-system | gitops-system/clusters-config/commercial-staging/secrets/git-secret.yaml |
+||| gitops-system/clusters-config/commercial-prod/secrets/git-secret.yaml|
+|gitops-workloads|gitops-workloads|gitops-system/workloads/commercial-staging/git-secret.yaml|
+|||gitops-system/workloads/commercial-prod/git-secret.yaml|
+|payment-app-manifests| payment-app | gitops-workloads/commercial-staging/payment-app/git-secret.yaml |
 
-3. Replace the content of
-   `gitops-system/clusters-config/commercial-prod/secrets/git-secret.yaml` with the content of `git-creds-sealed-system.yaml`.
-   ```
-   cp git-creds-sealed-system.yaml gitops-system/clusters-config/commercial-prod/secrets/git-secret.yaml
-   ```
-
-### Create the `SealedSecret` resource that contains the Git Credentials for `gitops-workloads`
-
-1. Copy `git-creds-system.yaml` to `git-creds-workloads.yaml`, and change the value for `metadata.name` from
-   `flux-system` to `gitops-workloads`.
-   ```
-   cp git-creds-system.yaml git-creds-workloads.yaml
-   yq e '.metadata.name="gitops-workloads"' -i git-creds-workloads.yaml
-   ```
-
-2. Create a `SealedSecret` resource using  `git-creds-workloads.yaml`.
-   ```bash
-   kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-workloads.yaml >git-creds-sealed-workloads.yaml
-   ```
-
-3. Replace the content of
-   `gitops-system/workloads/commercial-staging/git-secret.yaml` with the content of
-   `git-creds-sealed-workloads.yaml`.
-   ```
-   cp git-creds-sealed-workloads.yaml gitops-system/workloads/commercial-staging/git-secret.yaml
-   ```
-
-4. Replace the content of
-   `gitops-system/workloads/commercial-prod/git-secret.yaml` with the content of
-   `git-creds-sealed-workloads.yaml`.
-   ```
-   cp git-creds-sealed-workloads.yaml gitops-system/workloads/commercial-prod/git-secret.yaml
-   ```
-
-### Create the `SealedSecret` resource that contains the Git Credentials for `payment-app-manifests`
-
-1. Copy `git-creds-system.yaml` to `git-creds-app.yaml`, and change the value for `metadata.name` to `payment-app`.
-   ```
-   cp git-creds-system.yaml git-creds-app.yaml
-   yq e '.metadata.name="payment-app"' -i git-creds-app.yaml
-   ```
-
-2. Create a `SealedSecret` resource using `git-creds-app.yaml`.
-   ```bash
-   kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-app.yaml >git-creds-sealed-app.yaml
-   ```
-
-3. Replace the content of
-   `gitops-workloads/commercial-staging/payment-app/git-secret.yaml` with the content of `git-creds-sealed-app.yaml`.
-   ```
-   cp git-creds-sealed-app.yaml gitops-workloads/commercial-staging/payment-app/git-secret.yaml
-   ```
+Use the following script to generate the `SealedSecret` manifests and copy them to the correct locations:
+```bash
+kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-system.yaml >git-creds-sealed-system.yaml
+cp git-creds-sealed-system.yaml gitops-system/clusters-config/commercial-staging/secrets/git-secret.yaml
+cp git-creds-sealed-system.yaml gitops-system/clusters-config/commercial-prod/secrets/git-secret.yaml
+cp git-creds-system.yaml git-creds-workloads.yaml
+yq e '.metadata.name="gitops-workloads"' -i git-creds-workloads.yaml
+kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-workloads.yaml >git-creds-sealed-workloads.yaml
+cp git-creds-sealed-workloads.yaml gitops-system/workloads/commercial-staging/git-secret.yaml
+cp git-creds-sealed-workloads.yaml gitops-system/workloads/commercial-prod/git-secret.yaml
+cp git-creds-system.yaml git-creds-app.yaml
+yq e '.metadata.name="payment-app"' -i git-creds-app.yaml
+kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-app.yaml >git-creds-sealed-app.yaml
+cp git-creds-sealed-app.yaml gitops-workloads/commercial-staging/payment-app/git-secret.yaml
+```
 
 ## Create AWS credentials for Crossplane
 
