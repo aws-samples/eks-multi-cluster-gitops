@@ -51,8 +51,15 @@ This document will assume all resources are created in `eu-west-1`.
    ```
    aws sts get-caller-identity --query Arn | grep gitops-workshop -q && echo "IAM role valid" || echo "IAM role NOT valid"
    ```
+   
+8. Note the account ID and region
+   ```
+   export ACCOUNT_ID=$(aws sts get-caller-identity --output text --query Account)
+   export AWS_REGION=$(curl -s 169.254.169.254/latest/dynamic/instance-identity/document | yq -e '.region')
+   echo $ACCOUNT_ID:$AWS_REGION
+   ```
 
-8. Increase the volume of the EBS volume to 30GB as follows.
+9. Increase the volume of the EBS volume to 30GB as follows.
     1. Copy the [volume resize script from the Cloud9 documentation](https://docs.aws.amazon.com/cloud9/latest/user-guide/move-environment.html#move-environment-resize) into a file `resize.sh` in your Cloud9 environment.
     2. Run 
        ```
@@ -142,7 +149,10 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
 
 Create the management cluster using `eksctl`
 ```bash
-eksctl create cluster -f ~/environment/multi-cluster-gitops/initial-setup/config/mgmt-cluster-eksctl.yaml
+cd ~/environment
+cp multi-cluster-gitops/initial-setup/config/mgmt-cluster-eksctl.yaml .
+yq e ".metadata.region=\"$AWS_REGION\"" -i mgmt-cluster-eksctl.yaml     
+eksctl create cluster -f mgmt-cluster-eksctl.yaml
 ```
 This will take some time. You can proceed to the next section in parallel, using a separate terminal window.
 
@@ -155,6 +165,9 @@ You can use GitHub or AWS CodeCommit as the backend for your Git repositories.
 OR
 
 [Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit.md#create-and-prepare-the-git-repositories)
+
+
+
 
 ## Create sealed secrets for access to Git repos
 
@@ -190,7 +203,7 @@ cp git-creds-sealed-app.yaml gitops-workloads/commercial-staging/payment-app/git
 
 ## Create AWS credentials for Crossplane
 
-### Create an IAM iser for Crossplane
+### Create an IAM user for Crossplane
 
 1. Create the IAM user that will be used by Crossplane for provisioning AWS resources (DynamoDB table, SQS queue, etc.)
    ```
