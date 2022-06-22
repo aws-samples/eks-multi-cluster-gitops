@@ -151,4 +151,4 @@
    HOST=$(echo "github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=" | base64 -w 0) yq -i '.data.known_hosts = strenv(HOST)' git-creds-system.yaml
    ```
 
-When done, continue with the setup process [here](../README.md#create-sealed-secrets-for-access-to-git-repos)
+When done, continue with the setup process [here](../../README.md#create-sealed-secrets-for-access-to-git-repos)
