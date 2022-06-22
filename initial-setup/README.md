@@ -269,6 +269,7 @@ With the local repos now populated and updated, you can now push them to their r
    cd ~/environment/gitops-system
    git add .
    git commit -m "initial commit"
+   git branch -M main
    git push --set-upstream origin main
    ```
 
@@ -277,6 +278,7 @@ With the local repos now populated and updated, you can now push them to their r
    cd ~/environment/gitops-workloads
    git add .
    git commit -m "initial commit"
+   git branch -M main
    git push --set-upstream origin main
    ```
 
@@ -285,6 +287,7 @@ With the local repos now populated and updated, you can now push them to their r
    cd ~/environment/payment-app-manifests
    git add .
    git commit -m "initial commit"
+   git branch -M main
    git push --set-upstream origin main
    ```
 
