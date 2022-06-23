@@ -60,7 +60,7 @@ This document will assume all resources are created in `eu-west-1`.
        ```
 
 
-## Install tools
+## Install tools and workshop files
 
 Having set up your Cloud9 environment, you can now install a number of tools that will be used to build the multi-cluster GitOps environment.
 
@@ -102,6 +102,12 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
    curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
    sudo mv /tmp/eksctl /usr/local/bin
    ```
+     
+7. Clone the workshop git repo:
+   ```
+   cd ~/environment
+   git clone https://github.com/aws-samples/multi-cluster-gitops.git
+   ```
    
 ## Create a secret in AWS Secret Manager for Sealed Secrets keys
 
@@ -132,7 +138,59 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
      --secret-string file://secret.json
    ```
 
+## Create the management cluster
+
+Create the management cluster using `eksctl`
+```bash
+eksctl create cluster -f ~/environment/multi-cluster-gitops/initial-setup/config/mgmt-cluster-eksctl.yaml
+```
+This will take some time. You can proceed to the next section in parallel, using a separate terminal window.
+
+## Create and populate the Git repositories
+
+You can use GitHub or AWS CodeCommit as the backend for your Git repositories.
+
+[Using GitHub as `GitRepository` backend.](doc/repos/GitHub.md#create-and-prepare-the-git-repositories)
+
+OR
+
+[Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit.md#create-and-prepare-the-git-repositories)
+
+## Create sealed secrets for access to Git repos
+
+Flux needs Git credentials in order to access the Git repos, both for management and workloads. In this section, you use the `Secret` manifest you created in the file `git-creds-system.yaml` to create `SealedSecret` manifests, and then copy these into the correct locations in the repos.
+
+The same Git credentials are used for all Git repos. However, the `metadata.name` in the `Secret` needs to be adjusted for each repo before creating the `SealedSecret`.
+
+The `SealedSecret` manifests are then copied into the correct locations for each of the repos as follows:
+
+|Repo|metadata.name|Locations|
+|----|-------------|---------|
+|gitops-system | flux-system | gitops-system/clusters-config/commercial-staging/secrets/git-secret.yaml |
+||| gitops-system/clusters-config/commercial-prod/secrets/git-secret.yaml|
+|gitops-workloads|gitops-workloads|gitops-system/workloads/commercial-staging/git-secret.yaml|
+|||gitops-system/workloads/commercial-prod/git-secret.yaml|
+|payment-app-manifests| payment-app | gitops-workloads/commercial-staging/payment-app/git-secret.yaml |
+
+Use the following script to generate the `SealedSecret` manifests and copy them to the correct locations:
+```bash
+kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-system.yaml >git-creds-sealed-system.yaml
+cp git-creds-sealed-system.yaml gitops-system/clusters-config/commercial-staging/secrets/git-secret.yaml
+cp git-creds-sealed-system.yaml gitops-system/clusters-config/commercial-prod/secrets/git-secret.yaml
+cp git-creds-system.yaml git-creds-workloads.yaml
+yq e '.metadata.name="gitops-workloads"' -i git-creds-workloads.yaml
+kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-workloads.yaml >git-creds-sealed-workloads.yaml
+cp git-creds-sealed-workloads.yaml gitops-system/workloads/commercial-staging/git-secret.yaml
+cp git-creds-sealed-workloads.yaml gitops-system/workloads/commercial-prod/git-secret.yaml
+cp git-creds-system.yaml git-creds-app.yaml
+yq e '.metadata.name="payment-app"' -i git-creds-app.yaml
+kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-app.yaml >git-creds-sealed-app.yaml
+cp git-creds-sealed-app.yaml gitops-workloads/commercial-staging/payment-app/git-secret.yaml
+```
+
 ## Create AWS credentials for Crossplane
+
+### Create an IAM iser for Crossplane
 
 1. Create the IAM user that will be used by Crossplane for provisioning AWS resources (DynamoDB table, SQS queue, etc.)
    ```
@@ -152,46 +210,78 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
    ```
    **Note:** You can fine-tune the permissions granted to the created IAM user, and only select those that you want to grant to Crossplane.
 
-### Update the AWS Credentials `SealedSecret`
-1. Create `aws-credentials.conf`.
-```
-cd ~/environment
-echo -e "[default]\naws_access_key_id = <access-key-id>\naws_secret_access_key = <secret-access-key>" > aws-credentials.conf
-```
-(Replace `<access-key-id>` and `<secret-access-key>` with the Access Key ID and
-the Secret Access Key you created above).
+### Create a `SealedSecret` for Crossplane AWS Credentials
 
-2. Create `secret` resource that contains the AWS credentials, and create a
+1. Extract the access key credentials for the *crossplane* user you created in the previous section:
+   ```
+   ACCESS_KEY_ID=$(echo $ACCESS_KEY | yq e ".AccessKey.AccessKeyId")
+   SECRET_ACCESS_KEY=$(echo $ACCESS_KEY | yq e ".AccessKey.SecretAccessKey")
+   ```
+
+2. Use these credentials to create a file `aws-credentials.conf` as follows:
+   ```
+   cd ~/environment
+   echo -e "[default]\naws_access_key_id = $ACCESS_KEY_ID\naws_secret_access_key = $SECRET_ACCESS_KEY" > aws-credentials.conf
+   ```
+
+3. Create a Kubernetes `Secret` resource that contains the AWS credentials, and create a
    corresponding `SealedSecret` resource.
-```
-kubectl create secret generic aws-credentials -n crossplane-system --dry-run=client --from-file=credentials=./aws-credentials.conf -o yaml >mysecret.yaml
-
-kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <mysecret.yaml > mysealedsecret.yaml
-```
-3. Replace the content of
+   ```
+   kubectl create secret generic aws-credentials \
+     -n crossplane-system \
+     --dry-run=client --from-file=credentials=./aws-credentials.conf \
+     -o yaml \
+     >creds-secret.yaml
+   kubeseal --cert sealed-secrets-keypair-public.pem --format yaml \
+     <creds-secret.yaml >creds-sealedsecret.yaml
+   ```
+4. Replace the content of
    `gitops-system/tools/crossplane/crossplane-aws-provider-config/aws-credentials-sealed.yaml`
-   with the content of `mysealedsecret.yaml`.
+   with the content of `creds-sealedsecret.yaml`.
+   ```
+   cp creds-sealedsecret.yaml gitops-system/tools/crossplane/crossplane-aws-provider-config/aws-credentials-sealed.yaml
+   ```
 
-NOTE: Make sure you do not commit `aws-credentials.conf``` and/or
-`mysecret.yaml` to Git. Otherwise, your AWS credentials will be stored
+**Note:** Make sure you do not commit `aws-credentials.conf` and/or
+`creds-secret.yaml` to Git. Otherwise, your AWS credentials will be stored
 unencrypted in Git!
 
-## Install the management cluster
-1. Log into the AWS CLI with AWS credentials that have the privilege to create
-   and connect to an EKS cluster
 
-2. Create the management cluster using `eksctl`
-```bash
-eksctl create cluster -f ~/environment/multi-cluster-gitops/initial-setup/config/mgmt-cluster-eksctl.yaml
-```
+## Commit and push the repos
 
-## Setup instructions to initialize git repositories
+With the local repos now populated and updated, you can now push them to their respective remote upstream repos.
 
-[Using GitHub as `GitRepository` backend.](doc/repos/GitHub.md#create-and-prepare-the-git-repositories)
+1. Commit and push `gitops-system` repo changes 
+   ```bash
+   cd ~/environment/gitops-system
+   git add .
+   git commit -m "initial commit"
+   git push --set-upstream origin main
+   ```
 
-OR
+2. Commit and push `gitops-workloads` repo changes 
+   ```bash
+   cd ~/environment/gitops-workloads
+   git add .
+   git commit -m "initial commit"
+   git push --set-upstream origin main
+   ```
 
-[Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit.md#create-and-prepare-the-git-repositories)
+3. Commit and push `payment-app-manifests` repo changes 
+   ```bash
+   cd ~/environment/payment-app-manifests
+   git add .
+   git commit -m "initial commit"
+   git push --set-upstream origin main
+   ```
+
+## Bootstrap the management cluster
+
+Make sure that `eksctl` has finished creating the management cluster. Then proceed with one of the following, depending on your choice of `GitRepository` backend.
+
+- [Using GitHub as `GitRepository` backend.](doc/repos/GitHub-Bootstrap.md)
+- [Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit-Bootstrap.md)
+
 
 ## Connect to cluster
 1. Connect to `<cluster-name>`  cluster using `kubeconfig` stored as a `Secret`
