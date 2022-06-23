@@ -190,7 +190,7 @@ cp git-creds-sealed-app.yaml gitops-workloads/commercial-staging/payment-app/git
 
 ## Create AWS credentials for Crossplane
 
-### Create an IAM iser for Crossplane
+### Create an IAM user for Crossplane
 
 1. Create the IAM user that will be used by Crossplane for provisioning AWS resources (DynamoDB table, SQS queue, etc.)
    ```
