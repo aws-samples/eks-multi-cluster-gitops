@@ -1,5 +1,10 @@
 ## Provision and bootstrap a new cluster
-1. Make a copy of the cluster definition template folder for the new cluster.
+1. Set the variable name GITHUB_ACCOUNT to your GitHub user name.
+```bash
+GITHUB_ACCOUNT=<your-github-user-name>
+```
+
+2. Make a copy of the cluster definition template folder for the new cluster.
 
 ```bash
 cd ~/environment/gitops-system/clusters-config
@@ -10,8 +15,10 @@ grep -RiIl  'cluster-name' . | xargs sed -i 's/cluster-name/<cluster-name>/g'
 ```
 (Replace `<cluster-name>` with the new cluster name).
 
-2. Make any necessary changes (e.g. change the number of nodes, the K8s version, CIDR range, etc.).
-3. Make a copy of the flux controller template folder for the new cluster.
+3. Change the Gitrepo url under flux-system/gitk-sync.yaml. 
+```bash
+sed -i "s/GITHUB_ACCOUNT/$GITHUB_ACCOUNT/g" flux-system/gotk-sync.yaml 
+```
 
 ```bash
 cd ~/environment/gitops-system/clusters
@@ -28,22 +35,41 @@ grep -RiIl  'cluster-name' . | xargs sed -i 's/cluster-name/<cluster-name>/g'
 cd ~/environment/gitops-system/workloads
 mkdir <cluster-name>
 cp -R template/* <cluster-name>/
-cd commercial-staging
+cd <cluster-name>
 grep -RiIl  'cluster-name' . | xargs sed -i 's/cluster-name/<cluster-name>/g'
 ```
 (Replace `<cluster-name>` with the new cluster name).
 
-5. Make a copy of the workloads template folder in `gitops-workloads` for the new cluster.
+4. Change the Gitrepo url under git-repo.yaml. 
+```bash
+sed -i "s/GITHUB_ACCOUNT/$GITHUB_ACCOUNT/g" git-repo.yaml
+```
+
+5. Make a copy of the workloads template folder in `clusters-config` for the new cluster.
 
 ```bash
-cd ~/environment/gitops-workloads
+cd ~/environment/clusters-config
 mkdir <cluster-name>
 cp -R template/* <cluster-name>/
-cd <cluster-name>/app-template
+cd <cluster-name>
 grep -RiIl  'cluster-name' . | xargs sed -i 's/cluster-name/<cluster-name>/g'
 ```
 (Replace `<cluster-name>` with the new cluster name).
 
+6. Change the Gitrepo url under git-repo.yaml. 
+```bash
+sed -i "s/GITHUB_ACCOUNT/$GITHUB_ACCOUNT/g" git-repo.yaml
+```
+7. Add <cluster-name> to clusters-config/kustomization.yaml file.
+```bash
+ ---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - commercial-staging
+  - <cluster-name>
+```
+  
 6. Commit changes
 ```bash
 cd ~/environment/gitops-system/
@@ -53,13 +79,6 @@ git push
 ```
 (Replace `<cluster-name>` with the new cluster name).
 
-```bash
-cd ~/environment/gitops-workloads/
-git add .
-git commit -m "adding <cluster-name> cluster"
-git push
-```
-(Replace `<cluster-name>` with the new cluster name).
 
 ## Upgrade an existing cluster
 1. Open `gitops-system/clusters-config/<cluster-name>/def/eks-cluster.yaml`.
