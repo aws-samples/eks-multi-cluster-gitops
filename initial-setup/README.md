@@ -58,6 +58,7 @@ This document will assume all resources are created in `eu-west-1`.
    export AWS_REGION=$(curl -s 169.254.169.254/latest/dynamic/instance-identity/document | yq -e '.region')
    echo $ACCOUNT_ID:$AWS_REGION
    ```
+   **Note:** At present, only the region `eu-west-1` is supported.
 
 9. Increase the volume of the EBS volume to 30GB as follows.
     1. Copy the [volume resize script from the Cloud9 documentation](https://docs.aws.amazon.com/cloud9/latest/user-guide/move-environment.html#move-environment-resize) into a file `resize.sh` in your Cloud9 environment.
