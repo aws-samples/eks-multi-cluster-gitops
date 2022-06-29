@@ -6,12 +6,15 @@
 
    ![](GitHub-PAT.png)
 
-2. Bootstrap Flux on the management cluster with the `mgmt` cluster config path.
+2. Export GitHub access token and username to be used by Flux bootstrap command. 
    ```bash
    export CLUSTER_NAME=mgmt
    export GITHUB_TOKEN=XXXX
    export GITHUB_USER=<your-github-username>
-
+   ```
+   
+3. Bootstrap Flux on the management cluster with the `mgmt` cluster config path.
+   ```bash
    flux bootstrap github \
    --components-extra=image-reflector-controller,image-automation-controller \
    --owner=$GITHUB_USER \
@@ -22,7 +25,7 @@
    --personal
    ```
 
-3. Wait for the `staging` cluster to start. Track the progress of the Flux
+4. Wait for the `staging` cluster to start. Track the progress of the Flux
    deployments using the Flux CLI. This may take >30 minutes due to exponential
    backoff, however this is only a one-time process.
    ```bash
