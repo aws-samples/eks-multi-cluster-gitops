@@ -15,7 +15,7 @@ grep -RiIl  'cluster-name' . | xargs sed -i 's/cluster-name/<cluster-name>/g'
 ```
 (Replace `<cluster-name>` with the new cluster name).
 
-3. Change the Gitrepo url under flux-system/gitk-sync.yaml. 
+3. Change the Gitrepo url under flux-system/gotk-sync.yaml. 
 ```bash
 sed -i "s/GITHUB_ACCOUNT/$GITHUB_ACCOUNT/g" flux-system/gotk-sync.yaml 
 ```

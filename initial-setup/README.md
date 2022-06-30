@@ -51,8 +51,16 @@ This document will assume all resources are created in `eu-west-1`.
    ```
    aws sts get-caller-identity --query Arn | grep gitops-workshop -q && echo "IAM role valid" || echo "IAM role NOT valid"
    ```
+   
+8. Note the account ID and region
+   ```
+   export ACCOUNT_ID=$(aws sts get-caller-identity --output text --query Account)
+   export AWS_REGION=$(curl -s 169.254.169.254/latest/dynamic/instance-identity/document | yq -e '.region')
+   echo $ACCOUNT_ID:$AWS_REGION
+   ```
+   **Note:** At present, only the region `eu-west-1` is supported.
 
-8. Increase the volume of the EBS volume to 30GB as follows.
+9. Increase the volume of the EBS volume to 30GB as follows.
     1. Copy the [volume resize script from the Cloud9 documentation](https://docs.aws.amazon.com/cloud9/latest/user-guide/move-environment.html#move-environment-resize) into a file `resize.sh` in your Cloud9 environment.
     2. Run 
        ```
@@ -142,7 +150,10 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
 
 Create the management cluster using `eksctl`
 ```bash
-eksctl create cluster -f ~/environment/multi-cluster-gitops/initial-setup/config/mgmt-cluster-eksctl.yaml
+cd ~/environment
+cp multi-cluster-gitops/initial-setup/config/mgmt-cluster-eksctl.yaml .
+yq e ".metadata.region=\"$AWS_REGION\"" -i mgmt-cluster-eksctl.yaml     
+eksctl create cluster -f mgmt-cluster-eksctl.yaml
 ```
 This will take some time. You can proceed to the next section in parallel, using a separate terminal window.
 
@@ -155,6 +166,9 @@ You can use GitHub or AWS CodeCommit as the backend for your Git repositories.
 OR
 
 [Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit.md#create-and-prepare-the-git-repositories)
+
+
+
 
 ## Create sealed secrets for access to Git repos
 
@@ -256,6 +270,7 @@ With the local repos now populated and updated, you can now push them to their r
    cd ~/environment/gitops-system
    git add .
    git commit -m "initial commit"
+   git branch -M main
    git push --set-upstream origin main
    ```
 
@@ -264,6 +279,7 @@ With the local repos now populated and updated, you can now push them to their r
    cd ~/environment/gitops-workloads
    git add .
    git commit -m "initial commit"
+   git branch -M main
    git push --set-upstream origin main
    ```
 
@@ -272,6 +288,7 @@ With the local repos now populated and updated, you can now push them to their r
    cd ~/environment/payment-app-manifests
    git add .
    git commit -m "initial commit"
+   git branch -M main
    git push --set-upstream origin main
    ```
 
