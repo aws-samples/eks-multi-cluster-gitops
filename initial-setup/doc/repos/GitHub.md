@@ -68,7 +68,7 @@
    ```
 2. Set the variable `REPO_PREFIX` as follows:
    ```
-   export REPO_PREFIX=ssh://git@github.com/$GITHUB_ACCOUNT
+   export REPO_PREFIX="ssh:\/\/git@github.com\/$GITHUB_ACCOUNT"
    ```
 
 

@@ -122,8 +122,6 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
    
 ## Create a secret in AWS Secret Manager for Sealed Secrets keys
 
-**Note:** Make sure you're using the same region as defined in multi-cluster-gitops/initial-setup/config/mgmt-cluster-eksctl.yaml
-
 1. Generate a 4096-bit RSA key pair using *openssl*:
    ```bash
    cd ~/environment
