@@ -49,8 +49,15 @@ account you use for deploying this sample implementation can accommodate that.
    ```
    aws sts get-caller-identity --query Arn | grep gitops-workshop -q && echo "IAM role valid" || echo "IAM role NOT valid"
    ```
+
+
+8. Install `yq`
+   ```bash
+   sudo curl --silent --location -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.24.5/yq_linux_amd64
+   sudo chmod +x /usr/local/bin/yq
+   ```
    
-8. Track the account ID and region using environment variables,
+9. Track the account ID and region using environment variables,
    and update `.bash_profile` and `~/.aws/config`so that these veriables will be available in all Cloud9 Terminal windows.
    ```
    export ACCOUNT_ID=$(aws sts get-caller-identity --output text --query Account)
@@ -62,7 +69,7 @@ account you use for deploying this sample implementation can accommodate that.
    aws configure get default.region
    ```
 
-9. Increase the volume of the EBS volume to 30GB as follows.
+10. Increase the volume of the EBS volume to 30GB as follows.
     1. Copy the [volume resize script from the Cloud9 documentation](https://docs.aws.amazon.com/cloud9/latest/user-guide/move-environment.html#move-environment-resize) into a file `resize.sh` in your Cloud9 environment.
     2. Run 
        ```
@@ -101,19 +108,13 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
    sudo apt install gh
    ```
 
-5. Install `yq`
-   ```bash
-   sudo curl --silent --location -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.24.5/yq_linux_amd64
-   sudo chmod +x /usr/local/bin/yq
-   ```
-
-6. Install `eksctl`
+5. Install `eksctl`
    ```bash
    curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
    sudo mv /tmp/eksctl /usr/local/bin
    ```
      
-7. Clone the workshop git repo:
+6. Clone the workshop git repo:
    ```
    cd ~/environment
    git clone https://github.com/aws-samples/multi-cluster-gitops.git
