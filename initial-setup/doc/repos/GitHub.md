@@ -60,26 +60,7 @@
    done
    ```
    
-3. Copy the content of the `multi-cluster-gitops/repos` directories
-   to the corresponding repos you created in the previous step:
-   ```
-   cp -r multi-cluster-gitops/repos/gitops-system/* gitops-system/
-   cp -r multi-cluster-gitops/repos/gitops-workloads/* gitops-workloads/
-   cp -r multi-cluster-gitops/repos/app-manifests/payment-app/* payment-app-manifests/
-   ```
-
-### Update references to AWS region
-
-Run the `sed` comand below to update various manifests to point to the correct AWS region:
-```
-sed -i "s/AWS_REGION/$AWS_REGION/g" \
-   gitops-system/clusters-config/commercial-prod/def/eks-cluster.yaml \
-   gitops-system/clusters-config/commercial-staging/def/eks-cluster.yaml \
-   gitops-system/clusters-config/template/def/eks-cluster.yaml \
-   gitops-system/tools-config/external-secrets/sealed-secrets-key.yaml
-```
-   
-### Update references to Git repositories
+### Set the `REPO_PREFIX` variable to point at your GitHub account
 
 1. Set the variable `GITHUB_ACCOUNT` to your GitHub user name.
    ```
@@ -87,35 +68,7 @@ sed -i "s/AWS_REGION/$AWS_REGION/g" \
    ```
 2. Set the variable `REPO_PREFIX` as follows:
    ```
-   REPO_PREFIX=ssh://git@github.com/$GITHUB_ACCOUNT
-   ```
-3. Update the `git-repo.yaml` files in the `workloads` folder of the `gitops-system` repo,
-   updating the `url` for the `GitRepository` resource to point at 
-   the `gitpops-workloads` repo created in your account:
-   ```
-   sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
-     gitops-system/workloads/template/git-repo.yaml \
-     gitops-system/workloads/commercial-staging/git-repo.yaml \
-     gitops-system/workloads/commercial-prod/git-repo.yaml
-   ```
-4. Update the `gotk-sync.yaml` files in the `clusters` folder of the `gitops-system` repo,
-   updating the `url` for the `GitRepository` resource to point at the `gitpops-system` repo created in your account:
-   ```
-   sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
-     gitops-system/clusters/mgmt/flux-system/gotk-sync.yaml \
-     gitops-system/clusters/template/flux-system/gotk-sync.yaml \
-     gitops-system/clusters/commercial-prod/flux-system/gotk-sync.yaml \
-     gitops-system/clusters/commercial-staging/flux-system/gotk-sync.yaml
-   ```
-
-5. Update the `git-repo.yaml` files in the `gitops-workloads` repo,
-   updating the `url` for the `GitRepository` resource to point at the `payment-app-manifests` repo created in your account:
-   ```
-   sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
-     gitops-workloads/template/app-template/git-repo.yaml \ 
-     gitops-workloads/commercial-staging/app-template/git-repo.yaml \
-     gitops-workloads/commercial-prod/app-template/git-repo.yaml \
-     gitops-workloads/commercial-staging/payment-app/git-repo.yaml
+   export REPO_PREFIX=ssh://git@github.com/$GITHUB_ACCOUNT
    ```
 
 
@@ -149,4 +102,4 @@ sed -i "s/AWS_REGION/$AWS_REGION/g" \
    HOST=$(echo "github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=" | base64 -w 0) yq -i '.data.known_hosts = strenv(HOST)' git-creds-system.yaml
    ```
 
-When done, continue with the setup process [here](../../README.md#create-sealed-secrets-for-access-to-git-repos)
+When done, continue with the setup process [here](../../README.md#populate-and-update-the-repositories)

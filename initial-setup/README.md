@@ -159,7 +159,7 @@ eksctl create cluster -f mgmt-cluster-eksctl.yaml
 ```
 This will take some time. You can proceed to the next section in parallel, using a separate terminal window.
 
-## Create and populate the Git repositories
+## Create the Git repositories
 
 You can use GitHub or AWS CodeCommit as the backend for your Git repositories.
 
@@ -170,6 +170,66 @@ OR
 [Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit.md#create-and-prepare-the-git-repositories)
 
 
+## Populate and update the repositories
+   
+To populate the repos you created, copy the content of the
+`multi-cluster-gitops/repos` directories to the corresponding repos you
+created in the previous step:
+```
+cp -r multi-cluster-gitops/repos/gitops-system/* gitops-system/
+cp -r multi-cluster-gitops/repos/gitops-workloads/* gitops-workloads/
+cp -r multi-cluster-gitops/repos/app-manifests/payment-app/* payment-app-manifests/
+```
+Some of the files in these repos contain placholder references for AWS_REGION and REPO_PREFIX
+which need to be updated to reflect your working region, and the location of your repos.
+
+### Update references to AWS region
+
+Run the `sed` comand below to update various manifests to point to the correct AWS region:
+```
+sed -i "s/AWS_REGION/$AWS_REGION/g" \
+   gitops-system/clusters-config/commercial-prod/def/eks-cluster.yaml \
+   gitops-system/clusters-config/commercial-staging/def/eks-cluster.yaml \
+   gitops-system/clusters-config/template/def/eks-cluster.yaml \
+   gitops-system/tools-config/external-secrets/sealed-secrets-key.yaml
+```
+
+
+### Update references to GitRepository URLs
+
+1. Verify that REPO_PREFIX is set correctly (for either GitHib or CodeCommit)
+   ```
+   echo $REPO_PREFIX
+   ```
+
+2. Update the `git-repo.yaml` files in the `workloads` folder of the `gitops-system` repo,
+   updating the `url` for the `GitRepository` resource to point at 
+   the `gitpops-workloads` repo created in your account:
+   ```
+   sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
+     gitops-system/workloads/template/git-repo.yaml \
+     gitops-system/workloads/commercial-staging/git-repo.yaml \
+     gitops-system/workloads/commercial-prod/git-repo.yaml
+   ```
+3. Update the `gotk-sync.yaml` files in the `clusters` folder of the `gitops-system` repo,
+   updating the `url` for the `GitRepository` resource to point at the `gitpops-system` repo created in your account:
+   ```
+   sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
+     gitops-system/clusters/mgmt/flux-system/gotk-sync.yaml \
+     gitops-system/clusters/template/flux-system/gotk-sync.yaml \
+     gitops-system/clusters/commercial-prod/flux-system/gotk-sync.yaml \
+     gitops-system/clusters/commercial-staging/flux-system/gotk-sync.yaml
+   ```
+
+4. Update the `git-repo.yaml` files in the `gitops-workloads` repo,
+   updating the `url` for the `GitRepository` resource to point at the `payment-app-manifests` repo created in your account:
+   ```
+   sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
+     gitops-workloads/template/app-template/git-repo.yaml \ 
+     gitops-workloads/commercial-staging/app-template/git-repo.yaml \
+     gitops-workloads/commercial-prod/app-template/git-repo.yaml \
+     gitops-workloads/commercial-staging/payment-app/git-repo.yaml
+   ```
 
 
 ## Create sealed secrets for access to Git repos
