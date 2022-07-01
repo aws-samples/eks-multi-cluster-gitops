@@ -10,5 +10,5 @@ spec:
   secretRef:
     name: app-name
   timeout: 60s
-  url: ssh://git@github.com/iamahgoub/app-name-manifests
+  url: REPO_PREFIX/app-name-manifests
 

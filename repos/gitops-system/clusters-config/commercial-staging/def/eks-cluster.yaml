@@ -5,25 +5,25 @@ metadata:
   name: commercial-staging
 spec:
   parameters:
-    region: eu-west-1
+    region: AWS_REGION
     vpc-name: "commercial-staging-eks-vpc"
     vpc-cidrBlock: "10.20.0.0/16"
 
     subnet1-public-name: "public-worker-1"
     subnet1-public-cidrBlock: "10.20.1.0/24"
-    subnet1-public-availabilityZone: "eu-west-1a"
+    subnet1-public-availabilityZone: "AWS_REGIONa"
     
     subnet2-public-name: "public-worker-2"
     subnet2-public-cidrBlock: "10.20.2.0/24"
-    subnet2-public-availabilityZone: "eu-west-1b"    
+    subnet2-public-availabilityZone: "AWS_REGIONb"    
 
     subnet1-private-name: "private-worker-1"
     subnet1-private-cidrBlock: "10.20.11.0/24"
-    subnet1-private-availabilityZone: "eu-west-1a"
+    subnet1-private-availabilityZone: "AWS_REGIONa"
     
     subnet2-private-name: "private-worker-2"
     subnet2-private-cidrBlock: "10.20.12.0/24"
-    subnet2-private-availabilityZone: "eu-west-1b"     
+    subnet2-private-availabilityZone: "AWS_REGIONb"     
 
 
     k8s-version: "1.21"

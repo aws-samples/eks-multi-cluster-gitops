@@ -6,8 +6,6 @@ Public Subnets, 2 Private Subnets, 2 NAT Gateways, and 2 Elastic IP Addresses
 (attached to the NAT Gateways). Please make sure that the quotas of the AWS
 account you use for deploying this sample implementation can accommodate that.
 
-This document will assume all resources are created in `eu-west-1`.
-
 ## Create and prepare the Cloud9 workspace
 
 
@@ -52,13 +50,17 @@ This document will assume all resources are created in `eu-west-1`.
    aws sts get-caller-identity --query Arn | grep gitops-workshop -q && echo "IAM role valid" || echo "IAM role NOT valid"
    ```
    
-8. Note the account ID and region
+8. Track the account ID and region using environment variables,
+   and update `.bash_profile` and `~/.aws/config`so that these veriables will be available in all Cloud9 Terminal windows.
    ```
    export ACCOUNT_ID=$(aws sts get-caller-identity --output text --query Account)
    export AWS_REGION=$(curl -s 169.254.169.254/latest/dynamic/instance-identity/document | yq -e '.region')
    echo $ACCOUNT_ID:$AWS_REGION
+   echo "export ACCOUNT_ID=${ACCOUNT_ID}" | tee -a ~/.bash_profile
+   echo "export AWS_REGION=${AWS_REGION}" | tee -a ~/.bash_profile
+   aws configure set default.region ${AWS_REGION}
+   aws configure get default.region
    ```
-   **Note:** At present, only the region `eu-west-1` is supported.
 
 9. Increase the volume of the EBS volume to 30GB as follows.
     1. Copy the [volume resize script from the Cloud9 documentation](https://docs.aws.amazon.com/cloud9/latest/user-guide/move-environment.html#move-environment-resize) into a file `resize.sh` in your Cloud9 environment.
@@ -152,7 +154,7 @@ Create the management cluster using `eksctl`
 ```bash
 cd ~/environment
 cp multi-cluster-gitops/initial-setup/config/mgmt-cluster-eksctl.yaml .
-yq e ".metadata.region=\"$AWS_REGION\"" -i mgmt-cluster-eksctl.yaml     
+sed -i "s/AWS_REGION/$AWS_REGION/g" mgmt-cluster-eksctl.yaml     
 eksctl create cluster -f mgmt-cluster-eksctl.yaml
 ```
 This will take some time. You can proceed to the next section in parallel, using a separate terminal window.
