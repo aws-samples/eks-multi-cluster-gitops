@@ -75,7 +75,7 @@ EOF
 ```
 ### Create Git repos
 
-1. Create the following empty CodeCommit repos in your AWS account: `gitops-system`,
+Create the following empty CodeCommit repos in your AWS account: `gitops-system`,
    `gitops-workloads`, and `payment-app-manifests`, and clone them
    into the Cloud9 environment.
 
@@ -92,56 +92,12 @@ for repo in "${repos[@]}"; do
 done
 ```
 
-2. Copy the content of the `multi-cluster-gitops/repos` directories to their
-   respective repos you created in your AWS account as indicated in the [Git
-   Repositories](https://gitlab.aws.dev/mahgisla/multi-cluster-gitops/-/tree/main#git-repositories)
-   section.
+   
+### Set the `REPO_PREFIX` variable to point at your GitHub account
 
-### Update the references to any repositories
-1. Update the `git-repo.yaml` files, replacing the `url` of the repository with
-   the one created in your account. Note the ssh clone url must contain the SSH key id of gitops user as printed above :
-   1. In the `gitops-system` repo:
-     - `./workloads/commercial-staging/git-repo.yaml`
-     - `./workloads/commercial-prod/git-repo.yaml`
-     - `./clusters/mgmt/flux-system/gotk-sync.yaml`
-     - `./clusters/commercial-prod/flux-system/gotk-sync.yaml`
-     - `./clusters/commercial-staging/flux-system/gotk-sync.yaml`
-   2. In the `gitops-workloads` repo:
-     - `./template/app-template/git-repo.yaml`
-     - `./commercial-staging/app-template/git-repo.yaml`
-     - `./commercial-staging/payment-app/git-repo.yaml`
-2. Update files containing `GitRepository` specs, adding `gitImplementation: libgit2` inside `spec` object for `GitRepository`.
-   1. In the `gitops-system` repo:
-     - `./workloads/commercial-staging/git-repo.yaml`
-     - `./workloads/commercial-prod/git-repo.yaml`
-     - `./clusters/mgmt/flux-system/gotk-sync.yaml`
-     - `./clusters/commercial-prod/flux-system/gotk-sync.yaml`
-     - `./clusters/commercial-staging/flux-system/gotk-sync.yaml`
-   2. In the `gitops-workloads` repo:
-     - `./template/app-template/git-repo.yaml`
-     - `./commercial-staging/app-template/git-repo.yaml`
-     - `./commercial-staging/payment-app/git-repo.yaml`
-3. The above two edits should result in the `GitRepository` manifests resembling below sample.
-
-```yaml
----
-# This is a sample GitRepository manifest
-# showing edits required for AWS CodeCommit
-apiVersion: source.toolkit.fluxcd.io/v1beta1
-kind: GitRepository
-metadata:
-  name: <name>
-  namespace: flux-system
-spec:
-  gitImplementation: libgit2 ### Edit 2
-  interval: 1m0s
-  ref:
-    branch: main
-  secretRef:
-    name: <secret-ref>
-  url: ssh://<SSH key id>@git-codecommit.<region>.amazonaws.com/v1/repos/<repo> ### Edit 1
 ```
-
+export REPO_PREFIX=ssh://${SSH_KEY_ID_GITOPS}@git-codecommit.${AWS_REGION}.amazonaws.com/v1/repos
+```
 
 ### Create a `Secret` resource that contains the Git Credentials for `gitops-system`
 
@@ -169,3 +125,4 @@ kubectl create secret generic flux-system -n flux-system \
 ```
 
 
+When done, continue with the setup process [here](../../README.md#populate-and-update-the-repositories)
