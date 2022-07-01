@@ -224,7 +224,7 @@ sed -i "s/AWS_REGION/$AWS_REGION/g" \
    updating the `url` for the `GitRepository` resource to point at the `payment-app-manifests` repo created in your account:
    ```
    sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
-     gitops-workloads/template/app-template/git-repo.yaml \ 
+     gitops-workloads/template/app-template/git-repo.yaml \
      gitops-workloads/commercial-staging/app-template/git-repo.yaml \
      gitops-workloads/commercial-prod/app-template/git-repo.yaml \
      gitops-workloads/commercial-staging/payment-app/git-repo.yaml
