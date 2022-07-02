@@ -1,0 +1,72 @@
+<!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
+<!-- SPDX-License-Identifier: MIT-0 -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Product Catalog</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+
+  </head>
+  <script>
+    function refreshPage(){
+        window.location.reload();
+    }
+  </script>
+
+  <body>
+    <h1 data-position="header">Product Catalog Application</h1>
+    <table style="border-collapse: collapse; border: none; background: #E6E6E6;">
+    <tr style="border: none;background: #E6E6E6;">
+    <td style="border: none;" width="700" height="500">
+          <h3>Product Catalog</h3>
+          <p>
+          <form action="/products" method="POST">
+            <input type="id" placeholder="id" name="id" required/>
+            <input type="name" placeholder="name" name="name" required/>
+            <button type="submit">Add</button>
+          </form>
+          </p>
+          <%if (Object.keys(products).length > 0) { %>
+            <table class="table">
+            <tr
+                <tr>
+                    <th>Product ID</th>
+                    <th>Product Name</th>
+                </tr>
+                <% for(var i = 0; i < Object.keys(products).length; i++) { %>
+                    <tr>
+                        <td><%= Object.keys(products)[i] %> </td>
+                        <td><%= Object.values(products)[i] %> </td>
+                    </tr>
+
+                <% }; %>
+
+            </table>
+          <% } else { %>
+           <h4>No Products found in the Product Catalog</h4>
+        <% } %>
+                <%if (Object.keys(products).length > 0) { %>
+            <h3>Catalog Detail</h3>
+             <p>
+             <label class="control-label" style="border: thin grey solid;">
+             Vendors :
+                     <% for(var i = 0; i < Object.keys(vendors).length; i++) {
+                             if (i == Object.keys(vendors).length -1 ) {
+                             %>
+                                 <mark class="red"><%= Object.values(vendors)[i]%></mark>
+                             <% } else { %>
+                              <mark class="red"><%= Object.values(vendors)[i]%></mark>,
+                     <% } }; %>
+             </label>
+        <% }  %>
+
+    </td>
+    <td>
+    <h3>Architecture</h3>
+    <img src="arch.png" alt="architecture">
+    </td>
+    </tr>
+    </table>
+  </body>
+</html>

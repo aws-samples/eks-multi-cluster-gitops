@@ -1,0 +1,89 @@
+body {
+  font-family: "Lato", "Helvetica", Helvetica, sans-serif;
+  background: #E6E6E6;
+  color: #000000B;
+  padding: 15px;
+  letter-spacing: 1px;
+  }
+  table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+  }
+  th, td {
+    padding: 8px;
+    text-align: left;
+  }
+  tr:nth-child(even){background-color: #F0F8FF}
+  tr:nth-child(odd){background-color: #E6E6FA}
+  th {
+    background-color: #1E90FF;
+    color: white;
+  }
+
+h3 {
+  color: #800000;
+}
+button {
+  background-color: #00BFFF; /* blue */
+  border: none;
+  color: white;
+  padding: 6px 9px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+}
+input[type=id], select {
+  width: 20%;
+  padding: 5px 8px;
+  margin: 8px 0;
+  display: inline-block;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+input[type=name], select {
+  width: 50%;
+  padding: 5px 8px;
+  margin: 8px 0;
+  display: inline-block;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+input,
+input::-webkit-input-placeholder {
+    font-size: 16px;
+    line-height: 1;
+}
+input:read-only {
+    width: 50%;
+    padding: 12px 15px;
+    margin: 8px 0;
+    display: inline-block;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    color: #000000B;
+    background-color: #E6E6FA;
+}
+
+mark.red {
+    color:#ff0000;
+    background: none;
+}
+
+mark.blue {
+    color:#0000FF;
+    background: none;
+}
+
+label{
+  display: inline-block;
+  vertical-align: middle;
+  padding: 10px 5px;
+  margin-right: 15px;
+  color: #000000B;
+  background-color: #E6E6FA;
+}

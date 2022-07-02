@@ -1,0 +1,55 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: proddetail
+  namespace: detail
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: proddetail
+  template:
+    metadata:
+      labels:
+        app: proddetail
+    spec:
+      containers:
+        - name: proddetail
+          image: "405710966773.dkr.ecr.us-east-2.amazonaws.com/eks-app-mesh-demo/catalog_detail:2.0"
+          imagePullPolicy: Always
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 3000
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 3000
+            successThreshold: 3
+          ports:
+            - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  #annotations:
+  # This annotation is only required if you are creating an internal facing ELB. Remove this annotation to create public facing ELB.
+  #service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+  name: proddetail
+  namespace: detail
+  labels:
+    app: proddetail
+spec:
+  type: NodePort
+  ports:
+    - name: "http"
+      port: 3000
+      targetPort: 3000
+      nodePort: 30036
+  selector:
+    app: proddetail

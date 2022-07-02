@@ -1,0 +1,15 @@
+{
+  "name": "nodejs_app_2",
+  "version": "1.0.0",
+  "description": "catalog detail",
+  "main": " app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Praseeda Sathaye",
+  "license": "MIT-0",
+  "dependencies": {
+    "aws-xray-sdk": "3.2.0",
+    "express": "^4.17.1"
+  }
+}
