@@ -1,10 +1,3 @@
-/.DS_Store
-/.project
-repos/gitops-system/clusters/.DS_Store
-repos/app-manifests/.DS_Store
-repos/gitops-system/clusters-config/.DS_Store
-repos/gitops-system/workloads/.DS_Store
-repos/gitops-workloads/.DS_Store
-repos/app-manifests/payment-app/.DS_Store
-initial-setup/.DS_Store
-repos/.DS_Store
+.DS_Store
+.project
+.vscode
