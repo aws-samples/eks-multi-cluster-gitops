@@ -60,34 +60,6 @@ spec:
     name: default
 ---
 apiVersion: iam.aws.crossplane.io/v1beta1
-kind: Policy
-metadata:
-  name: secrets-manager-policy
-spec:
-  forProvider:
-    name: secrets-manager-policy
-    document: |
-        {
-            "Version": "2012-10-17",
-            "Statement": [
-                {
-                    "Effect": "Allow",
-                    "Action": [
-                        "secretsmanager:GetResourcePolicy",
-                        "secretsmanager:GetSecretValue",
-                        "secretsmanager:DescribeSecret",
-                        "secretsmanager:ListSecretVersionIds"
-                    ],
-                    "Resource": [
-                        "arn:aws:secretsmanager:*:*:secret:sealed-secrets*"
-                    ]
-                }
-            ]
-        }
-  providerConfigRef:
-    name: default
----
-apiVersion: iam.aws.crossplane.io/v1beta1
 kind: RolePolicyAttachment
 metadata:
   name: eks-nodegroup-role-amazoneksworkernodepolicy
@@ -130,19 +102,6 @@ metadata:
 spec:
   forProvider:
     policyArn: arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
-    roleNameRef:
-      name: eks-nodegroup-role
-  providerConfigRef:
-    name: default
----
-apiVersion: iam.aws.crossplane.io/v1beta1
-kind: RolePolicyAttachment
-metadata:
-  name: eks-nodegroup-role-secrets-manager-policy
-spec:
-  forProvider:
-    policyArnRef:
-      name: secrets-manager-policy
     roleNameRef:
       name: eks-nodegroup-role
   providerConfigRef:

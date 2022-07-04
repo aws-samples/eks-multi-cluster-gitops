@@ -18,6 +18,22 @@ spec:
       patches:
         - fromFieldPath: "spec.parameters.region"
           toFieldPath: "spec.forProvider.region"
+    - name: cluster-info-mappings
+      patches:
+        - fromFieldPath: status.account_id
+          toFieldPath: spec.forProvider.manifest.data.ACCOUNT_ID
+          policy:
+            fromFieldPath: Required
+        - fromFieldPath: spec.parameters.region
+          toFieldPath: spec.forProvider.manifest.data.AWS_REGION
+        - fromFieldPath: status.eks_cluster_arn
+          toFieldPath: spec.forProvider.manifest.data.CLUSTER_ARN
+          policy:
+            fromFieldPath: Required
+        - fromFieldPath: status.eks_cluster_oidc_issuer
+          toFieldPath: spec.forProvider.manifest.data.OIDC_PROVIDER
+          policy:
+            fromFieldPath: Required
 
   resources:
     - name: vpc
@@ -37,6 +53,9 @@ spec:
           toFieldPath: spec.forProvider.cidrBlock
         - fromFieldPath: spec.parameters.vpc-name
           toFieldPath: spec.forProvider.tags[0].value
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.ownerId
+          toFieldPath: status.account_id
 
     - name: internetgateway
       base:
@@ -367,7 +386,7 @@ spec:
               fmt: "%s-public-route-table"
           toFieldPath: spec.forProvider.tags[0].value
           policy:
-            fromFieldPath: Required      
+            fromFieldPath: Required
         - type: PatchSet
           patchSetName: common-parameters 
         - fromFieldPath: spec.parameters.subnet1-public-availabilityZone
@@ -407,7 +426,7 @@ spec:
               fmt: "%s-private-route-table-1"
           toFieldPath: spec.forProvider.tags[0].value
           policy:
-            fromFieldPath: Required      
+            fromFieldPath: Required
         - type: PatchSet
           patchSetName: common-parameters           
         - fromFieldPath: spec.parameters.subnet1-public-availabilityZone
@@ -445,7 +464,7 @@ spec:
               fmt: "%s-private-route-table-2"
           toFieldPath: spec.forProvider.tags[0].value
           policy:
-            fromFieldPath: Required      
+            fromFieldPath: Required
         - type: PatchSet
           patchSetName: common-parameters   
         - fromFieldPath: spec.parameters.subnet2-public-availabilityZone
@@ -480,6 +499,20 @@ spec:
             - type: string
               string:
                 fmt: "%s-ekscluster-connection"
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.arn
+          toFieldPath: status.eks_cluster_arn
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.identity.oidc.issuer
+          toFieldPath: status.eks_cluster_oidc_issuer_url
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.identity.oidc.issuer
+          toFieldPath: status.eks_cluster_oidc_issuer
+          transforms:
+            - type: string
+              string:
+                type: TrimPrefix
+                trim: 'https://'
       connectionDetails:
         - name: cluster-ca
           fromConnectionSecretKey: clusterCA
@@ -524,3 +557,149 @@ spec:
             map:
               gpu: AL2_x86_64_GPU
               non-gpu: AL2_x86_64        
+    
+    - name: configmap-cluster-info-workload-cluster
+      base:
+        apiVersion: kubernetes.crossplane.io/v1alpha1
+        kind: Object
+        metadata:
+          name: configmap-cluster-info-workload-cluster
+        spec:
+          forProvider:
+            manifest:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: cluster-info-workload-cluster
+                namespace: flux-system
+                labels:
+                  createdBy: crossplane
+              data:
+                ACCOUNT_ID: ""
+                AWS_REGION: ""
+                CLUSTER_ARN: ""
+                OIDC_PROVIDER: ""
+          providerConfigRef:
+            name: k8s-providerconfig
+      patches:
+        - fromFieldPath: metadata.name
+          toFieldPath: metadata.name
+          transforms:
+            - type: string
+              string:
+                fmt: "configmap-cluster-info-%s"
+        - fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.manifest.metadata.name
+          transforms:
+            - type: string
+              string:
+                fmt: "cluster-info-%s"
+        - type: PatchSet
+          patchSetName: cluster-info-mappings
+    
+    # Creating cluster-info ConfigMap for the workload cluster here
+    # because of a bug in serverside patch apply
+    # https://github.com/kubernetes/kubernetes/issues/94275
+    # It is fixed in 1.22
+    - name: remote-k8s-providerconfig-workload-cluster
+      base:
+        apiVersion: kubernetes.crossplane.io/v1alpha1
+        kind: ProviderConfig
+        metadata:
+          name: remote-k8s-providerconfig-workload-cluster
+          labels:
+            createdBy: crossplane
+        spec:
+          credentials:
+            source: Secret
+            secretRef:
+              name: ekscluster-connection
+              namespace: crossplane-system
+              key: kubeconfig
+      patches:
+        - fromFieldPath: metadata.name
+          toFieldPath: metadata.name
+          transforms:
+            - type: string
+              string:
+                fmt: "remote-k8s-providerconfig-%s"
+        # This ProviderConfig uses the above EKS cluster's connection secret as
+        # its credentials secret.
+        - fromFieldPath: "metadata.uid"
+          toFieldPath: spec.credentials.secretRef.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-ekscluster-connection"
+      readinessChecks:
+        - type: None
+
+    - name: remote-namespace-flux-system-workload-cluster
+      base:
+        apiVersion: kubernetes.crossplane.io/v1alpha1
+        kind: Object
+        metadata:
+          name: remote-namespace-flux-system-workload-cluster
+        spec:
+          forProvider:
+            manifest:
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: flux-system
+                labels:
+                  createdBy: crossplane
+          providerConfigRef:
+            name: remote-k8s-providerconfig-workload-cluster
+      patches:
+        - fromFieldPath: metadata.name
+          toFieldPath: spec.providerConfigRef.name
+          transforms:
+            - type: string
+              string:
+                fmt: "remote-k8s-providerconfig-%s"
+        - fromFieldPath: metadata.name
+          toFieldPath: metadata.name
+          transforms:
+            - type: string
+              string:
+                fmt: "remote-namespace-flux-system-%s"
+
+    - name: remote-configmap-cluster-info-workload-cluster
+      base:
+        apiVersion: kubernetes.crossplane.io/v1alpha1
+        kind: Object
+        metadata:
+          name: remote-configmap-cluster-info-workload-cluster
+        spec:
+          forProvider:
+            manifest:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: cluster-info
+                namespace: flux-system
+                labels:
+                  createdBy: crossplane
+              data:
+                ACCOUNT_ID: ""
+                AWS_REGION: ""
+                CLUSTER_ARN: ""
+                OIDC_PROVIDER: ""
+          providerConfigRef:
+            name: remote-k8s-providerconfig-workload-cluster
+      patches:
+        - fromFieldPath: metadata.name
+          toFieldPath: spec.providerConfigRef.name
+          transforms:
+            - type: string
+              string:
+                fmt: "remote-k8s-providerconfig-%s"
+        - fromFieldPath: metadata.name
+          toFieldPath: metadata.name
+          transforms:
+            - type: string
+              string:
+                fmt: "remote-configmap-cluster-info-%s"
+        - type: PatchSet
+          patchSetName: cluster-info-mappings

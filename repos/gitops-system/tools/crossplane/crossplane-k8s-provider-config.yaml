@@ -2,24 +2,21 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  name: cluster-name-intialization
+  name: crossplane-k8s-provider-config
   namespace: flux-system
 spec:
   dependsOn:
-  - name: cluster-name-eks-cluster
+  - name: crossplane-k8s-provider
   interval: 3m0s
-  path: ./clusters-config/cluster-name/initialization
+  path: ./tools/crossplane/crossplane-k8s-provider-config
   prune: true
   sourceRef:
     kind: GitRepository
     name: flux-system
   healthChecks:
-  - kind: Namespace
-    apiVersion: v1
-    name: flux-system
-  kubeConfig:
-    secretRef:
-      name: cluster-name-eks-connection
+  - apiVersion: kubernetes.crossplane.io/v1alpha1
+    kind: ProviderConfig
+    name: k8s-providerconfig
   validation: client
   timeout: 2m
----
+

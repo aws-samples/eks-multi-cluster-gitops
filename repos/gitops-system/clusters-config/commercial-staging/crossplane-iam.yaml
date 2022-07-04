@@ -1,0 +1,29 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: commercial-staging-crossplane-iam
+  namespace: flux-system
+spec:
+  dependsOn:
+  #- name: commercial-staging-intialization
+  - name: commercial-staging-eks-cluster-oidc-idp
+  interval: 1m0s
+  path: ./clusters-config/commercial-staging/crossplane-iam
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  healthChecks:
+  - kind: Role
+    apiVersion: iam.aws.crossplane.io/v1beta1
+    name: crossplane-role-commercial-staging
+  - kind: RolePolicyAttachment
+    apiVersion: iam.aws.crossplane.io/v1beta1
+    name: crossplane-rolepolicyattachment-commercial-staging
+  validation: client
+  timeout: 2m
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-info-commercial-staging
+        optional: false

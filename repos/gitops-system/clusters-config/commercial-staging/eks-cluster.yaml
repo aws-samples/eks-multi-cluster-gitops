@@ -17,4 +17,4 @@ spec:
     name: commercial-staging-eks-connection
     namespace: flux-system
   validation: client
-  timeout: 2m
+  timeout: 20m

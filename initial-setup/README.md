@@ -202,64 +202,58 @@ kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-app.y
 cp git-creds-sealed-app.yaml gitops-workloads/commercial-staging/payment-app/git-secret.yaml
 ```
 
-## Create AWS credentials for Crossplane
+## Setup IAM for Crossplane
 
-### Create an IAM user for Crossplane
+The following steps will refer to configuration values from the EKS cluster. Please ensure that the cluster status is
+active before you continue with the following steps.
 
-1. Create the IAM user that will be used by Crossplane for provisioning AWS resources (DynamoDB table, SQS queue, etc.)
-   ```
-   aws iam create-user --user-name crossplane
-   ```
+```bash
+# Wait for the cluster status to change to 'Active'
+aws eks wait cluster-active --name mgmt
+```
 
-2. Create a programmatic access key for this user:
-   ```
-   ACCESS_KEY=$(aws iam create-access-key --user-name crossplane)
-   echo $ACCESS_KEY
-   ```
-   Keep a record of the generated access key ID and secret access key as you will use them in a subsequent step.
+### Export environment variables
 
-3. Attach `AdministratorAccess` permissions policy to this user:
-   ```
-   aws iam attach-user-policy --user-name crossplane --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
-   ```
-   **Note:** You can fine-tune the permissions granted to the created IAM user, and only select those that you want to grant to Crossplane.
+```bash
+export MGMT_CLUSTER_INFO=$(aws eks describe-cluster --name mgmt) 
+export CLUSTER_ARN=$(echo $MGMT_CLUSTER_INFO | yq '.cluster.arn')
+export OIDC_PROVIDER_URL=$(echo $MGMT_CLUSTER_INFO | yq '.cluster.identity.oidc.issuer')
+export OIDC_PROVIDER=${OIDC_PROVIDER_URL#'https://'}
+```
 
-### Create a `SealedSecret` for Crossplane AWS Credentials
+### Create an IAM role for Crossplane
 
-1. Extract the access key credentials for the *crossplane* user you created in the previous section:
-   ```
-   ACCESS_KEY_ID=$(echo $ACCESS_KEY | yq e ".AccessKey.AccessKeyId")
-   SECRET_ACCESS_KEY=$(echo $ACCESS_KEY | yq e ".AccessKey.SecretAccessKey")
-   ```
-
-2. Use these credentials to create a file `aws-credentials.conf` as follows:
-   ```
+1. Create IAM trust policy document
+   ```bash
    cd ~/environment
-   echo -e "[default]\naws_access_key_id = $ACCESS_KEY_ID\naws_secret_access_key = $SECRET_ACCESS_KEY" > aws-credentials.conf
+   envsubst \
+     < multi-cluster-gitops/initial-setup/config/crossplane-role-trust-policy-template.json \
+     > crossplane-role-trust-policy.json
    ```
 
-3. Create a Kubernetes `Secret` resource that contains the AWS credentials, and create a
-   corresponding `SealedSecret` resource.
-   ```
-   kubectl create secret generic aws-credentials \
-     -n crossplane-system \
-     --dry-run=client --from-file=credentials=./aws-credentials.conf \
-     -o yaml \
-     >creds-secret.yaml
-   kubeseal --cert sealed-secrets-keypair-public.pem --format yaml \
-     <creds-secret.yaml >creds-sealedsecret.yaml
-   ```
-4. Replace the content of
-   `gitops-system/tools/crossplane/crossplane-aws-provider-config/aws-credentials-sealed.yaml`
-   with the content of `creds-sealedsecret.yaml`.
-   ```
-   cp creds-sealedsecret.yaml gitops-system/tools/crossplane/crossplane-aws-provider-config/aws-credentials-sealed.yaml
+2. Create the IAM role that will be used by Crossplane for provisioning AWS resources (DynamoDB table, SQS queue, etc.)
+   ```bash
+   CROSSPLANE_IAM_ROLE_ARN=$(aws iam create-role \
+     --role-name crossplane-role \
+     --assume-role-policy-document file://crossplane-role-trust-policy.json \
+     --output text \
+     --query "Role.Arn")
    ```
 
-**Note:** Make sure you do not commit `aws-credentials.conf` and/or
-`creds-secret.yaml` to Git. Otherwise, your AWS credentials will be stored
-unencrypted in Git!
+3. Attach `AdministratorAccess` permissions policy to this role:
+   ```bash
+   aws iam attach-role-policy --role-name crossplane-role --policy-arn "arn:aws:iam::aws:policy/AdministratorAccess"
+   ```
+   **Note:** You can fine-tune the permissions granted to the created IAM role, and only select those that you want to grant to Crossplane.
 
+4. Create a `ConfigMap` named `cluster-info` with the cluster details
+   ```bash
+   kubectl create configmap cluster-info -n flux-system \
+     --from-literal=AWS_REGION=${AWS_REGION} \
+     --from-literal=ACCOUNT_ID=${ACCOUNT_ID} \
+     --from-literal=CLUSTER_ARN=${CLUSTER_ARN} \
+     --from-literal=OIDC_PROVIDER=${OIDC_PROVIDER}
+   ```
 
 ## Commit and push the repos
 

@@ -1,0 +1,108 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: k8s-provider-config-job-sa
+  namespace: crossplane-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: k8s-provider-config-job-crb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: k8s-provider-config-job-sa
+    namespace: crossplane-system
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k8s-provider-config-job
+  namespace: crossplane-system
+spec:
+  template:
+    spec:
+      serviceAccountName: k8s-provider-config-job-sa
+      containers:
+      - name: kubectl
+        image: bitnami/kubectl:1.22.11
+        command:
+        - "/bin/bash"
+        - "-c"
+        - |+
+          SA="crossplane-system:"$(kubectl get provider.pkg.crossplane.io provider-kubernetes -o go-template --template='{{.status.currentRevision}}{{"\n"}}')
+          status=$?
+          if test $status -eq 1
+          then
+            echo "Provider not found. Deleting clusterrolebinding..."
+            kubectl delete clusterrolebinding provider-kubernetes-admin-binding --ignore-not-found
+          else
+            kubectl get clusterrolebinding provider-kubernetes-admin-binding
+            status=$?
+            
+            if test $status -eq 1
+            then
+              echo "Creating ClusterRoleBinding for serviceaccount [${SA}]"
+            	kubectl create clusterrolebinding provider-kubernetes-admin-binding --clusterrole cluster-admin --serviceaccount="${SA}"
+            else
+            	echo "ClusterRoleBinding 'provider-kubernetes-admin-binding' exists."
+            fi
+          fi
+              
+      restartPolicy: Never
+  backoffLimit: 4
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: k8s-provider-config-cronjob
+  namespace: crossplane-system
+spec:
+  schedule: "*/3 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 100
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: k8s-provider-config-job-sa
+          containers:
+          - name: kubectl
+            image: bitnami/kubectl:1.22.11
+            command:
+            - "/bin/bash"
+            - "-c"
+            - |+
+              SA="crossplane-system:"$(kubectl get provider.pkg.crossplane.io provider-kubernetes -o go-template --template='{{.status.currentRevision}}{{"\n"}}')
+              status=$?
+              if test $status -eq 1
+              then
+                echo "Provider not found. Deleting clusterrolebinding..."
+                kubectl delete clusterrolebinding provider-kubernetes-admin-binding --ignore-not-found
+              else
+                kubectl get clusterrolebinding provider-kubernetes-admin-binding
+                status=$?
+                
+                if test $status -eq 1
+                then
+                  echo "Creating ClusterRoleBinding for serviceaccount [${SA}]"
+                	kubectl create clusterrolebinding provider-kubernetes-admin-binding --clusterrole cluster-admin --serviceaccount="${SA}"
+                else
+                	echo "ClusterRoleBinding 'provider-kubernetes-admin-binding' exists."
+                fi
+              fi
+                  
+          restartPolicy: Never
+      backoffLimit: 4
+---
+apiVersion: kubernetes.crossplane.io/v1alpha1
+kind: ProviderConfig
+metadata:
+  name: k8s-providerconfig
+spec:
+  credentials:
+    source: InjectedIdentity
