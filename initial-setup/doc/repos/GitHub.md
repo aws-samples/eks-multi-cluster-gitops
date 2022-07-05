@@ -60,15 +60,7 @@
    done
    ```
    
-3. Copy the content of the `multi-cluster-gitops/repos` directories
-   to the corresponding repos you created in the previous step:
-   ```
-   cp -r multi-cluster-gitops/repos/gitops-system/* gitops-system/
-   cp -r multi-cluster-gitops/repos/gitops-workloads/* gitops-workloads/
-   cp -r multi-cluster-gitops/repos/app-manifests/payment-app/* payment-app-manifests/
-   ```
-   
-### Update references to Git repositories
+### Set the `REPO_PREFIX` variable to point at your GitHub account
 
 1. Set the variable `GITHUB_ACCOUNT` to your GitHub user name.
    ```
@@ -76,49 +68,8 @@
    ```
 2. Set the variable `REPO_PREFIX` as follows:
    ```
-   REPO_PREFIX=ssh://git@github.com/$GITHUB_ACCOUNT
+   export REPO_PREFIX="ssh:\/\/git@github.com\/$GITHUB_ACCOUNT"
    ```
-4. Update the `git-repo.yaml` files in the `workloads` folder of the `gitops-system` repo,
-   replacing the `url` for the `GitRepository` resource with
-   the URL for the `gitpops-workloads` repo created in your account:
-   ```
-   yq e \
-     ".spec.url = \"$REPO_PREFIX/gitops-workloads\"" \
-     -i ./gitops-system/workloads/commercial-staging/git-repo.yaml
-   yq e \
-     ".spec.url = \"$REPO_PREFIX/gitops-workloads\"" \
-     -i ./gitops-system/workloads/commercial-prod/git-repo.yaml
-   ```
-3. Update the `gotk-sync.yaml` files in the `clusters` folder of the `gitops-system` repo,
-   replacing the `url` for the `GitRepository` resource with
-   the URL for the `gitpops-system` repo created in your account:
-   ```
-   yq e \
-     ".spec.url = \"$REPO_PREFIX/gitops-system\"" \
-     -i ./gitops-system/clusters/mgmt/flux-system/gotk-sync.yaml
-   yq e \
-     ".spec.url = \"$REPO_PREFIX/gitops-system\"" \
-     -i ./gitops-system/clusters/commercial-prod/flux-system/gotk-sync.yaml
-   yq e \
-     ".spec.url = \"$REPO_PREFIX/gitops-system\"" \
-     -i ./gitops-system/clusters/commercial-staging/flux-system/gotk-sync.yaml
-   ```
-
-4. Update the `git-repo.yaml` files in the `gitops-workloads` repo,
-   replacing the `url` for the `GitRepository` resource with
-   the URL for the `payment-app-manifests` repo created in your account:
-   ```
-   yq e \
-     ".spec.url = \"$REPO_PREFIX/payment-app-manifests\"" \
-     -i ./gitops-workloads/template/app-template/git-repo.yaml
-   yq e \
-     ".spec.url = \"$REPO_PREFIX/payment-app-manifests\"" \
-     -i ./gitops-workloads/commercial-staging/app-template/git-repo.yaml
-   yq e \
-     ".spec.url = \"$REPO_PREFIX/payment-app-manifests\"" \
-     -i ./gitops-workloads/commercial-staging/payment-app/git-repo.yaml
-   ```
-
 
 
 ### Create a `Secret` resource that contains the Git Credentials for `gitops-system`
@@ -151,4 +102,4 @@
    HOST=$(echo "github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=" | base64 -w 0) yq -i '.data.known_hosts = strenv(HOST)' git-creds-system.yaml
    ```
 
-When done, continue with the setup process [here](../../README.md#create-sealed-secrets-for-access-to-git-repos)
+When done, continue with the setup process [here](../../README.md#populate-and-update-the-repositories)

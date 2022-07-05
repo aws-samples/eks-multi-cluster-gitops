@@ -6,8 +6,6 @@ Public Subnets, 2 Private Subnets, 2 NAT Gateways, and 2 Elastic IP Addresses
 (attached to the NAT Gateways). Please make sure that the quotas of the AWS
 account you use for deploying this sample implementation can accommodate that.
 
-This document will assume all resources are created in `eu-west-1`.
-
 ## Create and prepare the Cloud9 workspace
 
 
@@ -51,16 +49,27 @@ This document will assume all resources are created in `eu-west-1`.
    ```
    aws sts get-caller-identity --query Arn | grep gitops-workshop -q && echo "IAM role valid" || echo "IAM role NOT valid"
    ```
+
+
+8. Install `yq`
+   ```bash
+   sudo curl --silent --location -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.24.5/yq_linux_amd64
+   sudo chmod +x /usr/local/bin/yq
+   ```
    
-8. Note the account ID and region
+9. Track the account ID and region using environment variables,
+   and update `.bash_profile` and `~/.aws/config`so that these veriables will be available in all Cloud9 Terminal windows.
    ```
    export ACCOUNT_ID=$(aws sts get-caller-identity --output text --query Account)
    export AWS_REGION=$(curl -s 169.254.169.254/latest/dynamic/instance-identity/document | yq -e '.region')
    echo $ACCOUNT_ID:$AWS_REGION
+   echo "export ACCOUNT_ID=${ACCOUNT_ID}" | tee -a ~/.bash_profile
+   echo "export AWS_REGION=${AWS_REGION}" | tee -a ~/.bash_profile
+   aws configure set default.region ${AWS_REGION}
+   aws configure get default.region
    ```
-   **Note:** At present, only the region `eu-west-1` is supported.
 
-9. Increase the volume of the EBS volume to 30GB as follows.
+10. Increase the volume of the EBS volume to 30GB as follows.
     1. Copy the [volume resize script from the Cloud9 documentation](https://docs.aws.amazon.com/cloud9/latest/user-guide/move-environment.html#move-environment-resize) into a file `resize.sh` in your Cloud9 environment.
     2. Run 
        ```
@@ -99,27 +108,19 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
    sudo apt install gh
    ```
 
-5. Install `yq`
-   ```bash
-   sudo curl --silent --location -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.24.5/yq_linux_amd64
-   sudo chmod +x /usr/local/bin/yq
-   ```
-
-6. Install `eksctl`
+5. Install `eksctl`
    ```bash
    curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
    sudo mv /tmp/eksctl /usr/local/bin
    ```
      
-7. Clone the workshop git repo:
+6. Clone the workshop git repo:
    ```
    cd ~/environment
    git clone https://github.com/aws-samples/multi-cluster-gitops.git
    ```
    
 ## Create a secret in AWS Secret Manager for Sealed Secrets keys
-
-**Note:** Make sure you're using the same region as defined in multi-cluster-gitops/initial-setup/config/mgmt-cluster-eksctl.yaml
 
 1. Generate a 4096-bit RSA key pair using *openssl*:
    ```bash
@@ -152,12 +153,12 @@ Create the management cluster using `eksctl`
 ```bash
 cd ~/environment
 cp multi-cluster-gitops/initial-setup/config/mgmt-cluster-eksctl.yaml .
-yq e ".metadata.region=\"$AWS_REGION\"" -i mgmt-cluster-eksctl.yaml     
+sed -i "s/AWS_REGION/$AWS_REGION/g" mgmt-cluster-eksctl.yaml     
 eksctl create cluster -f mgmt-cluster-eksctl.yaml
 ```
 This will take some time. You can proceed to the next section in parallel, using a separate terminal window.
 
-## Create and populate the Git repositories
+## Create the Git repositories
 
 You can use GitHub or AWS CodeCommit as the backend for your Git repositories.
 
@@ -168,6 +169,66 @@ OR
 [Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit.md#create-and-prepare-the-git-repositories)
 
 
+## Populate and update the repositories
+   
+To populate the repos you created, copy the content of the
+`multi-cluster-gitops/repos` directories to the corresponding repos you
+created in the previous step:
+```
+cp -r multi-cluster-gitops/repos/gitops-system/* gitops-system/
+cp -r multi-cluster-gitops/repos/gitops-workloads/* gitops-workloads/
+cp -r multi-cluster-gitops/repos/app-manifests/payment-app/* payment-app-manifests/
+```
+Some of the files in these repos contain placholder references for AWS_REGION and REPO_PREFIX
+which need to be updated to reflect your working region, and the location of your repos.
+
+### Update references to AWS region
+
+Run the `sed` comand below to update various manifests to point to the correct AWS region:
+```
+sed -i "s/AWS_REGION/$AWS_REGION/g" \
+   gitops-system/clusters-config/commercial-prod/def/eks-cluster.yaml \
+   gitops-system/clusters-config/commercial-staging/def/eks-cluster.yaml \
+   gitops-system/clusters-config/template/def/eks-cluster.yaml \
+   gitops-system/tools-config/external-secrets/sealed-secrets-key.yaml
+```
+
+
+### Update references to GitRepository URLs
+
+1. Verify that REPO_PREFIX is set correctly (for either GitHib or CodeCommit)
+   ```
+   echo $REPO_PREFIX
+   ```
+
+2. Update the `git-repo.yaml` files in the `workloads` folder of the `gitops-system` repo,
+   updating the `url` for the `GitRepository` resource to point at 
+   the `gitpops-workloads` repo created in your account:
+   ```
+   sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
+     gitops-system/workloads/template/git-repo.yaml \
+     gitops-system/workloads/commercial-staging/git-repo.yaml \
+     gitops-system/workloads/commercial-prod/git-repo.yaml
+   ```
+3. Update the `gotk-sync.yaml` files in the `clusters` folder of the `gitops-system` repo,
+   updating the `url` for the `GitRepository` resource to point at the `gitpops-system` repo created in your account:
+   ```
+   sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
+     gitops-system/clusters/mgmt/flux-system/gotk-sync.yaml \
+     gitops-system/clusters/template/flux-system/gotk-sync.yaml \
+     gitops-system/clusters/commercial-prod/flux-system/gotk-sync.yaml \
+     gitops-system/clusters/commercial-staging/flux-system/gotk-sync.yaml
+   ```
+
+4. Update the `git-repo.yaml` files in the `gitops-workloads` repo,
+   updating the `url` for the `GitRepository` resource to point at the `payment-app-manifests` repo created in your account:
+   ```
+   sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
+     gitops-workloads/template/app-template/git-repo.yaml \
+     gitops-workloads/commercial-staging/app-template/git-repo.yaml \
+     gitops-workloads/commercial-prod/app-template/git-repo.yaml \
+     gitops-workloads/commercial-staging/payment-app/git-repo.yaml
+   ```
 
 
 ## Create sealed secrets for access to Git repos

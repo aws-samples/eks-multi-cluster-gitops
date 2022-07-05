@@ -10,4 +10,4 @@ spec:
   secretRef:
     name: payment-app
   timeout: 60s
-  url: ssh://git@github.com/iamahgoub/payment-app-manifests
+  url: REPO_PREFIX/payment-app-manifests

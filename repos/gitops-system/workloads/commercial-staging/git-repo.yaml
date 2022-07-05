@@ -10,4 +10,4 @@ spec:
   secretRef:
     name: gitops-workloads
   timeout: 60s
-  url: ssh://git@github.com/iamahgoub/gitops-workloads
+  url: REPO_PREFIX/gitops-workloads
