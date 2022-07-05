@@ -206,28 +206,21 @@ sed -i "s/AWS_REGION/$AWS_REGION/g" \
    the `gitpops-workloads` repo created in your account:
    ```
    sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
-     gitops-system/workloads/template/git-repo.yaml \
-     gitops-system/workloads/commercial-staging/git-repo.yaml \
-     gitops-system/workloads/commercial-prod/git-repo.yaml
+     gitops-system/workloads/template/git-repo.yaml
    ```
 3. Update the `gotk-sync.yaml` files in the `clusters` folder of the `gitops-system` repo,
    updating the `url` for the `GitRepository` resource to point at the `gitpops-system` repo created in your account:
    ```
    sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
      gitops-system/clusters/mgmt/flux-system/gotk-sync.yaml \
-     gitops-system/clusters/template/flux-system/gotk-sync.yaml \
-     gitops-system/clusters/commercial-prod/flux-system/gotk-sync.yaml \
-     gitops-system/clusters/commercial-staging/flux-system/gotk-sync.yaml
+     gitops-system/clusters/template/flux-system/gotk-sync.yaml
    ```
 
 4. Update the `git-repo.yaml` files in the `gitops-workloads` repo,
    updating the `url` for the `GitRepository` resource to point at the `payment-app-manifests` repo created in your account:
    ```
    sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
-     gitops-workloads/template/app-template/git-repo.yaml \
-     gitops-workloads/commercial-staging/app-template/git-repo.yaml \
-     gitops-workloads/commercial-prod/app-template/git-repo.yaml \
-     gitops-workloads/commercial-staging/payment-app/git-repo.yaml
+     gitops-workloads/template/app-template/git-repo.yaml
    ```
 
 
@@ -241,80 +234,82 @@ The `SealedSecret` manifests are then copied into the correct locations for each
 
 |Repo|metadata.name|Locations|
 |----|-------------|---------|
-|gitops-system | flux-system | gitops-system/clusters-config/commercial-staging/secrets/git-secret.yaml |
-||| gitops-system/clusters-config/commercial-prod/secrets/git-secret.yaml|
-|gitops-workloads|gitops-workloads|gitops-system/workloads/commercial-staging/git-secret.yaml|
-|||gitops-system/workloads/commercial-prod/git-secret.yaml|
-|payment-app-manifests| payment-app | gitops-workloads/commercial-staging/payment-app/git-secret.yaml |
+|gitops-system | flux-system | gitops-system/clusters-config/template/secrets/git-secret.yaml |
+|gitops-workloads|gitops-workloads|gitops-system/workloads/template/git-secret.yaml|
+|app repo| payment.app | gitops-workloads/template/git-secret.yaml |
 
 Use the following script to generate the `SealedSecret` manifests and copy them to the correct locations:
 ```bash
 kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-system.yaml >git-creds-sealed-system.yaml
-cp git-creds-sealed-system.yaml gitops-system/clusters-config/commercial-staging/secrets/git-secret.yaml
-cp git-creds-sealed-system.yaml gitops-system/clusters-config/commercial-prod/secrets/git-secret.yaml
+cp git-creds-sealed-system.yaml gitops-system/clusters-config/template/secrets/git-secret.yaml
 cp git-creds-system.yaml git-creds-workloads.yaml
 yq e '.metadata.name="gitops-workloads"' -i git-creds-workloads.yaml
 kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-workloads.yaml >git-creds-sealed-workloads.yaml
-cp git-creds-sealed-workloads.yaml gitops-system/workloads/commercial-staging/git-secret.yaml
-cp git-creds-sealed-workloads.yaml gitops-system/workloads/commercial-prod/git-secret.yaml
+cp git-creds-sealed-workloads.yaml gitops-system/workloads/template/git-secret.yaml
 cp git-creds-system.yaml git-creds-app.yaml
 yq e '.metadata.name="payment-app"' -i git-creds-app.yaml
 kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-app.yaml >git-creds-sealed-app.yaml
-cp git-creds-sealed-app.yaml gitops-workloads/commercial-staging/payment-app/git-secret.yaml
+cp git-creds-sealed-app.yaml gitops-workloads/template/git-secret.yaml
 ```
 
-## Setup IAM for Crossplane
+## Create AWS credentials for Crossplane
 
-The following steps will refer to configuration values from the EKS cluster. Please ensure that the cluster status is
-active before you continue with the following steps.
+### Create an IAM user for Crossplane
 
-```bash
-# Wait for the cluster status to change to 'Active'
-aws eks wait cluster-active --name mgmt
-```
+1. Create the IAM user that will be used by Crossplane for provisioning AWS resources (DynamoDB table, SQS queue, etc.)
+   ```
+   aws iam create-user --user-name crossplane
+   ```
 
-### Export environment variables
+2. Create a programmatic access key for this user:
+   ```
+   ACCESS_KEY=$(aws iam create-access-key --user-name crossplane)
+   echo $ACCESS_KEY
+   ```
+   Keep a record of the generated access key ID and secret access key as you will use them in a subsequent step.
 
-```bash
-export MGMT_CLUSTER_INFO=$(aws eks describe-cluster --name mgmt) 
-export CLUSTER_ARN=$(echo $MGMT_CLUSTER_INFO | yq '.cluster.arn')
-export OIDC_PROVIDER_URL=$(echo $MGMT_CLUSTER_INFO | yq '.cluster.identity.oidc.issuer')
-export OIDC_PROVIDER=${OIDC_PROVIDER_URL#'https://'}
-```
+3. Attach `AdministratorAccess` permissions policy to this user:
+   ```
+   aws iam attach-user-policy --user-name crossplane --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+   ```
+   **Note:** You can fine-tune the permissions granted to the created IAM user, and only select those that you want to grant to Crossplane.
 
-### Create an IAM role for Crossplane
+### Create a `SealedSecret` for Crossplane AWS Credentials
 
-1. Create IAM trust policy document
-   ```bash
+1. Extract the access key credentials for the *crossplane* user you created in the previous section:
+   ```
+   ACCESS_KEY_ID=$(echo $ACCESS_KEY | yq e ".AccessKey.AccessKeyId")
+   SECRET_ACCESS_KEY=$(echo $ACCESS_KEY | yq e ".AccessKey.SecretAccessKey")
+   ```
+
+2. Use these credentials to create a file `aws-credentials.conf` as follows:
+   ```
    cd ~/environment
-   envsubst \
-     < multi-cluster-gitops/initial-setup/config/crossplane-role-trust-policy-template.json \
-     > crossplane-role-trust-policy.json
+   echo -e "[default]\naws_access_key_id = $ACCESS_KEY_ID\naws_secret_access_key = $SECRET_ACCESS_KEY" > aws-credentials.conf
    ```
 
-2. Create the IAM role that will be used by Crossplane for provisioning AWS resources (DynamoDB table, SQS queue, etc.)
-   ```bash
-   CROSSPLANE_IAM_ROLE_ARN=$(aws iam create-role \
-     --role-name crossplane-role \
-     --assume-role-policy-document file://crossplane-role-trust-policy.json \
-     --output text \
-     --query "Role.Arn")
+3. Create a Kubernetes `Secret` resource that contains the AWS credentials, and create a
+   corresponding `SealedSecret` resource.
+   ```
+   kubectl create secret generic aws-credentials \
+     -n crossplane-system \
+     --dry-run=client --from-file=credentials=./aws-credentials.conf \
+     -o yaml \
+     >creds-secret.yaml
+   kubeseal --cert sealed-secrets-keypair-public.pem --format yaml \
+     <creds-secret.yaml >creds-sealedsecret.yaml
+   ```
+4. Replace the content of
+   `gitops-system/tools/crossplane/crossplane-aws-provider-config/aws-credentials-sealed.yaml`
+   with the content of `creds-sealedsecret.yaml`.
+   ```
+   cp creds-sealedsecret.yaml gitops-system/tools/crossplane/crossplane-aws-provider-config/aws-credentials-sealed.yaml
    ```
 
-3. Attach `AdministratorAccess` permissions policy to this role:
-   ```bash
-   aws iam attach-role-policy --role-name crossplane-role --policy-arn "arn:aws:iam::aws:policy/AdministratorAccess"
-   ```
-   **Note:** You can fine-tune the permissions granted to the created IAM role, and only select those that you want to grant to Crossplane.
+**Note:** Make sure you do not commit `aws-credentials.conf` and/or
+`creds-secret.yaml` to Git. Otherwise, your AWS credentials will be stored
+unencrypted in Git!
 
-4. Create a `ConfigMap` named `cluster-info` with the cluster details
-   ```bash
-   kubectl create configmap cluster-info -n flux-system \
-     --from-literal=AWS_REGION=${AWS_REGION} \
-     --from-literal=ACCOUNT_ID=${ACCOUNT_ID} \
-     --from-literal=CLUSTER_ARN=${CLUSTER_ARN} \
-     --from-literal=OIDC_PROVIDER=${OIDC_PROVIDER}
-   ```
 
 ## Commit and push the repos
 
