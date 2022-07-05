@@ -5,7 +5,7 @@ kind: ClusterConfig
 metadata:
   name: mgmt
   region: AWS_REGION
-  version: "1.21"
+  version: "1.22"
 
 iam:
   withOIDC: true
