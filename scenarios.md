@@ -1,10 +1,6 @@
 ## Provision and bootstrap a new cluster
-1. Set the variable name GITHUB_ACCOUNT to your GitHub user name.
-```bash
-GITHUB_ACCOUNT=<your-github-user-name>
-```
 
-2. Make a copy of the cluster definition template folder for the new cluster.
+1. Make a copy of the cluster definition template folder for the new cluster.
 
 ```bash
 cd ~/environment/gitops-system/clusters-config
@@ -15,10 +11,7 @@ grep -RiIl  'cluster-name' . | xargs sed -i 's/cluster-name/<cluster-name>/g'
 ```
 (Replace `<cluster-name>` with the new cluster name).
 
-3. Change the Gitrepo url under flux-system/gotk-sync.yaml. 
-```bash
-sed -i "s/GITHUB_ACCOUNT/$GITHUB_ACCOUNT/g" flux-system/gotk-sync.yaml 
-```
+2. Make a copy of the cluster template folder for the new cluster.
 
 ```bash
 cd ~/environment/gitops-system/clusters
@@ -29,7 +22,7 @@ grep -RiIl  'cluster-name' . | xargs sed -i 's/cluster-name/<cluster-name>/g'
 ```
 (Replace `<cluster-name>` with the new cluster name).
 
-4. Make a copy of the workloads template folder in `gitops-system` for the new cluster.
+3. Make a copy of the workloads template folder in `gitops-system` for the new cluster.
 
 ```bash
 cd ~/environment/gitops-system/workloads
@@ -40,12 +33,8 @@ grep -RiIl  'cluster-name' . | xargs sed -i 's/cluster-name/<cluster-name>/g'
 ```
 (Replace `<cluster-name>` with the new cluster name).
 
-4. Change the Gitrepo url under git-repo.yaml. 
-```bash
-sed -i "s/GITHUB_ACCOUNT/$GITHUB_ACCOUNT/g" git-repo.yaml
-```
 
-5. Make a copy of the workloads template folder in `clusters-config` for the new cluster.
+4. Make a copy of the workloads template folder in `clusters-config` for the new cluster.
 
 ```bash
 cd ~/environment/clusters-config
@@ -56,11 +45,8 @@ grep -RiIl  'cluster-name' . | xargs sed -i 's/cluster-name/<cluster-name>/g'
 ```
 (Replace `<cluster-name>` with the new cluster name).
 
-6. Change the Gitrepo url under git-repo.yaml. 
-```bash
-sed -i "s/GITHUB_ACCOUNT/$GITHUB_ACCOUNT/g" git-repo.yaml
-```
-7. Add <cluster-name> to clusters-config/kustomization.yaml file.
+
+5. Add <cluster-name> to clusters-config/kustomization.yaml file.
 ```bash
  ---
 apiVersion: kustomize.config.k8s.io/v1beta1

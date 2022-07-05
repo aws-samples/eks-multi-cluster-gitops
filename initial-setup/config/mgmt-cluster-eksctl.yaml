@@ -4,7 +4,7 @@ kind: ClusterConfig
 
 metadata:
   name: mgmt
-  region: eu-west-1
+  region: AWS_REGION
   version: "1.21"
 
 iam:

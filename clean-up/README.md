@@ -3,6 +3,6 @@
 2. Un-deploy the workload clusters by removing the resources listed in ```gitops-system/clusters-config/kustomization.yaml```
 3. Un-deploy the management cluster.
 ```
-eksctl delete cluster --name mgmt --region eu-west-1
+eksctl delete cluster --name mgmt --region $AWS_REGION
 ```
 4. Remove the GitHub repos or AWS CodeCommit repos you created.
