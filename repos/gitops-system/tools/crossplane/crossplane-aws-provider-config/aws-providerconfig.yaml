@@ -5,8 +5,4 @@ metadata:
   name: default
 spec:
   credentials:
-    source: Secret
-    secretRef:
-      namespace: crossplane-system
-      name: aws-credentials
-      key: credentials
+    source: InjectedIdentity

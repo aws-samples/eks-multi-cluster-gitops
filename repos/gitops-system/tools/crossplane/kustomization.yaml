@@ -5,4 +5,6 @@ resources:
   - crossplane-core.yaml
   - crossplane-aws-provider.yaml
   - crossplane-aws-provider-config.yaml
+  - crossplane-k8s-provider.yaml
+  - crossplane-k8s-provider-config.yaml
   - crossplane-composition.yaml

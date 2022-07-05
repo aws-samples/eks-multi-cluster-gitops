@@ -1,0 +1,27 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: commercial-staging-eks-cluster-oidc-idp
+  namespace: flux-system
+spec:
+  dependsOn:
+  #- name: commercial-staging-intialization
+  - name: commercial-staging-eks-cluster
+  interval: 30s
+  path: ./clusters-config/commercial-staging/eks-cluster-oidc-idp
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  healthChecks:
+  - kind: OpenIDConnectProvider
+    apiVersion: iam.aws.crossplane.io/v1beta1
+    name: cluster-oidc-idp-commercial-staging
+  validation: client
+  timeout: 30m
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-info-commercial-staging
+        optional: false

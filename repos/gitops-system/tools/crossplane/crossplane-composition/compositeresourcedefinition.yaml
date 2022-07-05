@@ -110,3 +110,19 @@ spec:
                   - workload-type              
             required:
               - parameters
+          status:
+            description: A Status represents the observed state
+            properties:
+              account_id:
+                description: Account ID
+                type: string
+              eks_cluster_arn:
+                description: ARN of the EKS cluster
+                type: string
+              eks_cluster_oidc_issuer_url:
+                description: OIDC issuer url for the EKS cluster
+                type: string
+              eks_cluster_oidc_issuer:
+                description: OIDC issuer for the EKS cluster
+                type: string
+            type: object
