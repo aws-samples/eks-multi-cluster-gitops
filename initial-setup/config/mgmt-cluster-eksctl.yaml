@@ -10,8 +10,13 @@ metadata:
 iam:
   withOIDC: true
 
+vpc:
+  nat:
+    gateway: HighlyAvailable
+
 managedNodeGroups:
 - name: nodegroup
+  privateNetworking: true
   iam:
     attachPolicyARNs:
       - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
@@ -20,5 +25,3 @@ managedNodeGroups:
       - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
   desiredCapacity: 3
   instanceType: t3.small
-  ssh:
-    enableSsm: true
