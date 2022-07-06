@@ -35,7 +35,6 @@ grep -RiIl  'cluster-name' . | xargs sed -i 's/cluster-name/<cluster-name>/g'
 
 
 4. Make a copy of the workloads template folder in `clusters-config` for the new cluster.
-
 ```bash
 cd ~/environment/clusters-config
 mkdir <cluster-name>
@@ -45,8 +44,13 @@ grep -RiIl  'cluster-name' . | xargs sed -i 's/cluster-name/<cluster-name>/g'
 ```
 (Replace `<cluster-name>` with the new cluster name).
 
+5. Copy `SealedSecret` for the new cluster locations:
+```bash
+cp git-creds-sealed-system.yaml gitops-system/clusters-config/<cluster-name>/secrets/git-secret.yaml
+cp git-creds-sealed-workloads.yaml gitops-system/workloads/<cluster-name>/git-secret.yaml
+```
 
-5. Add <cluster-name> to clusters-config/kustomization.yaml file.
+6. Add <cluster-name> to clusters-config/kustomization.yaml file.
 ```bash
  ---
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -56,7 +60,7 @@ resources:
   - <cluster-name>
 ```
   
-6. Commit changes
+7. Commit changes
 ```bash
 cd ~/environment/gitops-system/
 git add .
