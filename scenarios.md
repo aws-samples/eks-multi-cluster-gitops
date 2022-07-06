@@ -86,6 +86,11 @@ git push
 ```
 (Replace `<cluster-name>` with the new cluster name).
 
+4. Confirm cluster updating. 
+```bash
+eksctl get cluster --name <cluster-name> --region <region-name> 
+```
+
 ## Delete an existing cluster
 1. Delete the deployed applications from the cluster by following the instructions in delete an application from a cluster section, and wait for the applications to be removed.
 
