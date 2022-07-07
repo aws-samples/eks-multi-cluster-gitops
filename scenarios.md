@@ -130,19 +130,31 @@ git push
 cd ~/environment/gitops-workloads/<cluster-name>
 mkdir <app-name>
 cp -R app-template/* <app-name>/
-cd red
+cd <app-name>
 grep -RiIl  'app-name' . | xargs sed -i 's/app-name/<app-name>/g'
 ```
 
 (Replace `<app-name>` with the application name, and replace `<cluster-name>` with the cluster name).
 
-2. Update the git credentials for the application git repo in `gitops-worklaods/<cluster-name>/<app-name>/git-repo.yaml`.
+2. Update the git repo for an application in `gitops-worklaods/<cluster-name>/<app-name>/git-repo.yaml`.
 
 (Replace `<app-name>` with the application name, and replace `<cluster-name>` with the cluster name).
 
-3. Add an entry for the application in `gitops-workloads/<cluster-name>/kustomization.yaml`.
+3. Create sealed secrets for the new application. 
 
-4. Commit changes.
+```bash
+cd ~/environment
+cp git-creds-system.yaml git-creds-<app-name>.yaml
+yq e '.metadata.name="<app-name>"' -i git-creds-<app-name>.yaml
+kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-<app-name>.yaml >git-creds-sealed-<app-name>.yaml
+cp git-creds-sealed-<app-name>.yaml gitops-workloads/<cluster-name>/<app-name>/git-secret.yaml
+```
+
+(Replace `<app-name>` with the application name, and replace `<cluster-name>` with the cluster name).
+
+4. Add an entry for the application in `gitops-workloads/<cluster-name>/kustomization.yaml`.
+
+5. Commit changes.
 
 ```bash
 cd ~/environment/gitops-workloads/
