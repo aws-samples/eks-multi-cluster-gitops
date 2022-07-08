@@ -19,14 +19,6 @@ flask_app.logger.setLevel(log_level)
 # enable CORS
 CORS(flask_app, resources={r'/*': {'origins': '*'}})
 
-
-AGG_APP_URL = os.environ.get("AGG_APP_URL")
-
-if AGG_APP_URL is None:
-    AGG_APP_URL="http://localhost:3000/catalogDetail"
-
-flask_app.logger.info('AGG_APP_URL is ' + str(AGG_APP_URL))
-
 session = boto3.Session()
 dynamodb = session.resource("dynamodb", region_name="eu-west-1")
 table_name = os.getenv("PRODUCTS_TABLE_NAME", "products")
@@ -76,13 +68,9 @@ class Products(Resource):
             for item in resp['Items']:
                 products[item["id"]] = item["name"]
             
-            flask_app.logger.info('AGG_APP_URL is ' + str(AGG_APP_URL))
-            response = requests.get(str(AGG_APP_URL))
-            content = response.json()
             flask_app.logger.info('Get-All Request succeeded')
             return {
-                "products": products,
-                "details" : content
+                "products": products
             }
         except Exception as e:
             flask_app.logger.error('Error 500 Could not retrieve information ' + e.__doc__ )
@@ -104,14 +92,10 @@ class MainClass(Resource):
                     'id': str(id)
                 })
 
-            flask_app.logger.info('AGG_APP_URL is ' + str(AGG_APP_URL))
-            response = requests.get(str(AGG_APP_URL))
-            content = response.json()
             flask_app.logger.info('Get Request succeeded ' + resp["Item"]["name"])
             return {
                 "status": "Product Details retrieved",
-                "name" : resp["Item"]["name"],
-                "details" : content
+                "name" : resp["Item"]["name"]
             }
         except Exception as e:
             flask_app.logger.error('Error 500 Could not retrieve information ' + e.__doc__ )

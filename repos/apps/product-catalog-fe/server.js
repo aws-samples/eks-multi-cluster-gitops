@@ -34,7 +34,7 @@ app.get('/', (req, res) => {
        //   const responseTwo = responses[1]
 
         //  console.log(responseOne.data.products, responseOne.data.details.vendors, responseOne.data.details.version);
-          res.render('index.ejs', {products: responseOne.data.products, vendors:responseOne.data.details.vendors, version:responseOne.data.details.version})
+          res.render('index.ejs', {products: responseOne.data.products})
           console.log("Product Catalog get call was Successful from frontend");
         })).catch(errors => {
 
