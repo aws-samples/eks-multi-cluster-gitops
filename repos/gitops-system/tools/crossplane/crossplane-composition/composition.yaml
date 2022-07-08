@@ -558,6 +558,30 @@ spec:
               gpu: AL2_x86_64_GPU
               non-gpu: AL2_x86_64        
     
+    - name: cluster-oidc-idp
+      base:
+        apiVersion: iam.aws.crossplane.io/v1beta1
+        kind: OpenIDConnectProvider
+        metadata:
+          name: cluster-oidc-idp
+        spec:
+          forProvider:
+            clientIDList:
+              - sts.amazonaws.com
+            thumbprintList:
+              - "9e99a48a9960b14926bb7f3b02e22da2b0ab7280"
+      patches:
+        - fromFieldPath: metadata.name
+          toFieldPath: metadata.name
+          transforms:
+            - type: string
+              string:
+                fmt: "cluster-oidc-idp-%s"
+        - fromFieldPath: status.eks_cluster_oidc_issuer_url
+          toFieldPath: spec.forProvider.url
+          policy:
+            fromFieldPath: Required
+    
     - name: configmap-cluster-info-workload-cluster
       base:
         apiVersion: kubernetes.crossplane.io/v1alpha1
