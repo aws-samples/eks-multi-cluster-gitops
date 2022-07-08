@@ -16,5 +16,8 @@ spec:
     apiVersion: v1
     name: commercial-prod-eks-connection
     namespace: flux-system
+  - kind: OpenIDConnectProvider
+    apiVersion: iam.aws.crossplane.io/v1beta1
+    name: cluster-oidc-idp-commercial-prod
   validation: client
   timeout: 2m
