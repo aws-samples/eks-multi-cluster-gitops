@@ -5,9 +5,9 @@ metadata:
   namespace: flux-system
 spec:
   dependsOn:
-  - name: cluster-name-eks-cluster-oidc-idp
+  - name: cluster-name-eks-cluster
   interval: 1m0s
-  path: ./clusters-config/cluster-name/crossplane-iam
+  path: ./tools-config/crossplane-iam
   prune: true
   sourceRef:
     kind: GitRepository
@@ -21,6 +21,28 @@ spec:
     name: crossplane-rolepolicyattachment-cluster-name
   validation: client
   timeout: 2m
+  patches:
+    - target:
+        group: iam.aws.crossplane.io
+        kind: Role
+        version: v1beta1
+        name: crossplane-role
+      patch: |-
+        - op: replace
+          path: /metadata/name
+          value: crossplane-role-cluster-name
+    - target:
+        group: iam.aws.crossplane.io
+        kind: RolePolicyAttachment
+        version: v1beta1
+        name: crossplane-rolepolicyattachment
+      patch: |-
+        - op: replace
+          path: /metadata/name
+          value: crossplane-rolepolicyattachment-cluster-name
+        - op: replace
+          path: /spec/forProvider/roleNameRef/name
+          value: crossplane-role-cluster-name
   postBuild:
     substituteFrom:
       - kind: ConfigMap

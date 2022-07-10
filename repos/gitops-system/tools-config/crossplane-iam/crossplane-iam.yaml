@@ -2,7 +2,7 @@
 apiVersion: iam.aws.crossplane.io/v1beta1
 kind: Role
 metadata:
-  name: crossplane-role-commercial-staging
+  name: crossplane-role
 spec:
   forProvider:
     assumeRolePolicyDocument: |
@@ -32,11 +32,11 @@ spec:
 apiVersion: iam.aws.crossplane.io/v1beta1
 kind: RolePolicyAttachment
 metadata:
-  name: crossplane-rolepolicyattachment-commercial-staging
+  name: crossplane-rolepolicyattachment
 spec:
   forProvider:
     policyArn: arn:aws:iam::aws:policy/AdministratorAccess
     roleNameRef:
-      name: crossplane-role-commercial-staging
+      name: crossplane-role
   providerConfigRef:
     name: default

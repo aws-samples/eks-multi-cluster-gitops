@@ -16,5 +16,8 @@ spec:
     apiVersion: v1
     name: commercial-staging-eks-connection
     namespace: flux-system
+  - kind: OpenIDConnectProvider
+    apiVersion: iam.aws.crossplane.io/v1beta1
+    name: cluster-oidc-idp-commercial-staging
   validation: client
-  timeout: 20m
+  timeout: 2m

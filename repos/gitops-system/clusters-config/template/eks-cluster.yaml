@@ -16,5 +16,8 @@ spec:
     apiVersion: v1
     name: cluster-name-eks-connection
     namespace: flux-system
+  - kind: OpenIDConnectProvider
+    apiVersion: iam.aws.crossplane.io/v1beta1
+    name: cluster-oidc-idp-cluster-name
   validation: client
-  timeout: 20m
+  timeout: 2m
