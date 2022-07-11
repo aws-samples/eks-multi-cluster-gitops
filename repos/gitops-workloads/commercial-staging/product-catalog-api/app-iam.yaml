@@ -1,0 +1,65 @@
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: Role
+metadata:
+  name: product-catalog-api-commercial-staging-role
+  labels:
+    type: product-catalog-api-commercial-staging-role
+spec:
+  forProvider:
+    assumeRolePolicyDocument: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Principal": {
+              "Federated": "arn:aws:iam::${ACCOUNT_ID}:oidc-provider/${OIDC_PROVIDER}"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity",
+            "Condition": {
+              "StringEquals": {
+                "${OIDC_PROVIDER}:aud": "sts.amazonaws.com",
+                "${OIDC_PROVIDER}:sub": "system:serviceaccount:product-catalog-api:product-catalog-api-sa"
+              }
+            }
+          }
+        ]
+      }
+  providerConfigRef:
+    name: default
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: Policy
+metadata:
+  name: product-catalog-api-commercial-staging-policy
+spec:
+  forProvider:
+    name: product-catalog-api-commercial-staging-policy
+    document: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "Stmt1657328236602",
+              "Action": "dynamodb:*",
+              "Effect": "Allow",
+              "Resource": "*"
+            }
+          ]
+        }
+  providerConfigRef:
+    name: default
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: RolePolicyAttachment
+metadata:
+  name: product-catalog-api-commercial-staging-attachment
+spec:
+  forProvider:
+    policyArnRef:
+      name: product-catalog-api-commercial-staging-policy
+    roleNameRef:
+      name: product-catalog-api-commercial-staging-role
+  providerConfigRef:
+    name: default

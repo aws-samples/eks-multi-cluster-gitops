@@ -1,0 +1,29 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: product-catalog-api-gotk-reconciler
+  namespace: flux-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: User
+  name: gotk:product-catalog-api:reconciler
+- kind: ServiceAccount
+  name: product-catalog-api-team
+  namespace: flux-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: product-catalog-api-infra-reconciler
+  namespace: flux-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: product-catalog-api-team-infra-admin
+subjects:
+- kind: ServiceAccount
+  name: product-catalog-api-team
+  namespace: flux-system
