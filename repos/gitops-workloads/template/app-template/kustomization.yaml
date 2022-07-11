@@ -8,3 +8,5 @@ resources:
   - ns.yaml
   - sa.yaml
   - role-binding.yaml
+  - app-iam.yaml
+  - app-sa.yaml

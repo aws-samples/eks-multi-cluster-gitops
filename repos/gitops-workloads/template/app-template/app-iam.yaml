@@ -1,0 +1,65 @@
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: Role
+metadata:
+  name: app-name-cluster-name-role
+  labels:
+    type: app-name-cluster-name-role
+spec:
+  forProvider:
+    assumeRolePolicyDocument: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Principal": {
+              "Federated": "arn:aws:iam::${ACCOUNT_ID}:oidc-provider/${OIDC_PROVIDER}"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity",
+            "Condition": {
+              "StringEquals": {
+                "${OIDC_PROVIDER}:aud": "sts.amazonaws.com",
+                "${OIDC_PROVIDER}:sub": "system:serviceaccount:app-name:app-name-sa"
+              }
+            }
+          }
+        ]
+      }
+  providerConfigRef:
+    name: default
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: Policy
+metadata:
+  name: app-name-cluster-name-policy
+spec:
+  forProvider:
+    name: app-name-cluster-name-policy
+    document: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "Stmt1657328236602",
+              "Action": "dynamodb:*",
+              "Effect": "Allow",
+              "Resource": "*"
+            }
+          ]
+        }
+  providerConfigRef:
+    name: default
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: RolePolicyAttachment
+metadata:
+  name: app-name-cluster-name-attachment
+spec:
+  forProvider:
+    policyArnRef:
+      name: app-name-cluster-name-policy
+    roleNameRef:
+      name: app-name-cluster-name-role
+  providerConfigRef:
+    name: default

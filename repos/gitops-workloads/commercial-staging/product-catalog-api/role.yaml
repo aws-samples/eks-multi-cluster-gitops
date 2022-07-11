@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: app-name-team-infra-admin
+  name: product-catalog-api-team-infra-admin
   namespace: flux-system
 rules:
 - apiGroups:

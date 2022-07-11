@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::${ACCOUNT_ID}:role/app-name-cluster-name-role
+  name: product-catalog-api-sa
+  namespace: product-catalog-api

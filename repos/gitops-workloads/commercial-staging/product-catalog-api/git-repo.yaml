@@ -1,13 +1,14 @@
 apiVersion: source.toolkit.fluxcd.io/v1beta1
 kind: GitRepository
 metadata:
-  name: app-name
+  name: product-catalog-api
   namespace: flux-system
 spec:
   interval: 1m0s
   ref:
     branch: main
   secretRef:
-    name: app-name
+    name: product-catalog-api
   timeout: 60s
-  url: REPO_PREFIX/app-name-manifests
+  url: ssh://git@github.com/iamahgoub/product-catalog-api-manifests
+

@@ -2,15 +2,15 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  name: app-name
+  name: product-catalog-api
   namespace: flux-system
 spec:
-  serviceAccountName: app-name-team
+  serviceAccountName: product-catalog-api-team
   prune: true
   interval: 2m0s
-  path: ./kubernetes/overlays/commercial-prod
+  path: ./kubernetes/overlays/commercial-staging
   sourceRef:
     kind: GitRepository
-    name: app-name
+    name: product-catalog-api
   validation: client
 ---
