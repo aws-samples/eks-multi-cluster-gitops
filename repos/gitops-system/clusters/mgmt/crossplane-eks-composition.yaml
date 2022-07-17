@@ -2,14 +2,14 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization
 metadata:
-  name: crossplane-composition
+  name: crossplane-eks-composition
   namespace: flux-system
 spec:
   dependsOn:
-  - name: crossplane-aws-provider
+  - name: crossplane-aws-provider-config
   - name: crossplane-k8s-provider-config
   interval: 3m0s
-  path: ./tools/crossplane/crossplane-composition
+  path: ./tools-config/crossplane-eks-composition
   prune: true
   sourceRef:
     kind: GitRepository
