@@ -14,18 +14,30 @@ spec:
   validation: client
   patches:
     - target:
-        group: pkg.crossplane.io
-        kind: ControllerConfig
-        version: v1alpha1
-        name: aws-config
+        group: kustomize.toolkit.fluxcd.io
+        kind: Kustomization
+        version: v1beta2
+        name: crossplane-aws-provider
+        namespace: flux-system
       patch: |-
-        - op: replace
-          path: /metadata/annotations
+        - op: add
+          path: /spec/patches
           value:
-            eks.amazonaws.com/role-arn: arn:aws:iam::${ACCOUNT_ID}:role/crossplane-role-commercial-staging
-  postBuild:
-    substituteFrom:
-      - kind: ConfigMap
-        name: cluster-info
-        optional: false
+            - target:
+                group: pkg.crossplane.io
+                kind: ControllerConfig
+                version: v1alpha1
+                name: aws-config
+              patch: |-
+                - op: replace
+                  path: /metadata/annotations
+                  value:
+                    eks.amazonaws.com/role-arn: arn:aws:iam::${ACCOUNT_ID}:role/crossplane-role-commercial-staging
+        - op: add
+          path: /spec/postBuild
+          value:
+            substituteFrom:
+              - kind: ConfigMap
+                name: cluster-info
+                optional: false
 ---
