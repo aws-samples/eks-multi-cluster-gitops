@@ -7,7 +7,7 @@ metadata:
 spec:
   prune: true
   dependsOn:
-  - name: crossplane
+  - name: crossplane-eks-composition
   interval: 2m0s
   path: ./clusters-config
   sourceRef:
