@@ -6,7 +6,7 @@ metadata:
   namespace: flux-system
 spec:
   dependsOn:
-  - name: crossplane-aws-provider
+  - name: crossplane-aws-provider-config
   - name: crossplane-k8s-provider-config
   interval: 3m0s
   path: ./tools-config/crossplane-eks-composition
