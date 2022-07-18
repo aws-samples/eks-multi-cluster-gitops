@@ -44,7 +44,7 @@ spec:
               "Sid": "Stmt1657328236602",
               "Action": "dynamodb:*",
               "Effect": "Allow",
-              "Resource": "*"
+              "Resource": "arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/products-staging"
             }
           ]
         }
