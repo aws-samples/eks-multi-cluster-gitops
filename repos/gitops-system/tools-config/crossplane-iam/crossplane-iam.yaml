@@ -35,8 +35,74 @@ metadata:
   name: crossplane-rolepolicyattachment
 spec:
   forProvider:
-    policyArn: arn:aws:iam::aws:policy/AdministratorAccess
+    policyArnRef:
+      name: crossplane-iam-policy
     roleNameRef:
       name: crossplane-role
+  providerConfigRef:
+    name: default
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: Policy
+metadata:
+  name: crossplane-policy
+spec:
+  forProvider:
+    name: crossplane-policy
+    document: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Sid": "Stmt1658116958078",
+            "Action": [
+              "iam:AttachRolePolicy",
+              "iam:CreatePolicy",
+              "iam:CreatePolicyVersion",
+              "iam:CreateRole",
+              "iam:DeletePolicy",
+              "iam:DeletePolicyVersion",
+              "iam:DeleteRole",
+              "iam:DeleteRolePermissionsBoundary",
+              "iam:DeleteRolePolicy",
+              "iam:DetachRolePolicy",
+              "iam:GetPolicy",
+              "iam:GetPolicyVersion",
+              "iam:GetRole",
+              "iam:GetRolePolicy",
+              "iam:GetUserPolicy",
+              "iam:ListAttachedRolePolicies",
+              "iam:ListPolicies",
+              "iam:ListPolicyTags",
+              "iam:ListPolicyVersions",
+              "iam:ListRolePolicies",
+              "iam:ListRoleTags",
+              "iam:PutRolePermissionsBoundary",
+              "iam:PutRolePolicy",
+              "iam:TagPolicy",
+              "iam:TagRole",
+              "iam:UntagPolicy",
+              "iam:UntagRole",
+              "iam:UpdateRole",
+              "iam:UpdateRoleDescription"
+            ],
+            "Effect": "Allow",
+            "Resource": "*"
+          },
+          {
+            "Sid": "Stmt1658117635374",
+            "Action": [
+              "dynamodb:CreateTable",
+              "dynamodb:DeleteTable",
+              "dynamodb:DescribeTable",
+              "dynamodb:TagResource",
+              "dynamodb:UntagResource",
+              "dynamodb:UpdateTable"
+            ],
+            "Effect": "Allow",
+            "Resource": "*"
+          }
+        ]
+      }
   providerConfigRef:
     name: default
