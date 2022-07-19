@@ -27,6 +27,9 @@ The Flux controller on each of the workload clusters deploys other tools require
 
 One of the architectural decisions made is to deploy a separate Flux and Crossplane controller on each of the workload clusters, rather than having a central Flux and Crossplane controllers in the management clusters that server all the clusters. The key reason behind that is to reduce dependency on the management cluster, and to increase the scalability of the solution — single/central set of controllers in the management cluster would lead to less scalable solution, compared to separate set of controllers per cluster.
 
+**Note:**
+The API server endpoint public access is enabled for the management cluster and the workload clusters provisioned by this management cluster. Support for private clusters is on our roadmap.
+
 ### Git Repositories
 The table below lists the proposed repos:
 
