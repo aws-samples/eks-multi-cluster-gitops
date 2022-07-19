@@ -41,8 +41,23 @@ spec:
           path: /metadata/name
           value: crossplane-rolepolicyattachment-commercial-prod
         - op: replace
+          path: /spec/forProvider/policyArnRef/name
+          value: crossplane-policy-commercial-prod
+        - op: replace
           path: /spec/forProvider/roleNameRef/name
           value: crossplane-role-commercial-prod
+    - target:
+        group: iam.aws.crossplane.io
+        kind: Policy
+        version: v1beta1
+        name: crossplane-policy
+      patch: |-
+        - op: replace
+          path: /metadata/name
+          value: crossplane-policy-commercial-prod
+        - op: replace
+          path: /spec/forProvider/name
+          value: crossplane-policy-commercial-prod
   postBuild:
     substituteFrom:
       - kind: ConfigMap

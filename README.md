@@ -12,7 +12,7 @@ A hub/spoke model is used to implement the multi-cluster GitOps. As part of the 
 This solution uses FluxCD as a GitOps tool, and uses Crossplane as an infrastructure controller. It also uses Sealed Secrets and External Secrets Operator for secrets management — more details about that exist in the following sections.
 
 The architecture of the solution is depicted in the following diagram:
-![Image of Clone button](doc/images/architecture.png)
+![Image of Clone button](doc/img/architecture.png)
 
 The initial setup involves
   * generating and storing encryption keys for sealed secrets in AWS Secrets Manager as the backing secrets store,
@@ -26,6 +26,9 @@ After the initial setup, the Flux controller in the management cluster deploys o
 The Flux controller on each of the workload clusters deploys other tools required on the cluster (e.g. Crossplane), and the workloads (applications, microservices, ...) meant to be deployed on the cluster, as defined in Git. The workloads typically consist of standard Kubernetes resources (e.g. Deployment, Service, ConfigMap, Secret, etc.), and infrastructure resources as well (e.g. DynamoDB table, SQS queue, RDS instance, etc.) that are required for the workload to fully function.
 
 One of the architectural decisions made is to deploy a separate Flux and Crossplane controller on each of the workload clusters, rather than having a central Flux and Crossplane controllers in the management clusters that server all the clusters. The key reason behind that is to reduce dependency on the management cluster, and to increase the scalability of the solution — single/central set of controllers in the management cluster would lead to less scalable solution, compared to separate set of controllers per cluster.
+
+**Note:**
+The API server endpoint public access is enabled for the management cluster and the workload clusters provisioned by this management cluster. Support for private clusters is on our roadmap.
 
 ### Git Repositories
 The table below lists the proposed repos:

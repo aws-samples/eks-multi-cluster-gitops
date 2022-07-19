@@ -17,6 +17,7 @@ spec:
       labels:
         app: product-catalog-api
     spec:
+      serviceAccountName: product-catalog-api-sa
       containers:
       - env:
         - name: PRODUCTS_TABLE_NAME

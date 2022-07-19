@@ -17,9 +17,12 @@ account you use for deploying this sample implementation can accommodate that.
     1. Open another tab to access the [IAM console](https://console.aws.amazon.com/iam/).
     2. From the menu bar on the left, choose **Roles**.
     3. Choose **Create Role**.
-    4. For **Trusted entity type** choose **AWS Service**, and then choose the use case **EC2**. Choose **Next**
-    5. On the **Add Permissions** screen, add the *AdministratorAccess* policy, and then choose **Next**. 
-    6. Give the role a name, for example "gitops-workshop", and choose **Create role**. ![](img/iam-create-role.png).
+    4. For **Trusted entity type** choose **AWS Service**, and then choose the use case **EC2**. Choose **Next**.
+    5. On the **Add Permissions** screen, choose **Create policy**. This action opens new tab in your browser for creating an IAM policy.
+    6. In the new browser tab, choose **JSON**, paste the content of [cloud9-role-permission-policy-template.json](config/cloud9-role-permission-policy-template.json), replace `${ACCOUNT_ID}` with your AWS account id, choose **Next**, then choose **Next** again. ![](img/iam-create-policy-json.png)
+    7. Give the policy a name, for example "gitops-workshop", and choose **Create policy**. ![](img/iam-create-policy.png)
+    8. Return to the previous browser tab, click on the refresh button, add the IAM policy you created in the other browser tab, and choose **Next**.
+    9. Give the role a name, for example "gitops-workshop", and choose **Create role**. ![](img/iam-create-role.png)
 
 4. Attach this IAM role to your Cloud9 EC2 instance as follows:
 
@@ -301,11 +304,21 @@ export OIDC_PROVIDER=${OIDC_PROVIDER_URL#'https://'}
      --query "Role.Arn")
    ```
 
-3. Attach `AdministratorAccess` permissions policy to this role:
+3. Create the IAM policy that grants Crossplane the required permissions to provision the workload clusters, and attach it to the role created in the previous step.
    ```bash
-   aws iam attach-role-policy --role-name crossplane-role --policy-arn "arn:aws:iam::aws:policy/AdministratorAccess"
+   cd ~/environment
+   envsubst \
+   < multi-cluster-gitops/initial-setup/config/crossplane-role-permission-policy-template.json \
+   > crossplane-role-permission-policy.json
+
+   CROSSPLANE_IAM_POLICY_ARN=$(aws iam create-policy \
+      --policy-name crossplane-policy \
+      --policy-document file://crossplane-role-permission-policy.json \
+      --output text \
+      --query "Policy.Arn")
+
+   aws iam attach-role-policy --role-name crossplane-role --policy-arn ${CROSSPLANE_IAM_POLICY_ARN}
    ```
-   **Note:** You can fine-tune the permissions granted to the created IAM role, and only select those that you want to grant to Crossplane.
 
 4. Create a `ConfigMap` named `cluster-info` with the cluster details
    ```bash
