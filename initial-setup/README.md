@@ -301,11 +301,21 @@ export OIDC_PROVIDER=${OIDC_PROVIDER_URL#'https://'}
      --query "Role.Arn")
    ```
 
-3. Attach `AdministratorAccess` permissions policy to this role:
+3. Create the IAM policy that grants Crossplane the required permissions to provision the workload clusters, and attach it to the role created in the previous step.
    ```bash
-   aws iam attach-role-policy --role-name crossplane-role --policy-arn "arn:aws:iam::aws:policy/AdministratorAccess"
+   cd ~/environment
+   envsubst \
+   < multi-cluster-gitops/initial-setup/config/crossplane-role-permission-policy-template.json \
+   > crossplane-role-permission-policy.json
+
+   CROSSPLANE_IAM_POLICY_ARN=$(aws iam create-policy \
+      --policy-name crossplane-policy \
+      --policy-document file://crossplane-role-permission-policy.json \
+      --output text \
+      --query "Policy.Arn")
+
+   aws iam attach-role-policy --role-name crossplane-role --policy-arn ${CROSSPLANE_IAM_POLICY_ARN}
    ```
-   **Note:** You can fine-tune the permissions granted to the created IAM role, and only select those that you want to grant to Crossplane.
 
 4. Create a `ConfigMap` named `cluster-info` with the cluster details
    ```bash
