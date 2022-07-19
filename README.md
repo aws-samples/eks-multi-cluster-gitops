@@ -12,7 +12,7 @@ A hub/spoke model is used to implement the multi-cluster GitOps. As part of the 
 This solution uses FluxCD as a GitOps tool, and uses Crossplane as an infrastructure controller. It also uses Sealed Secrets and External Secrets Operator for secrets management — more details about that exist in the following sections.
 
 The architecture of the solution is depicted in the following diagram:
-![Image of Clone button](doc/images/architecture.png)
+![Image of Clone button](doc/img/architecture.png)
 
 The initial setup involves
   * generating and storing encryption keys for sealed secrets in AWS Secrets Manager as the backing secrets store,
