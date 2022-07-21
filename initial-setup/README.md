@@ -180,9 +180,9 @@ created in the previous step:
 ```
 cp -r multi-cluster-gitops/repos/gitops-system/* gitops-system/
 cp -r multi-cluster-gitops/repos/gitops-workloads/* gitops-workloads/
-cp -r multi-cluster-gitops/repos/app-manifests/payment-app/* payment-app-manifests/
+cp -r multi-cluster-gitops/repos/apps-manifests/payment-app/* payment-app-manifests/
 ```
-Some of the files in these repos contain placholder references for AWS_REGION and REPO_PREFIX
+Some of the files in these repos contain placholder references for `AWS_REGION` and `REPO_PREFIX`
 which need to be updated to reflect your working region, and the location of your repos.
 
 ### Update references to AWS region
@@ -228,9 +228,8 @@ sed -i "s/AWS_REGION/$AWS_REGION/g" \
    ```
    sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
      gitops-workloads/template/app-template/git-repo.yaml \
-     gitops-workloads/commercial-staging/app-template/git-repo.yaml \
-     gitops-workloads/commercial-prod/app-template/git-repo.yaml \
-     gitops-workloads/commercial-staging/payment-app/git-repo.yaml
+     gitops-workloads/commercial-staging/payment-app/git-repo.yaml \
+     gitops-workloads/commercial-staging/product-catalog-api/git-repo.yaml
    ```
 
 
@@ -322,6 +321,7 @@ export OIDC_PROVIDER=${OIDC_PROVIDER_URL#'https://'}
 
 4. Create a `ConfigMap` named `cluster-info` with the cluster details
    ```bash
+   kubectl create ns flux-system
    kubectl create configmap cluster-info -n flux-system \
      --from-literal=AWS_REGION=${AWS_REGION} \
      --from-literal=ACCOUNT_ID=${ACCOUNT_ID} \
@@ -368,7 +368,7 @@ Make sure that `eksctl` has finished creating the management cluster. Then proce
 - [Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit-Bootstrap.md)
 
 
-## Connect to cluster
+## Connect to a workload cluster
 1. Connect to `<cluster-name>`  cluster using `kubeconfig` stored as a `Secret`
 ```bash
 unset KUBECONFIG

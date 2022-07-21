@@ -10,5 +10,5 @@ spec:
   secretRef:
     name: product-catalog-api
   timeout: 60s
-  url: ssh://git@github.com/iamahgoub/product-catalog-api-manifests
+  url: REPO_PREFIX/product-catalog-api-manifests
 

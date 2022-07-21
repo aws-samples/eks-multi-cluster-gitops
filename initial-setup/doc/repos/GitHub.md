@@ -42,11 +42,10 @@
 
 1. Log in with the Github CLI using:
    ```bash
-   gh auth login -p ssh -h GitHub.com
+   gh auth login -p ssh -h github.com
    ```
-<!--
-   3. For the SSH public key, choose **/home/ubuntu/.ssh/gitops-cloud9.pub**.
--->
+   
+   For the SSH public key, choose **/home/ubuntu/.ssh/gitops-cloud9.pub**.
 
 2. Create the following empty repos in your GitHub account: `gitops-system`,
    `gitops-workloads`, and `payment-app-manifests`, and clone them
