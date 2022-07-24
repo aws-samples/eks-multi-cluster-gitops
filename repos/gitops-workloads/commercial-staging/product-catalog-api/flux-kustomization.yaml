@@ -13,4 +13,9 @@ spec:
     kind: GitRepository
     name: product-catalog-api
   validation: client
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-info
+        optional: false
 ---

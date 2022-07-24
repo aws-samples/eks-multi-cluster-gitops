@@ -22,7 +22,7 @@ spec:
       - env:
         - name: PRODUCTS_TABLE_NAME
           value: products
-        image: public.ecr.aws/h2c3y9h0/multi-cluster-gitops/product-catalog-api:latest
+        image: public.ecr.aws/h2c3y9h0/multi-cluster-gitops/product-catalog-api:v1
         name: product-catalog-api
         ports:
         - containerPort: 5000
