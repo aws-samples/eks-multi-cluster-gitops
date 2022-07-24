@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-catalog-api
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+      - name: product-catalog-api
+        env:
+        - name: PRODUCTS_TABLE_NAME
+          value: products-prod
