@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: product-catalog-api
+  name: product-catalog-fe
 spec:
   ports:
   - name: http
     port: 80
     protocol: TCP
-    targetPort: 5000
+    targetPort: 9000
   selector:
-    app: product-catalog-api
-
+    app: product-catalog-fe
+  type: LoadBalancer
