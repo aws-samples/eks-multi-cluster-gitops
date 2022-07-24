@@ -1,0 +1,21 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: product-catalog-fe
+  namespace: flux-system
+spec:
+  serviceAccountName: product-catalog-fe-team
+  prune: true
+  interval: 2m0s
+  path: ./kubernetes/overlays/commercial-staging
+  sourceRef:
+    kind: GitRepository
+    name: product-catalog-fe
+  validation: client
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-info
+        optional: false
+---

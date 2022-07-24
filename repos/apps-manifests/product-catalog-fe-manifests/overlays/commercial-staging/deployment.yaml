@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-catalog-fe
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+      - name: product-catalog-fe
+        env:
+        - name: BASE_URL
+          value: "http://product-catalog-api-staging.product-catalog-api/products"
