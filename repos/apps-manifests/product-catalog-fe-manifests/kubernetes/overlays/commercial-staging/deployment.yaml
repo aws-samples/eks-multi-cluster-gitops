@@ -10,4 +10,4 @@ spec:
       - name: product-catalog-fe
         env:
         - name: BASE_URL
-          value: "http://product-catalog-api-staging.product-catalog-api/products"
+          value: "http://product-catalog-api-staging.product-catalog-api/products/"
