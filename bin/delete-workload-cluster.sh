@@ -1,9 +1,10 @@
 #!/bin/bash
-# $1 = cluster name
-# $2 = location of gitops-system
+# $1 = location of gitops-system
+# $2 = cluster name
 
-cluster_name=$1
-gitops_system=$(realpath "$2")
+
+gitops_system=$(realpath "$1")
+cluster_name=$2
 
 # Remove $cluster_name from clusters-config/kustomization.yaml file
 yq -i e "del ( .resources[] | select (. == \"$cluster_name\" ))" $gitops_system/clusters-config/kustomization.yaml

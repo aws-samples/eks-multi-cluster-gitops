@@ -6,7 +6,7 @@
 
 Usage:
 ```
-init-workload-cluster.sh <cluster_name> <gitops_system_path> <gitops_workloads_path>
+init-workload-cluster.sh <gitops_system_path> <gitops_workloads_path> <cluster_name> 
 ```
 
 Updates the local and remote repos for `gitops-system` and `gitops-workloads` to add a new workload cluster.
@@ -20,7 +20,7 @@ updated. To create the cluster, you need to follow the repo initialization with 
 
 Usage:
 ```
-init-workload-cluster.sh <cluster_name> <gitops_system_path>
+create-workload-cluster.sh  <gitops_system_path> <cluster_name>
 ```
 
 Creates a previously initialized cluster by updating `cluster-configs/kustomization.yaml`. This causes flux to pick up the
@@ -30,7 +30,7 @@ configuration of the cluster, which is then created by crossplane.
 
 Usage:
 ```
-delete-workload-cluster.sh <cluster_name> <gitops_system_path>
+delete-workload-cluster.sh <gitops_system_path> <cluster_name> 
 ```
 
 This does the reverse of `init-workload-cluster.sh`. It removes the specified cluster from `cluster-configs/kustomization.yaml`. This triggers crossplane to remove the cluster.
@@ -39,13 +39,18 @@ This does the reverse of `init-workload-cluster.sh`. It removes the specified cl
 
 Usage:
 ```
-cleanup-workload-cluster.sh <cluster_name> <gitops_system_path>
+cleanup-workload-cluster.sh  <gitops_system_path> <gitops_workloads_path> <cluster_name>
 ```
 
 Once a cluster has been deleted you can use this script to remove all cluster configuration files from the local
 and remote repos.
 
 ## Add application to Workload cluster
+
+Usage:
+```
+add-app.sh <gitops_workloads_path> <cluster_name> <app-name> <public_key_pem>
+```
 
 ** WORK IN PROGRESS **
 

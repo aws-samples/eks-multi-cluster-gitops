@@ -1,12 +1,11 @@
 #!/bin/bash
-# $1 = cluster name
-# $2 = location of gitops-system
-# $3 = location of gitops-workloads
+# $1 = location of gitops-system
+# $2 = location of gitops-workloads
+# $3 = cluster name
 
-
-cluster_name=$1
-gitops_system=$(realpath "$2")
-gitops_workloads=$(realpath "$3")
+gitops_system=$(realpath "$1")
+gitops_workloads=$(realpath "$2")
+cluster_name=$3
 
 # Remove cluster folders from repos
 

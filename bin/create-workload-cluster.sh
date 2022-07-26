@@ -1,9 +1,9 @@
 #!/bin/bash
-# $1 = cluster name
-# $2 = location of gitops-system
+# $1 = location of gitops-system
+# $2 = cluster name
 
-cluster_name=$1
-gitops_system=$(realpath "$2")
+gitops_system=$(realpath "$1")
+cluster_name=$2
 
 # This script assumes that all templates for the new cluster have already been created
 
