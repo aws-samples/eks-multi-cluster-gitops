@@ -69,18 +69,46 @@ add-app-cluster-overlay <app_manifests_path> cluster_name
 
 ## Example sequence
 
-Create a `staging` cluster:
+Create a `commercial-staging` cluster:
 ```
-add-cluster.sh ./gitops-system staging
+add-cluster.sh ./gitops-system commercial-staging
 ```
 
-Add an app `product-catalog-api` to the `staging` cluster:
+Commit and push:
+```
+cd gitops-system
+git add .
+git commit -m "Added cluster"
+git push
+```
+
+Create an application manifests repo:
+```
+cd ~/environment
+gh repo create --private --clone product-catalog-fe-manifests
+cp -r multi-cluster-gitops/repos/apps-manifests/product-catalog-fe-manifests/* product-catalog-fe-manifests/
+cd product-catalog-fe-manifests
+git add .
+git commit -m "baseline version"
+git branch -M main
+git push --set-upstream origin main
+```
+
+Add the app `product-catalog-fe` to the `commercial-staging` cluster:
 ```
 add-cluster-app.sh \
   ./gitops-workloads \
-  staging product-catalog-api \
-  multi-cluster-gitops/initial-setup/secrets-template/git-credentials.sh \
+  commercial-staging product-catalog-fe \
+  multi-cluster-gitops/initial-setup/secrets-template/git-credentials.yaml \
   ~/.ssh/gitops ~/.ssh/gitops.pub \
   "github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=" \
   ./sealed-secrets-keypair-public.pem
+```
+
+Commit and push:
+```
+cd gitops-workloads
+git add .
+git commit -m "Added pc-fe to staging"
+git push
 ```

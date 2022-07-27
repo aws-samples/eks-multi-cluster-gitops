@@ -18,6 +18,10 @@ known_hosts=$7
 pem_file=$(realpath "$8")
 
 mkdir -p $gitops_workloads/$cluster_name/$app_name
+if [[ ! -f $gitops_workloads/$cluster_name/kustomization.yaml ]]
+then
+    cp $gitops_workloads/template/kustomization.yaml $gitops_workloads/$cluster_name
+fi
 cp -R $gitops_workloads/template/app-template/* $gitops_workloads/$cluster_name/$app_name
 grep -RiIl 'cluster-name' $gitops_workloads/$cluster_name/$app_name | xargs sed -i "s/cluster-name/$cluster_name/g"
 grep -RiIl 'app-name' $gitops_workloads/$cluster_name/$app_name | xargs sed -i "s/app-name/$app_name/g"
