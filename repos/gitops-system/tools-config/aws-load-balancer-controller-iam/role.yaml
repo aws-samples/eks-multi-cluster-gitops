@@ -1,0 +1,38 @@
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: Role
+metadata:
+  name: aws-load-balancer-controller-role
+  namespace: kube-system
+spec:
+  forProvider:
+    assumeRolePolicyDocument: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Federated": "arn:aws:iam::${ACCOUNT_ID}:oidc-provider/${OIDC_PROVIDER}"
+              },
+              "Action": "sts:AssumeRoleWithWebIdentity",
+              "Condition": {
+                "StringEquals": {
+                  "${OIDC_PROVIDER}:aud": "sts.amazonaws.com",
+                  "${OIDC_PROVIDER}:sub": "system:serviceaccount:kube-system:aws-load-balancer-controller"
+                }
+              }
+            }
+          ]
+        }
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: RolePolicyAttachment
+metadata:
+  name: aws-load-balancer-controller-attachment
+  namespace: kube-system
+spec:
+  forProvider:
+    policyArnRef:
+      name: aws-load-balancer-controller-policy
+    roleNameRef:
+      name: aws-load-balancer-controller

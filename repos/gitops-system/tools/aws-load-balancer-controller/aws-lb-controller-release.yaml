@@ -1,0 +1,22 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: aws-load-balancer-controller
+  namespace: flux-system
+spec:
+  releaseName: aws-load-balancer-controller
+  targetNamespace: kube-system
+  interval: 5m
+  chart:
+    spec:
+      chart: aws-load-balancer-controller
+      version: '1.4.2'
+      sourceRef:
+        kind: HelmRepository
+        name: aws-load-balancer-controller-repository
+        namespace: flux-system
+      interval: 1m
+  values:
+    serviceAccount:
+      create: false
+      name: aws-load-balancer-controller
