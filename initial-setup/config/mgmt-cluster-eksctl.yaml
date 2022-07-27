@@ -12,7 +12,7 @@ iam:
 
 vpc:
   nat:
-    gateway: HighlyAvailable
+    gateway: Single
 
 managedNodeGroups:
 - name: nodegroup
