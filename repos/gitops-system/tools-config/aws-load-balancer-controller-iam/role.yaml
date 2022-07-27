@@ -1,7 +1,7 @@
 apiVersion: iam.aws.crossplane.io/v1beta1
 kind: Role
 metadata:
-  name: aws-load-balancer-controller
+  name: aws-load-balancer-controller-role
   namespace: kube-system
 spec:
   forProvider:

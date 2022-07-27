@@ -22,4 +22,14 @@ spec:
       - kind: ConfigMap
         name: cluster-info
         optional: false
+  patches:
+    - target:
+        group: iam.aws.crossplane.io
+        kind: Role
+        version: v1beta1
+        name: aws-load-balancer-controller-role
+      patch: |-
+        - op: replace
+          path: /metadata/name
+          value: aws-load-balancer-controller-role-commercial-staging
 ---
