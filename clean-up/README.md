@@ -8,5 +8,5 @@ eksctl delete cluster --name mgmt --region $AWS_REGION
 4. Remove the GitHub repos or AWS CodeCommit repos you created.
 5. Remove the secret in Secrets Manager.
 ```
- aws secretsmanager delete-secret --secret-id sealed-secrets
+ aws secretsmanager delete-secret --secret-id sealed-secrets --force-delete-without-recovery
 ```
