@@ -34,6 +34,35 @@ spec:
           path: /metadata/name
           value: aws-load-balancer-controller-role-commercial-staging
     - target:
+        group: iam.aws.crossplane.io
+        kind: Policy
+        version: v1beta1
+        name: aws-load-balancer-controller-policy
+        namespace: kube-system
+      patch: |-
+        - op: replace
+          path: /metadata/name
+          value: aws-load-balancer-controller-policy-commercial-staging
+        - op: replace
+          path: /spec/forProvider/name
+          value: aws-load-balancer-controller-policy-commercial-staging
+    - target:
+        group: iam.aws.crossplane.io
+        kind: RolePolicyAttachment
+        version: v1beta1
+        name: aws-load-balancer-controller-attachment
+        namespace: kube-system
+      patch: |-
+        - op: replace
+          path: /metadata/name
+          value: aws-load-balancer-controller-attachment-commercial-staging
+        - op: replace
+          path: /spec/forProvider/policyArnRef/name
+          value: aws-load-balancer-controller-policy-commercial-staging
+        - op: replace
+          path: /spec/forProvider/roleNameRef/name
+          value: aws-load-balancer-controller-role-commercial-staging
+    - target:
         group: ""
         kind: ServiceAccount
         version: v1
