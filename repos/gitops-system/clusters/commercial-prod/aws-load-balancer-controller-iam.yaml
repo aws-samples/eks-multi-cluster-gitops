@@ -28,8 +28,20 @@ spec:
         kind: Role
         version: v1beta1
         name: aws-load-balancer-controller-role
+        namespace: kube-system
       patch: |-
         - op: replace
           path: /metadata/name
           value: aws-load-balancer-controller-role-commercial-prod
+    - target:
+      group: ""
+      kind: ServiceAccount
+      version: v1
+      name: aws-load-balancer-controller
+      namespace: kube-system
+      patch: |-
+        - op: replace
+          path: /metadata/annotations
+          value:
+            eks.amazonaws.com/role-arn: arn:aws:iam::${ACCOUNT_ID}:role/aws-load-balancer-controller-role-commercial-staging
 ---
