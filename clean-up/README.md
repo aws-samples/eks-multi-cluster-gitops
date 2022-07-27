@@ -8,5 +8,12 @@ eksctl delete cluster --name mgmt --region $AWS_REGION
 4. Remove the GitHub repos or AWS CodeCommit repos you created.
 5. Remove the secret in Secrets Manager.
 ```
- aws secretsmanager delete-secret --secret-id sealed-secrets --force-delete-without-recovery
+aws secretsmanager delete-secret --secret-id sealed-secrets --force-delete-without-recovery
+```
+6. Remove the crossplane role
+```
+POLICY_ARN=$(aws iam list-attached-role-policies --role-name crossplane-role --query AttachedPolicies[0].PolicyArn --output text)
+aws iam detach-role-policy --role-name crossplane-role --policy-arn $POLICY_ARN
+aws iam delete-policy --policy-arn $POLICY_ARN 
+aws iam delete-role --role-name crossplane-role
 ```
