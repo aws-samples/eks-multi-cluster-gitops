@@ -4,5 +4,3 @@ kind: Kustomization
 resources:
   - product-catalog-api
   - product-catalog-fe
-  - aws-load-balancer-controller.yaml
-  - aws-load-balancer-controller-config.yaml

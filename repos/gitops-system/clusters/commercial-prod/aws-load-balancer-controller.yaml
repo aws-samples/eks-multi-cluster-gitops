@@ -7,13 +7,13 @@ metadata:
 spec:
   prune: true
   interval: 10m0s
-  path: ./common/aws-load-balancer-controller
+  path: ./tools/aws-load-balancer-controller
   sourceRef:
     kind: GitRepository
-    name: gitops-workloads
+    name: flux-system
   validation: client
   dependsOn:
-  - name: aws-load-balancer-controller-config
+  - name: aws-load-balancer-controller-iam
   patches:
   - target:
       group: helm.toolkit.fluxcd.io
