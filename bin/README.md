@@ -1,64 +1,86 @@
 # Multi-cluster GitOps Scripts
 
+Note: these scripts operate on local repos and do not commit changes or push to remotes.
+Commits and pushes must be done separately.
+
 ## Workload cluster management
 
-### init-workload-cluster.sh
+### add-cluster.sh
 
 Usage:
 ```
-init-workload-cluster.sh <gitops_system_path> <gitops_workloads_path> <cluster_name> 
+add-cluster.sh <gitops_system_path> <cluster_name> 
 ```
 
-Updates the local and remote repos for `gitops-system` and `gitops-workloads` to add a new workload cluster.
-This is achieved by copying the required template folders into new folders for the cluster to be added.
+Updates the local repo for `gitops-system` to add a new workload cluster.
 
-Note that this script does not create the new cluster, as the `kustomization.yaml` file in `clusters-config` is not
-updated. To create the cluster, you need to follow the repo initialization with `create-workload-cluster.sh`.
+This is achieved by copying the required template folders into new folders for the cluster to be added, and updating the cluster name. The `kustomization.yaml` file in `clusters-config` is also updated to add the new cluster.
 
-
-### create-workload-cluster.sh
+### remove-cluster.sh
 
 Usage:
 ```
-create-workload-cluster.sh  <gitops_system_path> <cluster_name>
+remove-cluster.sh <gitops_system_path> <gitops_workloads_path> <cluster_name> 
 ```
 
-Creates a previously initialized cluster by updating `cluster-configs/kustomization.yaml`. This causes flux to pick up the
-configuration of the cluster, which is then created by crossplane.
+This removes the specified cluster from `cluster-configs/kustomization.yaml`, which triggers crossplane to remove the cluster.
 
-### delete-workload-cluster.sh
+It also removes all cluster configuration files from the local
+repos for `gitops-system` and `gitops-workloads`.
+
+## Application management
+
+### add-cluster-app.sh
 
 Usage:
 ```
-delete-workload-cluster.sh <gitops_system_path> <cluster_name> 
+add-cluster-app.sh
+  <gitops_workloads_path>
+  <cluster_name> <app-name>
+  <public_key_pem>
+  <git_creds_template_path>
+  <git_private_key_file> <git_public_key_file> <git_known_hosts>
+  <sealed_secrets_public_pem_file>
 ```
 
-This does the reverse of `init-workload-cluster.sh`. It removes the specified cluster from `cluster-configs/kustomization.yaml`. This triggers crossplane to remove the cluster.
+Adds the application `app-name` to the cluster `cluster-name`, using the following steps:
+- creates a new folder for the app under the correct workloads cluster folder and copies the app template
+- updates the folder content with the correct cluster name and app name
+- creates a sealed secret `gitops-secret.yaml` using the supplied template, keys, and known_hosts string
+- updates `kustomization.yaml` in the workloads cluster folder.
 
-### cleanup-workload-cluster.sh
+It is assumed that a repo called `app-name-manifests` exists.
+
+### remove-cluster-app.sh
+
+```
+remove-cluster-app.sh <gitops_workloads_path> <cluster_name> <app-name>
+```
+
+Removes the application from `kustomization.yaml` and deletes the application folder from the workloads cluster folder.
+
+### add-app-cluster-overlay
 
 Usage:
 ```
-cleanup-workload-cluster.sh  <gitops_system_path> <gitops_workloads_path> <cluster_name>
+add-app-cluster-overlay <app_manifests_path> cluster_name 
 ```
 
-Once a cluster has been deleted you can use this script to remove all cluster configuration files from the local
-and remote repos.
 
-## Add application to Workload cluster
+## Example sequence
 
-Usage:
+Create a `staging` cluster:
 ```
-add-app.sh <gitops_workloads_path> <cluster_name> <app-name> <public_key_pem>
+add-cluster.sh ./gitops-system staging
 ```
 
-** WORK IN PROGRESS **
-
-### add-cluster-overlay
-
-
-### add-app-to-cluster <cluster_name> <app> <secret>
-
-Steps to include:
-- Create sealed secret
-- Update repos
+Add an app `product-catalog-api` to the `staging` cluster:
+```
+add-cluster-app.sh \
+  ./gitops-workloads \
+  staging product-catalog-api \
+  multi-cluster-gitops/initial-setup/secrets-template/git-credentials.sh \
+  ~/.ssh/gitops ~/.ssh/gitops.pub \
+  "github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=" \
+  ./sealed-secrets-keypair-public.pem
+```
