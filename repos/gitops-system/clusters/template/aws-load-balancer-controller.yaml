@@ -1,0 +1,27 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: aws-load-balancer-controller
+  namespace: flux-system
+spec:
+  prune: true
+  interval: 10m0s
+  path: ./tools/aws-load-balancer-controller
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  validation: client
+  dependsOn:
+  - name: aws-load-balancer-controller-iam
+  patches:
+  - target:
+      group: helm.toolkit.fluxcd.io
+      kind: HelmRelease
+      name: aws-load-balancer-controller
+      namespace: flux-system
+    patch: |-
+      - op: add
+        path: /spec/values/clusterName
+        value: cluster-name
+---
