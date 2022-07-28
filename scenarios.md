@@ -1,8 +1,8 @@
 # Scenarios
 
-This document walks you through steps for a numnber of scenarios including:
-- Adding / removing a workload cluster
-- Adding / emoving an application to / from a workload cluster
+This document walks you through steps for a number of scenarios including:
+- Adding and removing a workload cluster
+- Adding and removing an application to / from a workload cluster
 - Upgrading a workload cluster
 
 ## Provision and bootstrap a new cluster
@@ -31,36 +31,33 @@ The `add-cluster.sh` script performs the following steps (please ensure your wor
 
 1. Instantiate the `cluster-configs` template. This creates a folder for the new `commercial-staging` cluster under `cluster-configs`, and copies the template.
 It then replaces all occurances of `cluster-name` in the template with `commercial-staging`.
-```
-mkdir -p gitops_system/clusters-config/commercial-staging
-cp -R gitops_system/clusters-config/template/* gitops_system/clusters-config/commercial-staging
-grep -RiIl 'cluster-name' gitops_system/clusters-config/commercial-staging| xargs sed -i "s/cluster-name/commercial-staging/g"
-```
+    ```
+    mkdir -p gitops_system/clusters-config/commercial-staging
+    cp -R gitops_system/clusters-config/template/* gitops_system/clusters-config/commercial-staging
+    grep -RiIl 'cluster-name' gitops_system/clusters-config/commercial-staging| xargs sed -i "s/cluster-name/commercial-staging/g"
+    ```
 
 
 2. Instantiate the `cluster` template. This create a folder for the `commcercial-staging` cluster
 under `clusters`, and copies the template. It then replaces all occurances of `cluster-name` in the template with `commercial-staging`.
-
-```
-mkdir -p gitops_system/clusters/commercial-staging
-cp -R gitops_system/clusters/template/* gitops_system/clusters/commercial-staging
-grep -RiIl 'cluster-name' gitops_system/clusters/commercial-staging | xargs sed -i "s/cluster-name/commercial-staging/g"
-```
+    ```
+    mkdir -p gitops_system/clusters/commercial-staging
+    cp -R gitops_system/clusters/template/* gitops_system/clusters/commercial-staging
+    grep -RiIl 'cluster-name' gitops_system/clusters/commercial-staging | xargs sed -i "s/cluster-name/commercial-staging/g"
+    ```
 
 3. Instantiate the `workloads` template. This creates a folder for the
  `commcercial-staging` cluster under `workloads` and copies the template. It then replaces all occurances of `cluster-name` in the template with `commercial-staging`.
-
-```
-mkdir -p gitops_system/workloads/commercial-staging
-cp -R gitops_system/workloads/template/* gitops_system/workloads/commercial-staging
-grep -RiIl 'cluster-name'  gitops_system/workloads/commercial-staging | xargs sed -i "s/cluster-name/commercial-staging/g"
-```
+    ```
+    mkdir -p gitops_system/workloads/commercial-staging
+    cp -R gitops_system/workloads/template/* gitops_system/workloads/commercial-staging
+    grep -RiIl 'cluster-name'  gitops_system/workloads/commercial-staging | xargs sed -i "s/cluster-name/commercial-staging/g"
+    ```
 
 4.  Add `commercial-staging` to `clusters-config/kustomization.yaml`.
-
-```
-yq -i e ".resources += [\"commercial-staging\"]" gitops_system/clusters-config/kustomization.yaml
-```
+    ```
+    yq -i e ".resources += [\"commercial-staging\"]" gitops_system/clusters-config/kustomization.yaml
+    ```
 
 Once you have completed these steps, commit and push changes using:
 
