@@ -18,7 +18,7 @@ kubectl create secret generic flux-system -n flux-system \
 kubectl apply -f ./clusters/${CLUSTER_NAME}/flux-system/gotk-sync.yaml
 ```
 
-3. Wait for the `staging` cluster to start. Track the progress of the Flux
+3. Track the progress of the Flux
    deployments using the Flux CLI. This may take >30 minutes due to exponential
    backoff, however this is only a one-time process.
 ```bash

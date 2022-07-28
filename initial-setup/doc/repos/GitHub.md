@@ -53,7 +53,7 @@
    ```bash
    cd ~/environment
    git config --global init.defaultBranch main
-   repos=( gitops-system gitops-workloads payment-app-manifests )
+   repos=( gitops-system gitops-workloads )
    for repo in "${repos[@]}"; do
      gh repo create --private --clone $repo
    done

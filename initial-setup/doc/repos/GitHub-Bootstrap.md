@@ -25,7 +25,7 @@
    --personal
    ```
 
-4. Wait for the `staging` cluster to start. Track the progress of the Flux
+4. Track the progress of the Flux
    deployments using the Flux CLI. This may take >30 minutes due to exponential
    backoff, however this is only a one-time process.
    ```bash
