@@ -1,0 +1,76 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: aws-load-balancer-controller-iam
+  namespace: flux-system
+spec:
+  prune: true
+  interval: 2m0s
+  path: ./tools-config/aws-load-balancer-controller-iam
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  validation: client
+  healthChecks:
+  - kind: ServiceAccount
+    apiVersion: v1
+    name: aws-load-balancer-controller
+    namespace: kube-system
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-info
+        optional: false
+  patches:
+    - target:
+        group: iam.aws.crossplane.io
+        kind: Role
+        version: v1beta1
+        name: aws-load-balancer-controller-role
+        namespace: kube-system
+      patch: |-
+        - op: replace
+          path: /metadata/name
+          value: aws-load-balancer-controller-role-cluster-name
+    - target:
+        group: iam.aws.crossplane.io
+        kind: Policy
+        version: v1beta1
+        name: aws-load-balancer-controller-policy
+        namespace: kube-system
+      patch: |-
+        - op: replace
+          path: /metadata/name
+          value: aws-load-balancer-controller-policy-cluster-name
+        - op: replace
+          path: /spec/forProvider/name
+          value: aws-load-balancer-controller-policy-cluster-name
+    - target:
+        group: iam.aws.crossplane.io
+        kind: RolePolicyAttachment
+        version: v1beta1
+        name: aws-load-balancer-controller-attachment
+        namespace: kube-system
+      patch: |-
+        - op: replace
+          path: /metadata/name
+          value: aws-load-balancer-controller-attachment-cluster-name
+        - op: replace
+          path: /spec/forProvider/policyArnRef/name
+          value: aws-load-balancer-controller-policy-cluster-name
+        - op: replace
+          path: /spec/forProvider/roleNameRef/name
+          value: aws-load-balancer-controller-role-cluster-name
+    - target:
+        group: ""
+        kind: ServiceAccount
+        version: v1
+        name: aws-load-balancer-controller
+        namespace: kube-system
+      patch: |-
+        - op: replace
+          path: /metadata/annotations
+          value:
+            eks.amazonaws.com/role-arn: arn:aws:iam::${ACCOUNT_ID}:role/aws-load-balancer-controller-role-cluster-name
+---
