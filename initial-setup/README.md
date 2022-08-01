@@ -231,7 +231,7 @@ sed -i "s/AWS_REGION/$AWS_REGION/g" \
      gitops-workloads/template/app-template/git-repo.yaml
    ```
 
-### Update references to the EKS Console IAM Role
+### Update references to the IAM entity that is used to access the EKS console
 1. Verify that EKS_CONSOLE_IAM_ENTITY_ARN is set correctly.
    ```
    echo $EKS_CONSOLE_IAM_ENTITY_ARN
