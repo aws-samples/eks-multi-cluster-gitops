@@ -77,8 +77,8 @@ account you use for deploying this sample implementation can accommodate that.
 (Replace `<IAM user/role ARN>` in the command below with the ARN of the IAM user or role used for accessing the EKS console).
 
    ```bash
-   export EKS_CONSOLE_IAM_ENTITY_ARN = <IAM user/role ARN>
-   echo "export EKS_CONSOLE_IAM_ENTITY_ARN = ${EKS_CONSOLE_IAM_ENTITY_ARN}" | tee -a ~/.bash_profile
+   export EKS_CONSOLE_IAM_ENTITY_ARN=<IAM user/role ARN>
+   echo "export EKS_CONSOLE_IAM_ENTITY_ARN=${EKS_CONSOLE_IAM_ENTITY_ARN}" | tee -a ~/.bash_profile
    ```
 
 11. Increase the volume of the EBS volume to 30GB as follows.
@@ -243,7 +243,6 @@ sed -i "s/AWS_REGION/$AWS_REGION/g" \
      gitops-system/tools-config/eks-console/aws-auth.yaml
    sed -i "s~EKS_CONSOLE_IAM_ENTITY_ARN~$EKS_CONSOLE_IAM_ENTITY_ARN~g" \
      gitops-system/tools-config/eks-console/role-binding.yaml
-
    ```
 
 ## Create sealed secrets for access to Git repos
