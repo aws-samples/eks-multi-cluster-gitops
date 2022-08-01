@@ -180,7 +180,6 @@ created in the previous step:
 ```
 cp -r multi-cluster-gitops/repos/gitops-system/* gitops-system/
 cp -r multi-cluster-gitops/repos/gitops-workloads/* gitops-workloads/
-cp -r multi-cluster-gitops/repos/apps-manifests/payment-app/* payment-app-manifests/
 ```
 Some of the files in these repos contain placholder references for `AWS_REGION` and `REPO_PREFIX`
 which need to be updated to reflect your working region, and the location of your repos.
@@ -190,8 +189,6 @@ which need to be updated to reflect your working region, and the location of you
 Run the `sed` comand below to update various manifests to point to the correct AWS region:
 ```
 sed -i "s/AWS_REGION/$AWS_REGION/g" \
-   gitops-system/clusters-config/commercial-prod/def/eks-cluster.yaml \
-   gitops-system/clusters-config/commercial-staging/def/eks-cluster.yaml \
    gitops-system/clusters-config/template/def/eks-cluster.yaml \
    gitops-system/tools-config/external-secrets/sealed-secrets-key.yaml
 ```
@@ -209,27 +206,21 @@ sed -i "s/AWS_REGION/$AWS_REGION/g" \
    the `gitpops-workloads` repo created in your account:
    ```
    sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
-     gitops-system/workloads/template/git-repo.yaml \
-     gitops-system/workloads/commercial-staging/git-repo.yaml \
-     gitops-system/workloads/commercial-prod/git-repo.yaml
+     gitops-system/workloads/template/git-repo.yaml
    ```
 3. Update the `gotk-sync.yaml` files in the `clusters` folder of the `gitops-system` repo,
    updating the `url` for the `GitRepository` resource to point at the `gitpops-system` repo created in your account:
    ```
    sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
      gitops-system/clusters/mgmt/flux-system/gotk-sync.yaml \
-     gitops-system/clusters/template/flux-system/gotk-sync.yaml \
-     gitops-system/clusters/commercial-prod/flux-system/gotk-sync.yaml \
-     gitops-system/clusters/commercial-staging/flux-system/gotk-sync.yaml
+     gitops-system/clusters/template/flux-system/gotk-sync.yaml
    ```
 
 4. Update the `git-repo.yaml` files in the `gitops-workloads` repo,
    updating the `url` for the `GitRepository` resource to point at the `payment-app-manifests` repo created in your account:
    ```
    sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
-     gitops-workloads/template/app-template/git-repo.yaml \
-     gitops-workloads/commercial-staging/payment-app/git-repo.yaml \
-     gitops-workloads/commercial-staging/product-catalog-api/git-repo.yaml
+     gitops-workloads/template/app-template/git-repo.yaml
    ```
 
 
@@ -243,26 +234,17 @@ The `SealedSecret` manifests are then copied into the correct locations for each
 
 |Repo|metadata.name|Locations|
 |----|-------------|---------|
-|gitops-system | flux-system | gitops-system/clusters-config/commercial-staging/secrets/git-secret.yaml |
-||| gitops-system/clusters-config/commercial-prod/secrets/git-secret.yaml|
-|gitops-workloads|gitops-workloads|gitops-system/workloads/commercial-staging/git-secret.yaml|
-|||gitops-system/workloads/commercial-prod/git-secret.yaml|
-|payment-app-manifests| payment-app | gitops-workloads/commercial-staging/payment-app/git-secret.yaml |
+|gitops-system | flux-system | gitops-system/clusters-config/template/secrets/git-secret.yaml |
+|gitops-workloads|gitops-workloads|gitops-system/workloads/template/git-secret.yaml|
 
 Use the following script to generate the `SealedSecret` manifests and copy them to the correct locations:
 ```bash
 kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-system.yaml >git-creds-sealed-system.yaml
-cp git-creds-sealed-system.yaml gitops-system/clusters-config/commercial-staging/secrets/git-secret.yaml
-cp git-creds-sealed-system.yaml gitops-system/clusters-config/commercial-prod/secrets/git-secret.yaml
+cp git-creds-sealed-system.yaml gitops-system/clusters-config/template/secrets/git-secret.yaml
 cp git-creds-system.yaml git-creds-workloads.yaml
 yq e '.metadata.name="gitops-workloads"' -i git-creds-workloads.yaml
 kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-workloads.yaml >git-creds-sealed-workloads.yaml
-cp git-creds-sealed-workloads.yaml gitops-system/workloads/commercial-staging/git-secret.yaml
-cp git-creds-sealed-workloads.yaml gitops-system/workloads/commercial-prod/git-secret.yaml
-cp git-creds-system.yaml git-creds-app.yaml
-yq e '.metadata.name="payment-app"' -i git-creds-app.yaml
-kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-app.yaml >git-creds-sealed-app.yaml
-cp git-creds-sealed-app.yaml gitops-workloads/commercial-staging/payment-app/git-secret.yaml
+cp git-creds-sealed-workloads.yaml gitops-system/workloads/template/git-secret.yaml
 ```
 
 ## Setup IAM for Crossplane
@@ -345,15 +327,6 @@ With the local repos now populated and updated, you can now push them to their r
 2. Commit and push `gitops-workloads` repo changes 
    ```bash
    cd ~/environment/gitops-workloads
-   git add .
-   git commit -m "initial commit"
-   git branch -M main
-   git push --set-upstream origin main
-   ```
-
-3. Commit and push `payment-app-manifests` repo changes 
-   ```bash
-   cd ~/environment/payment-app-manifests
    git add .
    git commit -m "initial commit"
    git branch -M main

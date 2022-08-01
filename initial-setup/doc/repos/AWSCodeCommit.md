@@ -1,6 +1,6 @@
 ## Create and prepare the Git repositories
 ### Create Git SSH keys
-1. Create a new IAM user that will be used to interact with the CodeCommit repos from Cloud9 environment and from the EKS clusters by Flux source controller. While the same IAM user is used for all the
+1. Create a new IAM user that will be used to interact with the CodeCommit repos from the Cloud9 environment and from the EKS clusters by Flux source controller. While the same IAM user is used for all the
    repositories in these instructions, but the structure supports using
    different users for different repos.
 
@@ -19,11 +19,7 @@ cat >gitops-policy.json <<EOF
         "codecommit:GitPull",
         "codecommit:GitPush"
       ],
-      "Resource": [
-         "arn:aws:codecommit:${AWS_REGION}:${AWS_ACCOUNT_ID}:gitops-system",
-         "arn:aws:codecommit:${AWS_REGION}:${AWS_ACCOUNT_ID}:gitops-workloads",
-         "arn:aws:codecommit:${AWS_REGION}:${AWS_ACCOUNT_ID}:payment-app-manifests"
-      ]
+      "Resource": "arn:aws:codecommit:${AWS_REGION}:${AWS_ACCOUNT_ID}:*"
     }
   ]
 }
@@ -75,14 +71,14 @@ EOF
 ```
 ### Create Git repos
 
-Create the following empty CodeCommit repos in your AWS account: `gitops-system`,
-   `gitops-workloads`, and `payment-app-manifests`, and clone them
+Create the following empty CodeCommit repos in your AWS account: `gitops-system` and
+   `gitops-workloads`, and clone them
    into the Cloud9 environment.
 
 ```bash
 cd ~/environment
 git config --global init.defaultBranch main
-repos=( gitops-system gitops-workloads payment-app-manifests )
+repos=( gitops-system gitops-workloads )
 for repo in "${repos[@]}"; do
   aws codecommit create-repository \
     --repository-name $repo
