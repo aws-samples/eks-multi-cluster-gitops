@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eks-console-dashboard-full-access-clusterrole-binding
+subjects:
+- kind: User
+  name: EKS_CONSOLE_IAM_ENTITY_ARN
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: eks-console-dashboard-full-access-clusterrole
+  apiGroup: rbac.authorization.k8s.io
