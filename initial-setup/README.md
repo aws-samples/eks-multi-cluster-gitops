@@ -239,9 +239,9 @@ sed -i "s/AWS_REGION/$AWS_REGION/g" \
 
 2. Update the various manifest files in the `tools-config/eks-console` folder of the `gitops-system` repo, replacing the placeholder for the ARN of the IAM entity that is used to access the EKS console, with the value set in an environment variable.
    ```
-   sed -i "s/EKS_CONSOLE_IAM_ENTITY_ARN/$EKS_CONSOLE_IAM_ENTITY_ARN/g" \
+   sed -i "s~EKS_CONSOLE_IAM_ENTITY_ARN~$EKS_CONSOLE_IAM_ENTITY_ARN~g" \
      gitops-system/tools-config/eks-console/aws-auth.yaml
-   sed -i "s/EKS_CONSOLE_IAM_ENTITY_ARN/$EKS_CONSOLE_IAM_ENTITY_ARN/g" \
+   sed -i "s~EKS_CONSOLE_IAM_ENTITY_ARN~$EKS_CONSOLE_IAM_ENTITY_ARN~g" \
      gitops-system/tools-config/eks-console/role-binding.yaml
 
    ```
