@@ -2,9 +2,16 @@
 
 This document walks you through steps for a number of scenarios including:
 - Adding and removing a workload cluster
-- Connecting to a workload cluster (using `kubeconfig`)
 - Adding and removing an application to / from a workload cluster
+- Connecting to a workload cluster to check reconciliation status
 - Upgrading a workload cluster
+
+For illustration purposes, these scenarios are based on the example of a product catalog application developed by the commercial department of an organisation.
+- The department
+runs two clusters `commercial-staging` and `commercial-prod`.
+- The product catalog application comprises two microservices which are owned by different teams.
+  - API server: this provides the backend, and makes use of an AWS DynamoDB table to store its state.
+  - Front end server: provides a web front end service that can be accessed via a browser.
 
 ## Provision and bootstrap a new cluster
 
@@ -26,11 +33,17 @@ git commit -m "Add cluster commercial-staging"
 git push
 ```
 
-### Detailed explanation
+Use
+```
+kubectl get kustomization -n flux-system
+```
+to monitor the creation of resources for the new cluster.
 
-The `add-cluster.sh` script performs the following steps (please ensure your working directory is set to `~/envionment`):
+### Detailed explanation of `add-cluster.sh` script
 
-1. Instantiate the `cluster-configs` template. This creates a folder for the new `commercial-staging` cluster under `cluster-configs`, and copies the template.
+The `add-cluster.sh` script performs the following steps. You can choose to execute these steps instead of running the script. Please ensure your working directory is set to `~/envionment` before executing.
+
+1. **Instantiate the `cluster-configs` template:** This creates a folder for the new `commercial-staging` cluster under `cluster-configs`, and copies the template.
 It then replaces all occurances of `cluster-name` in the template with `commercial-staging`.
     ```
     mkdir -p gitops_system/clusters-config/commercial-staging
@@ -38,8 +51,7 @@ It then replaces all occurances of `cluster-name` in the template with `commerci
     grep -RiIl 'cluster-name' gitops_system/clusters-config/commercial-staging| xargs sed -i "s/cluster-name/commercial-staging/g"
     ```
 
-
-2. Instantiate the `cluster` template. This create a folder for the `commcercial-staging` cluster
+2. **Instantiate the `cluster` template:** This create a folder for the `commcercial-staging` cluster
 under `clusters`, and copies the template. It then replaces all occurances of `cluster-name` in the template with `commercial-staging`.
     ```
     mkdir -p gitops_system/clusters/commercial-staging
@@ -47,31 +59,70 @@ under `clusters`, and copies the template. It then replaces all occurances of `c
     grep -RiIl 'cluster-name' gitops_system/clusters/commercial-staging | xargs sed -i "s/cluster-name/commercial-staging/g"
     ```
 
-3. Instantiate the `workloads` template. This creates a folder for the
- `commcercial-staging` cluster under `workloads` and copies the template. It then replaces all occurances of `cluster-name` in the template with `commercial-staging`.
+3. **Instantiate the `workloads` template.** This creates a folder for the
+ `commcercial-staging` cluster under `workloads` and copies the template. It then
+ replaces all occurences of `cluster-name` in the template with `commercial-staging`.
     ```
     mkdir -p gitops_system/workloads/commercial-staging
     cp -R gitops_system/workloads/template/* gitops_system/workloads/commercial-staging
     grep -RiIl 'cluster-name'  gitops_system/workloads/commercial-staging | xargs sed -i "s/cluster-name/commercial-staging/g"
     ```
 
-4.  Add `commercial-staging` to `clusters-config/kustomization.yaml`.
+4.  **Add `commercial-staging` to `clusters-config/kustomization.yaml`.**
+    This forces Flux to pick up the new cluster config.
     ```
     yq -i e ".resources += [\"commercial-staging\"]" gitops_system/clusters-config/kustomization.yaml
     ```
 
-Once you have completed these steps, commit and push changes using:
 
+## Add an application to a cluster
+
+In this section you will add an application `product-catalog-api` to the cluster `commercial-staging`. To achieve this, you need to use the supplied template to
+create manifest files for the new application in `gitops-workloads/commercial-staging`
+, and update `commercial-staging/kustomization.yaml` Once done, you then push the
+changes so that flux can pick them up and act on them.
+
+First, prepare a repo for `product-catalog-api-manifests` as follows:
 ```
-cd gitops-system
+cd ~/environment
+gh repo create --private --clone product-catalog-api-manifests
+cp -r multi-cluster-gitops/repos/apps-manifests/product-catalog-api-manifests/v1/* product-catalog-api-manifests/
+cd product-catalog-api-manifests
 git add .
-git commit -m "Add cluster commercial-staging"
+git commit -m "baseline version"
+git branch -M main
+git push --set-upstream origin main
+```
+
+You can make the required changes quickly using the script `add-cluster-app.sh`:
+```
+cd ~/environment
+multi-cluster-gitops/bin/add-cluster-app.sh \
+  ./gitops-workloads \
+  commercial-staging product-catalog-api \
+  multi-cluster-gitops/initial-setup/secrets-template/git-credentials.yaml \
+  ~/.ssh/gitops ~/.ssh/gitops.pub \
+  "github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=" \
+  ./sealed-secrets-keypair-public.pem
+```
+
+Once done, commit and push the changes as follows:
+```
+cd gitops-workloads
+git add .
+git commit -m "Add product-catalog-api to commercial-staging"
 git push
 ```
 
+### Detailed explanation
+
+MORE TO COME HERE
+
+
+
 ## Connect to a workload cluster
 
-to connect to `<cluster-name>` workload cluster using `kubeconfig` stored as a `Secret`
+To connect to `<cluster-name>` workload cluster using `kubeconfig` stored as a `Secret`
 
 1. In a terminal window that is currently configured for the management cluster, obtain a
 config file for the workload cluster using:
@@ -93,50 +144,6 @@ kubectl config current-context
   kubectl get kustomization -n flux-system
   ```
 
-
-
-## Add an application to a cluster
-
-In this section you will add an application `product-catalog-fe` to the cluster `commercial-staging`. To achieve this, you need to use the supplied template to
-create manifest files for the new application in `gitops-workloads/commercial-staging`
-, and update `commercial-staging/kustomization.yaml` Once done, you then push the
-changes so that flux can pick them up and act on them.
-
-First, prepare a repo for `product-catalog-fe-manifests` as follows:
-```
-cd ~/environment
-gh repo create --private --clone product-catalog-fe-manifests
-cp -r multi-cluster-gitops/repos/apps-manifests/product-catalog-fe-manifests/* product-catalog-fe-manifests/
-cd product-catalog-fe-manifests
-git add .
-git commit -m "baseline version"
-git branch -M main
-git push --set-upstream origin main
-```
-
-You can make the required changes quickly using the script `add-cluster.sh`:
-```
-cd ~/environment
-multi-cluster-gitops/bin/add-cluster-app.sh \
-  ./gitops-workloads \
-  commercial-staging product-catalog-fe \
-  multi-cluster-gitops/initial-setup/secrets-template/git-credentials.yaml \
-  ~/.ssh/gitops ~/.ssh/gitops.pub \
-  "github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=" \
-  ./sealed-secrets-keypair-public.pem
-```
-
-Once done, commit and push the changes as follows:
-```
-cd gitops-workloads
-git add .
-git commit -m "Add product-catalog-fe to commercial-staging"
-git push
-```
-
-### Detailed explanation
-
-MORE TO COME HERE
 
 
 ## Upgrade an existing cluster
