@@ -1,0 +1,20 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: eks-console
+  namespace: flux-system
+spec:
+  prune: true
+  interval: 2m0s
+  path: ./tools-config/eks-console
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  validation: client
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-info
+        optional: false
+---

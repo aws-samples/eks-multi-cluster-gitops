@@ -72,7 +72,16 @@ account you use for deploying this sample implementation can accommodate that.
    aws configure get default.region
    ```
 
-10. Increase the volume of the EBS volume to 30GB as follows.
+10. Track the ARN of the IAM entity that is used for accessing the EKS console using environment variables.
+
+(Replace `<IAM user/role ARN>` in the command below with the ARN of the IAM user or role used for accessing the EKS console).
+
+   ```bash
+   export EKS_CONSOLE_IAM_ENTITY_ARN=<IAM user/role ARN>
+   echo "export EKS_CONSOLE_IAM_ENTITY_ARN=${EKS_CONSOLE_IAM_ENTITY_ARN}" | tee -a ~/.bash_profile
+   ```
+
+11. Increase the volume of the EBS volume to 30GB as follows.
     1. Copy the [volume resize script from the Cloud9 documentation](https://docs.aws.amazon.com/cloud9/latest/user-guide/move-environment.html#move-environment-resize) into a file `resize.sh` in your Cloud9 environment.
     2. Run 
        ```
@@ -181,8 +190,7 @@ created in the previous step:
 cp -r multi-cluster-gitops/repos/gitops-system/* gitops-system/
 cp -r multi-cluster-gitops/repos/gitops-workloads/* gitops-workloads/
 ```
-Some of the files in these repos contain placholder references for `AWS_REGION` and `REPO_PREFIX`
-which need to be updated to reflect your working region, and the location of your repos.
+Some of the files in these repos contain placholder references for `AWS_REGION`, `REPO_PREFIX`, and `EKS_CONSOLE_IAM_ENTITY_ARN` which need to be updated to reflect your working region, the location of your repos, and the ARN of the IAM entity that is used for accessing the EKS console.
 
 ### Update references to AWS region
 
@@ -223,6 +231,19 @@ sed -i "s/AWS_REGION/$AWS_REGION/g" \
      gitops-workloads/template/app-template/git-repo.yaml
    ```
 
+### Update references to the IAM entity that is used to access the EKS console
+1. Verify that EKS_CONSOLE_IAM_ENTITY_ARN is set correctly.
+   ```
+   echo $EKS_CONSOLE_IAM_ENTITY_ARN
+   ```
+
+2. Update the various manifest files in the `tools-config/eks-console` folder of the `gitops-system` repo, replacing the placeholder for the ARN of the IAM entity that is used to access the EKS console, with the value set in an environment variable.
+   ```
+   sed -i "s~EKS_CONSOLE_IAM_ENTITY_ARN~$EKS_CONSOLE_IAM_ENTITY_ARN~g" \
+     gitops-system/tools-config/eks-console/aws-auth.yaml
+   sed -i "s~EKS_CONSOLE_IAM_ENTITY_ARN~$EKS_CONSOLE_IAM_ENTITY_ARN~g" \
+     gitops-system/tools-config/eks-console/role-binding.yaml
+   ```
 
 ## Create sealed secrets for access to Git repos
 
@@ -339,6 +360,26 @@ Make sure that `eksctl` has finished creating the management cluster. Then proce
 
 - [Using GitHub as `GitRepository` backend.](doc/repos/GitHub-Bootstrap.md)
 - [Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit-Bootstrap.md)
+
+## Allow access to the management cluster from the EKS console
+
+1. Create the RBAC authorization resources needed for granting an IAM entity access to the cluster through the EKS console.
+   ```bash
+   cd ~/environment
+   kubectl apply -f gitops-system/tools-config/eks-console/role.yaml
+   kubectl apply -f gitops-system/tools-config/eks-console/role-binding.yaml
+   ```
+
+2. Add a mapping for the IAM entity in `aws-auth` `ConfigMap` using `eksctl`.
+
+   ```bash
+   eksctl create iamidentitymapping \
+      --cluster mgmt \
+      --region=${AWS_REGION} \
+      --arn ${EKS_CONSOLE_IAM_ENTITY_ARN} \
+      --username ${EKS_CONSOLE_IAM_ENTITY_ARN} \
+      --no-duplicate-arns
+   ```
 
 
 ## Monitoring Flux Kustomizations
