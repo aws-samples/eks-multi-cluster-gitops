@@ -341,29 +341,10 @@ Make sure that `eksctl` has finished creating the management cluster. Then proce
 - [Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit-Bootstrap.md)
 
 
-## Connect to a workload cluster
-1. Connect to `<cluster-name>`  cluster using `kubeconfig` stored as a `Secret`
-```bash
-unset KUBECONFIG
-kubectl -n flux-system get secret <cluster-name>-eks-connection -n flux-system -o jsonpath="{.data.value}" | base64 -d > wl-kube.conf
-export KUBECONFIG=wl-kube.conf
-
-kubectl config current-context
-```
-(Replace `<cluster-name>` with the cluster name).
-
 ## Monitoring Flux Kustomizations
-* If you want to monitor the bootstrapping of the management cluster, and/or the
-  provisioning/bootstrapping of the workload clusters, list the `Kustomization`
-  resources in the management cluster using the following command:
 
-```bash
-kubectl get kustomization -n flux-system
-```
-* If you want to monitor the bootstrapping of the workload clusters, and the
-  deployment of the applications into it, connect to the workload cluster by
-  following the instructions above, then list the `Kustomization` resources
-  using the following command:
+* To monitor the bootstrapping of the management cluster, list the `Kustomization`
+  resources in the management cluster using the following command:
 
 ```bash
 kubectl get kustomization -n flux-system

@@ -2,6 +2,7 @@
 
 This document walks you through steps for a number of scenarios including:
 - Adding and removing a workload cluster
+- Connecting to a workload cluster (using `kubeconfig`)
 - Adding and removing an application to / from a workload cluster
 - Upgrading a workload cluster
 
@@ -67,6 +68,31 @@ git add .
 git commit -m "Add cluster commercial-staging"
 git push
 ```
+
+## Connect to a workload cluster
+
+to connect to `<cluster-name>` workload cluster using `kubeconfig` stored as a `Secret`
+
+1. In a terminal window that is currently configured for the management cluster, obtain a
+config file for the workload cluster using:
+
+```bash
+unset KUBECONFIG
+kubectl -n flux-system get secret <cluster-name>-eks-connection -n flux-system -o jsonpath="{.data.value}" | base64 -d > wl-kube.conf
+export KUBECONFIG=wl-kube.conf
+
+kubectl config current-context
+```
+(Replace `<cluster-name>` with the cluster name).
+
+2. To monitor the bootstrapping of the workload clusters (and subseuently for the
+  deployment of the applications into it), list the `Kustomization` resources
+  using the following command:
+
+  ```bash
+  kubectl get kustomization -n flux-system
+  ```
+
 
 
 ## Add an application to a cluster
