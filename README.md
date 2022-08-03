@@ -59,13 +59,8 @@ The pre-defined public/private key pair for Sealed Secrets is created as part of
 
 This repo contains the configuration of the management cluster and Kubernetes manifests representing the workload clusters, their configuration and the applications running within them. While these are represented as directories within this single repositories, the system assumes that they are split into multiple separate repositories - which allows for finer-grained permissions and version control over each separate part. The directories should be divided into the following repositories:
 
-## Deployment
-Please refer to [the initial setup](./initial-setup) for deploying the system. Also refer to [scenarios](./scenarios.md) for the instructions related to various scenarios (e.g. creating a new workload cluster, deleting a workload cluster, onboarding a new microservice/application and deploying it to one or more of the workload clusters).
-
-Please refer to [Clean-up](./clean-up) for un-deploying the system.
-
-## Enabling IRSA
-IRSA configuration varies widely for different tools. It may not be feasible to individually list the configuration steps for each of the tools. This section provides the overall architecture and lists the main configuration steps for key tools like Crossplane and External Secrets Operator.
+## IAM roles for service accounts (IRSA)
+IAM roles for service accounts (IRSA) configuration varies widely for different tools. It may not be feasible to individually list the configuration steps for each of the tools. This section provides the overall architecture and lists the main configuration steps for key tools like Crossplane and External Secrets Operator.
 
 There are various parts to get IRSA working. The major ones are:
   1. IAM IDP pointing to the EKS cluster OIDC endpoint
@@ -86,6 +81,11 @@ For the workload clusters the IAM objects for Crossplane IRSA are created by the
 The IAM role and policies are created through `crossplane` and can be [found here](repos/gitops-system/tools-config/external-secrets-iam/external-secrets-iam.yaml). The `ServiceAccount` manifest [found here](repos/gitops-system/tools-config/external-secrets/sealed-secrets-key.yaml) uses EKS IRSA annotation to refer to the IAM role ARN. Like earlier here also you'll notice `${ACCOUNT_ID}` placeholder that will be replaced through Flux kustomization `postBuild` substitution. The `ServiceAccount` is used to configure the authentication mechanism for the `SecretStore` [found here](repos/gitops-system/tools-config/external-secrets/sealed-secrets-key.yaml) referring to AWS Secrets Manager using the field `spec.provider.aws.auth.jwt.serviceAccountRef.name`. Refer [this doc](https://external-secrets.io/v0.5.7/provider-aws-secrets-manager/#eks-service-account-credentials).
 
 For the workload clusters the IAM objects and `external-secrets` installation is performed from the management cluster.
+
+## Deployment
+Please refer to [the initial setup](./initial-setup) for deploying the system. Also refer to [scenarios](./scenarios.md) for the instructions related to various scenarios (e.g. creating a new workload cluster, deleting a workload cluster, onboarding a new microservice/application and deploying it to one or more of the workload clusters).
+
+Please refer to [Clean-up](./clean-up) for un-deploying the system.
 
 ## Security
 
