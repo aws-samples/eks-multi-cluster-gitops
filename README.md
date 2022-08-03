@@ -59,7 +59,7 @@ The pre-defined public/private key pair for Sealed Secrets is created as part of
 
 This repo contains the configuration of the management cluster and Kubernetes manifests representing the workload clusters, their configuration and the applications running within them. While these are represented as directories within this single repositories, the system assumes that they are split into multiple separate repositories - which allows for finer-grained permissions and version control over each separate part. The directories should be divided into the following repositories:
 
-## IAM roles for service accounts (IRSA)
+### IAM roles for service accounts (IRSA)
 IAM roles for service accounts (IRSA) configuration varies widely for different tools. It may not be feasible to individually list the configuration steps for each of the tools. This section provides the overall architecture and lists the main configuration steps for key tools like Crossplane and External Secrets Operator.
 
 There are various parts to get IRSA working. The major ones are:
@@ -72,12 +72,12 @@ There are various parts to get IRSA working. The major ones are:
 
 The management cluster creation process sets up an IAM IDP pointing to the management cluster OIDC endpoint. The first tool to get installed is Crossplane. Once Crossplane is installed it is responsible for setting up IAM objects for the rest of the tools and applications in management cluster and workload clusters including for Crossplane itself installed in the workload clusters. However, the initial IAM setup to get Crossplane configured with IRSA in the management cluster requires setup outside of gitops.
 
-### Enable IRSA for `crossplane/provider-aws`
+#### Enable IRSA for `crossplane/provider-aws`
 The `ControllerConfig` object [found here](repos/gitops-system/tools/crossplane/crossplane-aws-provider/aws-provider.yaml) is annotated with the IAM role ARN. You'll notice the placeholder `${ACCOUNT_ID}` will be replaced through Flux `postBuild` substitution. This annotation is implicitly copied into the service account used by the AWS provider controller during init. The `ControllerConfig` defined earlier is referred in the `spec.controllerConfigRef.name` field in the `Provider` object manifest for `crossplane/provider-aws`. The `ProviderConfig` object [found here](repos/gitops-system/tools/crossplane/crossplane-aws-provider-config/aws-providerconfig.yaml) controls the authentication mechanism used by AWS controllers to create the XRs. The `ProviderConfig` uses `InjectedIdentity` as the value for the field `spec.credentials.source`. Refer [this doc](https://github.com/crossplane-contrib/provider-aws/blob/master/AUTHENTICATION.md#using-iam-roles-for-serviceaccounts).
 
 For the workload clusters the IAM objects for Crossplane IRSA are created by the management cluster. The tool itself is installed by Flux running in the workload cluster.
 
-### Enable IRSA for `external-secrets`
+#### Enable IRSA for `external-secrets`
 The IAM role and policies are created through `crossplane` and can be [found here](repos/gitops-system/tools-config/external-secrets-iam/external-secrets-iam.yaml). The `ServiceAccount` manifest [found here](repos/gitops-system/tools-config/external-secrets/sealed-secrets-key.yaml) uses EKS IRSA annotation to refer to the IAM role ARN. Like earlier here also you'll notice `${ACCOUNT_ID}` placeholder that will be replaced through Flux kustomization `postBuild` substitution. The `ServiceAccount` is used to configure the authentication mechanism for the `SecretStore` [found here](repos/gitops-system/tools-config/external-secrets/sealed-secrets-key.yaml) referring to AWS Secrets Manager using the field `spec.provider.aws.auth.jwt.serviceAccountRef.name`. Refer [this doc](https://external-secrets.io/v0.5.7/provider-aws-secrets-manager/#eks-service-account-credentials).
 
 For the workload clusters the IAM objects and `external-secrets` installation is performed from the management cluster.
