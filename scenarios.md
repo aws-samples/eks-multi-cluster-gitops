@@ -9,7 +9,6 @@ This document walks you through steps for a number of scenarios covering:
 - Removing an application from a workload cluster
 - Removing a workload cluster
 
-
 For illustration purposes, these scenarios are based on the example of a product catalog application developed by the commercial department of an organisation.
 - The department
 runs two clusters `commercial-staging` and `commercial-prod`.
@@ -52,7 +51,7 @@ to monitor the creation of resources for the new cluster.
 
 ### Detailed explanation of `add-cluster.sh` script
 
-The `add-cluster.sh` script performs the following steps. You can choose to execute these steps instead of running the script. Please ensure your working directory is set to `~/envionment` before executing.
+The `add-cluster.sh` script performs the following steps. You can choose to execute these steps instead of running the script. Please ensure your working directory is set to `~/environment` before executing.
 
 1. **Instantiate the `cluster-configs` template:** This creates a folder for the new `commercial-staging` cluster under `cluster-configs`, and copies the template.
 It then replaces all occurances of `cluster-name` in the template with `commercial-staging`.
@@ -125,11 +124,55 @@ git commit -m "Add product-catalog-api to commercial-staging"
 git push
 ```
 
-### Detailed explanation
+### Detailed explanation of `add-cluster-app.sh`
 
-MORE TO COME HERE
+The `add-cluster-app.sh` script performs the following steps. You can choose to execute these steps instead of running the script. Please ensure your working directory is set to `~/environment` before executing.
 
+1. **Ensure a directory for the application exists under `gitops-workloads/commercial-staging`:** create a directory if it does not yet exist (i.e. this is the first app in this cluster).
+```
+mkdir -p gitops-workloads/commercial-staging/product-catalog-api
+```
 
+2. **Ensure a `kustomization.yaml` file exists:** check if the file exists, and if not then
+create one by copying the template (only happens for the first app that is added to the cluster).
+```
+if [[ ! -f gitops-workloads/commercial-staging/kustomization.yaml ]]
+then
+    cp gitops-workloads/template/kustomization.yaml gitops-workloads/commercial-staging
+fi
+```
+
+3. **Instantiate the workloads application template:** this copies the application template
+from `gitops-workloads/template/app-template` to `gitops-workloads/commercial-staging/product-catalog-api`, and then updates the cluster name and app name to the correct values.
+```
+cp -R gitops-workloads/template/app-template/* gitops-workloads/commercial-staging/product-catalog-api
+grep -RiIl 'cluster-name' gitops-workloads/commercial-staging/product-catalog-api | xargs sed -i "s/cluster-name/commercial-staging/g"
+grep -RiIl 'app-name' gitops-workloads/commercial-staging/product-catalog-api | xargs sed -i "s/app-name/product-catalog-api/g"
+```
+
+4. **Prepare the sealed secret for the application:** this prepares a sealed secret for the
+application, which contains the Git credentials needed to access the repo. A
+temporary file is used to store a copy of the Git credentials template (which is
+a K8s `Secret`). This file is updated to use the correct name, public/private key pair, and
+known hosts. `kubeseal` is then used to create a sealed secret, using a supplied `.pem` file
+containing a key to encrypt the sealed secret which is stored in `gitops-workloads/commercial-staging/product-catalog-api/git-secret.yaml`.
+
+```
+tmp_git_creds=$(mktemp /tmp/git-creds.yaml.XXXXXXXXX)
+cp multi-cluster-gitops/initial-setup/secrets-template/git-credentials.yaml $tmp_git_creds
+APP_NAME=product-catalog-api yq e '.metadata.name=strenv(APP_NAME)' -i $tmp_git_creds
+KEY=$(cat ~/.ssh/gitops | base64 -w 0) yq -i '.data.identity = strenv(KEY)' $tmp_git_creds
+CERT=$(cat ~/.ssh/gitops.pub | base64 -w 0) yq -i '.data."identity.pub" = strenv(CERT)' $tmp_git_creds
+HOSTS=$(echo "github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=" | base64 -w 0) yq -i '.data.known_hosts = strenv(HOSTS)' $tmp_git_creds
+kubeseal --cert ./sealed-secrets-keypair-public.pem --format yaml <$tmp_git_creds >gitops-workloads/commercial-staging/product-catalog-api/git-secret.yaml
+rm $tmp_git_creds
+```
+
+5. **Add entry to `kustomization.yaml`:** this forces Flux to pick up the new application.
+
+```
+yq -i e ".resources += [\"product-catalog-api\"]" gitops-workloads/commercial-staging/kustomization.yaml
+```
 
 ## Connect to a workload cluster
 
@@ -155,12 +198,37 @@ kubectl config current-context
   kubectl get kustomization -n flux-system
   ```
 
-## Update an existing application
+## Upgrade an existing application
+
+In this section you will push a new version of the application `product-catalog-api` in
+the cluster `commercial-staging`. To achieve this, you need to update the app manifests in `gitops-workloads/commercial-staging/product-catalog-api`. Once done, you then push the
+changes so that flux can pick them up and act on them.
+
+
+**WE HAVE A PROBLEM HERE. HOW TO UPGRADE APP IN A SINGLE CLUSTER ???**
+
+**HAVE AGREED TO IMPLEMENT TAGS. TBD.**
+
+```
+cd ~/environment
+cp -r multi-cluster-gitops/repos/apps-manifests/product-catalog-api-manifests/v2/* product-catalog-api-manifests/
+cd product-catalog-api-manifests
+git add .
+git commit -m "Updated version"
+git branch -M main
+git push --set-upstream origin main
+```
+
 
 ## Upgrade an existing cluster
-1. Open `gitops-system/clusters-config/<cluster-name>/def/eks-cluster.yaml`.
 
-(Replace `<cluster-name>` with the cluster name).
+In this section you will upgrade the cluster `commercial-staging` to a newer version
+of Kubernetes. To achieve this, you need to update the cluster configuration
+in `gitops-system/clusters-config/commercial-staging/def/eks-cluster.yaml`.
+Once done, you then push the changes so that flux can pick them up and act on them.
+
+
+1. Open `gitops-system/clusters-config/commercial-staging/def/eks-cluster.yaml`.
 
 2. Change the value for `spec.parameters.k8s-version` (e.g. from `1.20` to `1.21`).
 
@@ -168,106 +236,106 @@ kubectl config current-context
 ```bash
 cd ~/environment/gitops-system/
 git add .
-git commit -m "upgrading <cluster-name> cluster"
+git commit -m "upgrading commercial-staging cluster"
 git push
 ```
-(Replace `<cluster-name>` with the new cluster name).
 
-4. Confirm cluster updating. 
+4. Confirm that the cluster is updating using:
 ```bash
-eksctl get cluster --name <cluster-name> --region <region-name> 
+eksctl get cluster --name commercial-staging --region $AWS_REGION
 ```
-
-## Delete an existing cluster
-1. Delete the deployed applications from the cluster by following the instructions in delete an application from a cluster section, and wait for the applications to be removed.
-
-2. Delete the line in `gitops-system/clusters-config/kustomization.yaml` that corresponds to the cluster.
-3. Commit changes, and wait for the cluster to be removed.
-
-```bash
-cd ~/environment/gitops-system/
-git add .
-git commit -m "removing <cluster-name> cluster"
-git push
-```
-(Replace `<cluster-name>` with the cluster name).
-
-4. Delete `gitops-system/clusters-config/<cluster-name>`.
-
-(Replace `<cluster-name>` with the cluster name).
-
-5. Delete `gitops-system/clusters/<cluster-name>`.
-
-(Replace `<cluster-name>` with the cluster name).
-
-6. Delete `gitops-system/workloads/<cluster-name>`.
-
-(Replace `<cluster-name>` with the cluster name).
-
-7. Delete `gitops-workloads/<cluster-name>`.
-
-(Replace `<cluster-name>` with the cluster name).
-
-
-## Onboard a new application into a cluster
-
-1. Make a copy of `app-template` for the new application in `gitops-workloads`.
-
-```bash
-cd ~/environment/gitops-workloads/<cluster-name>
-mkdir <app-name>
-cp -R app-template/* <app-name>/
-cd <app-name>
-grep -RiIl  'app-name' . | xargs sed -i 's/app-name/<app-name>/g'
-```
-
-(Replace `<app-name>` with the application name, and replace `<cluster-name>` with the cluster name).
-
-2. Update the git repo for an application in `gitops-worklaods/<cluster-name>/<app-name>/git-repo.yaml`.
-
-(Replace `<app-name>` with the application name, and replace `<cluster-name>` with the cluster name).
-
-3. Create sealed secrets for the new application. 
-
-```bash
-cd ~/environment
-cp git-creds-system.yaml git-creds-<app-name>.yaml
-yq e '.metadata.name="<app-name>"' -i git-creds-<app-name>.yaml
-kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-<app-name>.yaml >git-creds-sealed-<app-name>.yaml
-cp git-creds-sealed-<app-name>.yaml gitops-workloads/<cluster-name>/<app-name>/git-secret.yaml
-```
-
-(Replace `<app-name>` with the application name, and replace `<cluster-name>` with the cluster name).
-
-4. Add an entry for the application in `gitops-workloads/<cluster-name>/kustomization.yaml`.
-
-5. Commit changes.
-
-```bash
-cd ~/environment/gitops-workloads/
-git add .
-git commit -m "onboarding <app-name> into <cluster-name>"
-git push
-```
-(Replace `<app-name>` with the application name, and replace `<cluster-name>` with the cluster name).
 
 ## Delete an application from a cluster
 
-1. Delete the entry in `gitops-workloads/<cluster-name>/kustomization.yaml` that corresponds to the application.
+In this section you will delete the application `product-catalog-api` from
+the cluster `commercial-staging`. To achieve this, you need to remove the
+entry for this application from `gitops-workloads/commercial-staging/kustomization.yaml`.
+Once done, you then push the changes so that flux can pick them up and act on them.
+You also need to tidy up the `gitops-workloads/commercial-staging` directory by removing
+the `product-catalog-api` directory.
 
-(Replace `<cluster-name>` with the cluster name).
+You can make the required changes quickly using the script `remove-cluster-app.sh`:
+```
+cd ~/environment
+multi-cluster-gitops/bin/remove-cluster-app.sh ./gitops-workloads commercial-staging product-catalog-api
+```
 
-2. Delete `gitops-workloads/<cluster-name>/<app-name>`.
-
-(Replace `<app-name>` with the application name, and replace `<cluster-name>` with the cluster name).
-
-3. Commit the changes.
-
-```bash
-cd ~/environment/gitops-workloads/
+Once done, commit and push the changes as follows:
+```
+cd gitops-workloads
 git add .
-git commit -m "removing <app-name> from <cluster-name>"
+git commit -m "Removed product-catalog-api from cluster commercial-staging"
 git push
 ```
 
-(Replace `<app-name>` with the application name, and replace `<cluster-name>` with the cluster name).
+You can monitor the reconciliation of resources in the cluster using the 
+method described previously.
+
+### Detailed explanation of `remove-cluster-app.sh` script
+
+The `remove-cluster-app.sh` script performs the following steps. You can choose to execute these steps instead of running the script. Please ensure your working directory is set to `~/envionment` before executing.
+
+1. **Remove `product-catalog-api` from `gitops-workloads/commrical-staging/kustomization.yaml`:**
+this forces Flux to remove the application resources from the cluster.
+```
+yq -i e "del ( .resources[] | select (. == \"product-catalog-api\" ))" gitops-workloads/commercial-staging/kustomization.yaml
+```
+
+2. **Tidy up `gitops-workloads/commercial-staging`:** remove the application folder from the
+`gitops-workloads/commrical-staging` as it is no longer needed. 
+```
+rm -rf gitops-workloads/commercial-staging/product-catalog-api
+```
+
+
+## Delete an existing cluster
+
+In this section you will delete the `commercial-staging` cluster. To achieve this, you
+need to remove the entry for this cluster from `gitops-system/clusters-config/kustomization.yaml`.
+this triggers Flux (via Crossplane) to remove the cluster.
+You also need to tidy up various directories by removing the various cluster manifests.
+
+Before proceeding, you should ensure that all applications running in the cluster
+have been removed.
+
+You can make the required repo changes quickly using the script `remove-cluster.sh`:
+```
+cd ~/environment
+multi-cluster-gitops/bin/remove-cluster.sh ./gitops-system ./gitops-workloads commercial-staging
+```
+
+Once done, commit and push the changes as follows:
+```
+cd gitops-system
+git add .
+git commit -m "Removed cluster commercial-staging"
+git push
+cd ../gitops-workloads
+git add .
+git commit -m "Removed cluster commercial-staging"
+git push
+```
+
+You can monitor the reconciliation of resources in the management cluster using 
+```
+kubectl get kustomization -n flux-system
+```
+
+### Detailed explanation of `remove-cluster.sh` script
+
+The `remove-cluster.sh` script performs the following steps. You can choose to execute these steps instead of running the script. Please ensure your working directory is set to `~/environment` before executing.
+
+1. **Remove `commercial-staging` from `gitops-system/clusters-config/kustomization.yaml`:**
+this forces Flux to remove the application resources from the cluster.
+```
+yq -i e "del ( .resources[] | select (. == \"commercial-staging\" ))" gitops-system/clusters-config/kustomization.yaml
+```
+
+2. **Tidy up `gitops-system` and `gitops-workloads` repos:**
+
+```
+rm -rf gitops-system/clusters-config/commercial-staging
+rm -rf gitops-system/clusters/commercial-staging
+rm -rf gitops-system/workloads/commercial-staging
+rm -rf gitops-workloads/commercial-staging
+```
