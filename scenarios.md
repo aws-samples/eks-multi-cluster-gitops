@@ -1,10 +1,14 @@
 # Scenarios
 
-This document walks you through steps for a number of scenarios including:
-- Adding and removing a workload cluster
-- Adding and removing an application to / from a workload cluster
+This document walks you through steps for a number of scenarios covering:
+- Adding a workload cluster
+- Adding an application to a workload cluster (including associated AWS resources)
 - Connecting to a workload cluster to check reconciliation status
+- Updating an application running in a workload cluster
 - Upgrading a workload cluster
+- Removing an application from a workload cluster
+- Removing a workload cluster
+
 
 For illustration purposes, these scenarios are based on the example of a product catalog application developed by the commercial department of an organisation.
 - The department
@@ -13,7 +17,14 @@ runs two clusters `commercial-staging` and `commercial-prod`.
   - API server: this provides the backend, and makes use of an AWS DynamoDB table to store its state.
   - Front end server: provides a web front end service that can be accessed via a browser.
 
-## Provision and bootstrap a new cluster
+Pre-prepared manifest files for the application workloads are included in the
+`repos/apps-manifests` directory as follows:
+- `reops/apps-manifests/product-catalog-api-manifests`: contains manifests for two dsictinct versions of the API server, labelled `V1` and `V2`.
+- `reops/apps-manifests/product-catalog-fe-manifests`: contains manifests for the front end
+server.
+You can see that both of these include overlays for both the `commercial-staging` and `commercial-prod` clusters.
+
+## Provision and bootstrap a new workload cluster
 
 In this section you will create a new workload cluster called `commercial-staging`. To achieve this, you need to use the supplied templates to create manifest files for the new cluster in
 `gitops-system`, and update `clusters-config/kustomization.yaml` Once done, you then push the
@@ -144,7 +155,7 @@ kubectl config current-context
   kubectl get kustomization -n flux-system
   ```
 
-
+## Update an existing application
 
 ## Upgrade an existing cluster
 1. Open `gitops-system/clusters-config/<cluster-name>/def/eks-cluster.yaml`.
