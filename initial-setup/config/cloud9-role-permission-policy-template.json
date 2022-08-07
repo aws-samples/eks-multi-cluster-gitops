@@ -120,6 +120,7 @@
               "iam:TagPolicy",
               "iam:TagRole",
               "iam:UpdateAssumeRolePolicy",
+              "iam:UploadSSHPublicKey",
               "iam:UntagPolicy",
               "iam:UntagRole",
               "iam:UpdateRole",
@@ -138,6 +139,13 @@
         {
             "Effect": "Allow",
             "Action": "sts:GetCallerIdentity",
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "codecommit:CreateRepository"
+            ],
             "Resource": "*"
         }
     ]
