@@ -120,6 +120,7 @@
               "iam:TagPolicy",
               "iam:TagRole",
               "iam:UpdateAssumeRolePolicy",
+              "iam:UploadSSHPublicKey",
               "iam:UntagPolicy",
               "iam:UntagRole",
               "iam:UpdateRole",
