@@ -213,13 +213,13 @@ sed -i "s/AWS_REGION/$AWS_REGION/g" \
    updating the `url` for the `GitRepository` resource to point at 
    the `gitpops-workloads` repo created in your account:
    ```
-   sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
+   sed -i "s~REPO_PREFIX~$REPO_PREFIX~g" \
      gitops-system/workloads/template/git-repo.yaml
    ```
 3. Update the `gotk-sync.yaml` files in the `clusters` folder of the `gitops-system` repo,
    updating the `url` for the `GitRepository` resource to point at the `gitpops-system` repo created in your account:
    ```
-   sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
+   sed -i "s~REPO_PREFIX~$REPO_PREFIX~g" \
      gitops-system/clusters/mgmt/flux-system/gotk-sync.yaml \
      gitops-system/clusters/template/flux-system/gotk-sync.yaml
    ```
@@ -227,7 +227,7 @@ sed -i "s/AWS_REGION/$AWS_REGION/g" \
 4. Update the `git-repo.yaml` files in the `gitops-workloads` repo,
    updating the `url` for the `GitRepository` resource to point at the `payment-app-manifests` repo created in your account:
    ```
-   sed -i "s/REPO_PREFIX/$REPO_PREFIX/g" \
+   sed -i "s~REPO_PREFIX~$REPO_PREFIX~g" \
      gitops-workloads/template/app-template/git-repo.yaml
    ```
 
