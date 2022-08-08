@@ -2,20 +2,22 @@
 # $1 = location of gitops-workloads
 # $2 = cluster name
 # $3 = app name
-# $4 = location of git-credentials template file
-# $5 = private key file
-# $6 = public key
-# $7 = known hosts
-# $8 = Sealed secrets public key .pem file
+# $4 = git release tag
+# $5 = location of git-credentials template file
+# $6 = private key file
+# $7 = public key
+# $8 = known hosts
+# $9 = Sealed secrets public key .pem file
 
 gitops_workloads=$(realpath "$1")
 cluster_name=$2
 app_name=$3
-git_creds_file=$(realpath "$4")
-private_key_file=$(realpath "$5")
-public_key_file=$(realpath "$6")
-known_hosts=$7
-pem_file=$(realpath "$8")
+release_tag=$4
+git_creds_file=$(realpath "$5")
+private_key_file=$(realpath "$6")
+public_key_file=$(realpath "$7")
+known_hosts=$8
+pem_file=$(realpath "$9")
 
 mkdir -p $gitops_workloads/$cluster_name/$app_name
 if [[ ! -f $gitops_workloads/$cluster_name/kustomization.yaml ]]
@@ -25,6 +27,8 @@ fi
 cp -R $gitops_workloads/template/app-template/* $gitops_workloads/$cluster_name/$app_name
 grep -RiIl 'cluster-name' $gitops_workloads/$cluster_name/$app_name | xargs sed -i "s/cluster-name/$cluster_name/g"
 grep -RiIl 'app-name' $gitops_workloads/$cluster_name/$app_name | xargs sed -i "s/app-name/$app_name/g"
+grep -RiIl 'release-tag' $gitops_workloads/$cluster_name/$app_name | xargs sed -i "s/release-tag/$release_tag/g"
+
 
 # Prep the sealed secret
 
