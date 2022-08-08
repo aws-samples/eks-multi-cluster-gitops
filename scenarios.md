@@ -49,6 +49,8 @@ kubectl get kustomization -n flux-system
 ```
 to monitor the creation of resources for the new cluster.
 
+You can repeat the same process to create the `commercial-prod` cluster.
+
 ### Detailed explanation of `add-cluster.sh` script
 
 The `add-cluster.sh` script performs the following steps. You can choose to execute these steps instead of running the script. Please ensure your working directory is set to `~/environment` before executing.
@@ -123,6 +125,23 @@ git add .
 git commit -m "Add product-catalog-api to commercial-staging"
 git push
 ```
+
+To view the reconciliation of resources in the workload cluster, and verify that application
+resources have been created, see the section [Connect to a workload cluster](#connect-to-a-workload-cluster).
+
+This application makes use of a DynamoDB table which is created by Crossplane. You can
+verify that this has been created using the [DynamoDB console](https://console.aws.amazon.com/dynamodb/), or via the AWS CLI:
+```
+aws dynamodb list-tables
+```
+
+You can repeat the same process to add the application to the `commercial-prod` cluster
+(using the same manifests repo).
+
+You can also repeat this process to add the front-end application `product-catalog-fe` to
+each cluster. You will
+find pre-prepared manifests for this in the `product-catalog-fe-manifests` repo. Note these
+include overlays for each of `commercial-staging` and `commercial-prod`.
 
 ### Detailed explanation of `add-cluster-app.sh`
 
