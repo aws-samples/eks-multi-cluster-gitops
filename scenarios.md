@@ -91,7 +91,7 @@ under `clusters`, and copies the template. It then replaces all occurances of `c
 
 In this section you will add an application `product-catalog-api` to the cluster `commercial-staging`. To achieve this, you need to use the supplied template to
 create manifest files for the new application in `gitops-workloads/commercial-staging`
-, and update `commercial-staging/kustomization.yaml` Once done, you then push the
+, and update `commercial-staging/kustomization.yaml`. Once done, you then push the
 changes so that flux can pick them up and act on them.
 
 First, prepare a repo for `product-catalog-api-manifests` as follows:
@@ -106,12 +106,18 @@ git branch -M main
 git push --set-upstream origin main
 ```
 
-You can make the required changes quickly using the script `add-cluster-app.sh`:
+Next, tag the current commit as version 1.0 and push the tag:
+```
+git tag -a v1.0 -m "Version 1.0"
+git push origin v1.0
+```
+
+You can make the required changes in `gitops-workloads`  using the script `add-cluster-app.sh`:
 ```
 cd ~/environment
 multi-cluster-gitops/bin/add-cluster-app.sh \
   ./gitops-workloads \
-  commercial-staging product-catalog-api \
+  commercial-staging product-catalog-api v1.0 \
   multi-cluster-gitops/initial-setup/secrets-template/git-credentials.yaml \
   ~/.ssh/gitops ~/.ssh/gitops.pub \
   "github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=" \
@@ -167,6 +173,7 @@ from `gitops-workloads/template/app-template` to `gitops-workloads/commercial-st
 cp -R gitops-workloads/template/app-template/* gitops-workloads/commercial-staging/product-catalog-api
 grep -RiIl 'cluster-name' gitops-workloads/commercial-staging/product-catalog-api | xargs sed -i "s/cluster-name/commercial-staging/g"
 grep -RiIl 'app-name' gitops-workloads/commercial-staging/product-catalog-api | xargs sed -i "s/app-name/product-catalog-api/g"
+grep -RiIl 'release-tag' gitops-workloads/commercial-staging/product-catalog-api | xargs sed -i "s/release-tag/v1.0/g"
 ```
 
 4. **Prepare the sealed secret for the application:** this prepares a sealed secret for the
@@ -220,22 +227,61 @@ kubectl config current-context
 ## Upgrade an existing application
 
 In this section you will push a new version of the application `product-catalog-api` in
-the cluster `commercial-staging`. To achieve this, you need to update the app manifests in `gitops-workloads/commercial-staging/product-catalog-api`. Once done, you then push the
+the cluster `commercial-staging`. To achieve this, you need to update the release tag
+in the app manifests in `gitops-workloads/commercial-staging/product-catalog-api`.
+Once done, you then push the
 changes so that flux can pick them up and act on them.
 
 
-**WE HAVE A PROBLEM HERE. HOW TO UPGRADE APP IN A SINGLE CLUSTER ???**
-
-**HAVE AGREED TO IMPLEMENT TAGS. TBD.**
-
+First, update the repo for `product-catalog-api` to the new version (v2):
 ```
 cd ~/environment
 cp -r multi-cluster-gitops/repos/apps-manifests/product-catalog-api-manifests/v2/* product-catalog-api-manifests/
 cd product-catalog-api-manifests
 git add .
 git commit -m "Updated version"
-git branch -M main
-git push --set-upstream origin main
+git push origin main
+```
+
+Next, tag the current commit as version 2.0 and push the tag:
+```
+git tag -a v2.0 -m "Version 2.0"
+git push origin v2.0
+```
+
+Update the release tag in `gitops-workloads/commercial-staging/product-catalog-api`. You
+can do this using the `update-cluster-app.sh` script as follows:
+```
+cd ~/environment
+multi-cluster-gitops/bin/update-cluster-app.sh ./gitops-workloads commercial-staging product-catalog-api v2.0
+```
+
+Finally, commit this change:
+```
+cd gitops-workloads
+git add .
+git commit -m "Updated product-catalog-api to v2.0 in commercial-staging"
+git push
+```
+
+Monitor the reconciliation in the cluster. You can verify that the application deployment
+has been updated by checking the deployment history:
+```
+kubectl rollout history deployment/product-catalog-api-staging -n product-catalog-api
+```
+
+You can also verify that the container image in the deployment has been updated:
+```
+kubectl describe deployment/product-catalog-api-staging -n product-catalog-api
+```
+
+### Detailed explanation of `update-cluster-app.sh` script
+
+
+The `update-cluster-app.sh` script makes a single change as follows. Please ensure your working directory is set to `~/envionment` before executing.
+
+```
+yq -i e ".spec.ref.tag = \"v2.0\"" gitops-workloads/commercial-staging/product-catalog-api/git-repo.yaml
 ```
 
 

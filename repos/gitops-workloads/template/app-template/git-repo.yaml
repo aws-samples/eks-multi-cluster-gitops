@@ -6,7 +6,7 @@ metadata:
 spec:
   interval: 1m0s
   ref:
-    branch: main
+    tag: release-tag
   secretRef:
     name: app-name
   timeout: 60s
