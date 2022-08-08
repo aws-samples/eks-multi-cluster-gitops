@@ -231,6 +231,47 @@ sed -i "s/AWS_REGION/$AWS_REGION/g" \
      gitops-workloads/template/app-template/git-repo.yaml
    ```
 
+### Patch `GitRepository` for AWS CodeCommit
+
+*Note*: Please execute this section only if you are using AWS CodeCommit as the `GitRepository` backend.
+The default `go-git` client used by `GitRepositoryReconciler` does not support
+[version 2 of Git's wire protocol](https://git-scm.com/docs/protocol-v2). AWS CodeCommit git servers only support the newer
+v2 protocol. In this section we will set the git client implementation to `libgit2`. Please refer to
+[Git implementation](https://fluxcd.io/docs/components/source/gitrepositories/#git-implementation) section for the
+feature matrix of the supported git client implementations.
+
+1. Export environment variable with the `yq` expression to use to patch the `GitRepository` resources
+
+   ```bash
+   LIBGIT2='. |= (with(select(.kind=="GitRepository");.spec |= ({"gitImplementation":"libgit2"}) + .))'
+   ```
+
+2. Patch the `git-repo.yaml` files in the `workloads` folder of the `gitops-system` repo,
+   adding the `spec.gitImplementation` node for the `GitRepository` resource
+   to force the use of `libgit2` as the git client to connect to the repo:
+   ```bash
+   yq -i e "$LIBGIT2" \
+     gitops-system/workloads/template/git-repo.yaml
+   ```
+
+3. Patch the `gotk-sync.yaml` files in the `clusters` folder of the `gitops-system` repo,
+   adding the `spec.gitImplementation` node for the `GitRepository` resource
+   to force the use of `libgit2` as the git client to connect to the repo:
+   ```bash
+   yq -i e "$LIBGIT2" \
+     gitops-system/clusters/mgmt/flux-system/gotk-sync.yaml
+   yq -i e "$LIBGIT2" \
+     gitops-system/clusters/template/flux-system/gotk-sync.yaml
+   ```
+
+4. Patch the `git-repo.yaml` files in the `gitops-workloads` repo,
+   adding the `spec.gitImplementation` node for the `GitRepository` resource
+   to force the use of `libgit2` as the git client to connect to the repo:
+   ```bash
+   yq -i e "$LIBGIT2" \
+     gitops-workloads/template/app-template/git-repo.yaml
+   ```
+
 ### Update references to the IAM entity that is used to access the EKS console
 1. Verify that EKS_CONSOLE_IAM_ENTITY_ARN is set correctly.
    ```
