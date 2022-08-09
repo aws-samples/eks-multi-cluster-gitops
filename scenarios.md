@@ -302,6 +302,7 @@ kubectl describe deployment/product-catalog-api-staging -n product-catalog-api
 You can verify the creation of the DynamoDB table using the [DynamoDB console](https://console.aws.amazon.com/dynamodb/), or via the AWS CLI:
 ```
 aws dynamodb list-tables
+```
 
 ### Detailed explanation of `update-cluster-app.sh` script
 
