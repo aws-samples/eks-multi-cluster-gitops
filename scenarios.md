@@ -18,7 +18,7 @@ runs two clusters `commercial-staging` and `commercial-prod`.
 
 Pre-prepared manifest files for the application workloads are included in the
 `repos/apps-manifests` directory as follows:
-- `reops/apps-manifests/product-catalog-api-manifests`: contains manifests for two dsictinct versions of the API server, labelled `V1` and `V2`.
+- `reops/apps-manifests/product-catalog-api-manifests`: contains manifests for two distinct versions of the API server, labelled `V1` and `V2`.
 - `reops/apps-manifests/product-catalog-fe-manifests`: contains manifests for the front end
 server.
 You can see that both of these include overlays for both the `commercial-staging` and `commercial-prod` clusters.
