@@ -22,6 +22,8 @@ spec:
       - env:
         - name: PRODUCTS_TABLE_NAME
           value: products
+        - name: PRODUCTS_TABLE_REGION
+          value: ${AWS_REGION}
         image: public.ecr.aws/h2c3y9h0/multi-cluster-gitops/product-catalog-api:v2
         name: product-catalog-api
         ports:
