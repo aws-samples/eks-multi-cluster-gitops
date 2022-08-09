@@ -6,7 +6,6 @@ const Prometheus = require('prom-client');
 
 Prometheus.collectDefaultMetrics();
 
-const host = process.env.HOST || "localhost";
 const port = process.env.PORT || 9000;
 
 var baseProductUrl = process.env.BASE_URL;
@@ -52,17 +51,17 @@ app.post('/products', (req, res) => {
     })
 })
 
-app.get("/ping", (_, res, _) => {
+app.get("/ping", (req, res, _) => {
   res.json("Healthy");
 });
 
 // Export Prometheus metrics from /stats/prometheus endpoint
-app.get('/stats/prometheus', (_, res, _) => {
+app.get('/stats/prometheus', (req, res, _) => {
   res.set('Content-Type', Prometheus.register.contentType);
   res.end(Prometheus.register.metrics());
 })
 
-app.listen(parseInt(port), host, function() {
-  console.log(`Listening on ${host}:${port}`);
+app.listen(parseInt(port), function() {
+  console.log(`Listening on ${port}`);
   console.log(`Using product catalog at ${baseProductUrl}`);
 })
