@@ -253,7 +253,7 @@ Next, commit this change:
 ```
 cd ~/environment/gitops-workloads
 git add .
-git commit -m "add the required IAM permissions"
+git commit -m "add the IAM permissions required for v2"
 git push
 ```
 
