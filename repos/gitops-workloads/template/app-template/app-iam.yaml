@@ -39,14 +39,7 @@ spec:
     document: |
         {
           "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Sid": "Stmt1657328236602",
-              "Action": "dynamodb:*",
-              "Effect": "Allow",
-              "Resource": "*"
-            }
-          ]
+          "Statement": []
         }
   providerConfigRef:
     name: default

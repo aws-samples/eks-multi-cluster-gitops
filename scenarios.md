@@ -18,7 +18,7 @@ runs two clusters `commercial-staging` and `commercial-prod`.
 
 Pre-prepared manifest files for the application workloads are included in the
 `repos/apps-manifests` directory as follows:
-- `reops/apps-manifests/product-catalog-api-manifests`: contains manifests for two dsictinct versions of the API server, labelled `V1` and `V2`.
+- `reops/apps-manifests/product-catalog-api-manifests`: contains manifests for two distinct versions of the API server, labelled `V1` and `V2`.
 - `reops/apps-manifests/product-catalog-fe-manifests`: contains manifests for the front end
 server.
 You can see that both of these include overlays for both the `commercial-staging` and `commercial-prod` clusters.
@@ -129,17 +129,20 @@ Once done, commit and push the changes as follows:
 cd gitops-workloads
 git add .
 git commit -m "Add product-catalog-api to commercial-staging"
+```
+If this is the first commit on `gitops-workloads`, you need to rename the branch to `main`, and push the changes as follows:
+```
+git branch -M main
+git push --set-upstream origin main
+```
+Otherwise, you just push the changes as follows:
+```
 git push
 ```
 
-To view the reconciliation of resources in the workload cluster, and verify that application
-resources have been created, see the section [Connect to a workload cluster](#connect-to-a-workload-cluster).
 
-This application makes use of a DynamoDB table which is created by Crossplane. You can
-verify that this has been created using the [DynamoDB console](https://console.aws.amazon.com/dynamodb/), or via the AWS CLI:
-```
-aws dynamodb list-tables
-```
+To view the reconciliation of resources in the workload cluster, and verify that application
+resources have been created, see the section [Connect to a workload cluster](#connect-to-a-workload-cluster). You can also see the resources created in the workload cluster through the EKS console. In this case, you have to access the EKS console using the IAM entity whose ARN is set in `EKS_CONSOLE_IAM_ENTITY_ARN` environment variable during the initial setup.
 
 You can repeat the same process to add the application to the `commercial-prod` cluster
 (using the same manifests repo).
@@ -227,13 +230,34 @@ kubectl config current-context
 ## Upgrade an existing application
 
 In this section you will push a new version of the application `product-catalog-api` in
-the cluster `commercial-staging`. To achieve this, you need to update the release tag
-in the app manifests in `gitops-workloads/commercial-staging/product-catalog-api`.
-Once done, you then push the
-changes so that flux can pick them up and act on them.
+the cluster `commercial-staging`. To achieve this, you need to update the release tag in the app manifests in `gitops-workloads/commercial-staging/product-catalog-api`. Once done, you then push the changes so that flux can pick them up and act on them.
 
+The new version of the application makes use of a DynamoDB table which is created by Crossplane. So, the service account used by the application pods needs to be attached to an IAM role with the required permissions.
 
-First, update the repo for `product-catalog-api` to the new version (v2):
+First, the policy document specified in the `Policy` CRD that exists in `gitops-workloads/commercial-staging/product-catalog-api/app-iam.yaml` has to be changed as follows:
+```
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "Stmt1657328236602",
+              "Action": "dynamodb:*",
+              "Effect": "Allow",
+              "Resource": "arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/products-staging"
+            }
+          ]
+        }
+```
+
+Next, commit this change:
+```
+cd ~/environment/gitops-workloads
+git add .
+git commit -m "add the IAM permissions required for v2"
+git push
+```
+
+Next, update the repo for `product-catalog-api` to the new version (v2):
 ```
 cd ~/environment
 cp -r multi-cluster-gitops/repos/apps-manifests/product-catalog-api-manifests/v2/* product-catalog-api-manifests/
@@ -273,6 +297,11 @@ kubectl rollout history deployment/product-catalog-api-staging -n product-catalo
 You can also verify that the container image in the deployment has been updated:
 ```
 kubectl describe deployment/product-catalog-api-staging -n product-catalog-api
+```
+
+You can verify the creation of the DynamoDB table using the [DynamoDB console](https://console.aws.amazon.com/dynamodb/), or via the AWS CLI:
+```
+aws dynamodb list-tables
 ```
 
 ### Detailed explanation of `update-cluster-app.sh` script
