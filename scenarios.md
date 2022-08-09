@@ -334,10 +334,12 @@ git commit -m "upgrading commercial-staging cluster"
 git push
 ```
 
-4. Confirm that the cluster is updating using:
+4. Confirm that the cluster is updating using the following commands:
 ```bash
-eksctl get cluster --name commercial-staging --region $AWS_REGION
+eksctl get cluster
+eksctl get cluster --name <cluster-name>
 ```
+Alternatively, you can check the cluster status on the EKS console.
 
 ## Delete an application from a cluster
 

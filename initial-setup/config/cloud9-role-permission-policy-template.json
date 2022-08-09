@@ -138,6 +138,13 @@
         },
         {
             "Effect": "Allow",
+            "Action": [
+                "secretsmanager:DeleteSecret"
+            ],
+            "Resource": "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:sealed-secrets*"
+        },
+        {
+            "Effect": "Allow",
             "Action": "sts:GetCallerIdentity",
             "Resource": "*"
         },
@@ -147,6 +154,20 @@
                 "codecommit:CreateRepository"
             ],
             "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:ListTables"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:DeleteTable"
+            ],
+            "Resource": "arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/products-*"
         }
     ]
 }
