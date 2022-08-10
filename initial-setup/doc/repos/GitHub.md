@@ -1,5 +1,7 @@
 ## Create and prepare the Git repositories
-### Create Git SSH keys
+
+### Create SSH key for Cloud9 access to GitHub repo
+
 1. Create the SSH key that will be used for interacting with the repos in your
    GitHub account from the Cloud9 environment.
    ```bash
@@ -9,7 +11,34 @@
    (Replace `<youremail@yourcompany.com>` with your email address).
    This generates two files: `gitops-cloud9` contains a private key, and `gitops-cloud9.pub` contains the corresponding public key.
 
-2. Create the SSH key that will be used by Flux for interacting
+
+2. Create/edit `config` in `~/.ssh` to use the SSH key in `gitops-cloud9` for
+   the Git commands executed in the Cloud9 environment.
+   ```bash
+   cat << EOF > ~/.ssh/config
+   Host github.com
+   AddKeysToAgent yes
+   IdentityFile ~/.ssh/gitops-cloud9
+   EOF
+   ```
+   
+3. Log in with the Github CLI using:
+   ```bash
+   gh auth login -p ssh -h github.com
+   ```
+   
+   - In response to **Upload your SSH public key to your GitHub account?**, choose **/home/ubuntu/.ssh/gitops-cloud9.pub**.
+   - For **Title for your SSH key**, enter **gitops-cloud9**.
+   - In response to **How would you like to authenticate GitHub CLI?**, choose **Login with a web browser**.
+   - Note the one-time code.
+   - Pressing Enter will result in an error message as you cannot open a browser from your Cloud9 environment.
+   - Use a separate tab on your browser to navigate to https://github.com/login/device and enter the code.
+   - Choose **Authorize github**.
+   - Return to your Cloud9 terminal to continue. You are now logged in to your GitHub account from Cloud9. You can test this by running commands like `gh auth status` and `gh repo list`.
+
+### Create SSH key for Flux access to GitHub repo
+
+1. Create the SSH key that will be used by Flux for interacting
    with the repos in your GitHub account. Ensure that you do not use a
    passphrase to protect the key, as this will prevent Flux from being able to use
    the key.
@@ -24,40 +53,27 @@
    (Replace the `<yourcompany.com>` with your company domain or a fictitious domain).
    This generates two files: `gitops` contains a private key, and `gitops.pub` contains the corresponding public key.
 
-3. Copy the contents of the public key files generated above (these have a `.pub` suffix) to your GitHub account in order to
-   grant access. To do this, use the GitHub console to access **Settings->SSH and GPG Keys**,
-   and use the **New SSH Key** buttton to add each of the keys in turn.
-
-4. Create/edit `config` in `~/.ssh` to use the SSH key in `gitops-cloud9` for
-   the Git commands executed in the Cloud9 environment.
-   ```bash
-   cat << EOF > ~/.ssh/config
-   Host github.com
-   AddKeysToAgent yes
-   IdentityFile ~/.ssh/gitops-cloud9
-   EOF
+2. Copy the contents of the public key file `gitops.pub` generated above to your GitHub account as follows:
+   ```
+   gh ssh-key add -t gitops ~/.ssh/gitops.pub
    ```
    
-### Create Git repos
-
-1. Log in with the Github CLI using:
-   ```bash
-   gh auth login -p ssh -h github.com
+3. Verify that the key has been added:
    ```
+   gh ssh-key list
+   ```
+
    
-   For the SSH public key, choose **/home/ubuntu/.ssh/gitops-cloud9.pub**.
+### Create GitHub repos
 
-2. Create the following empty repos in your GitHub account: `gitops-system`,
-   `gitops-workloads`, and `payment-app-manifests`, and clone them
-   into the Cloud9 environment.
-   ```bash
-   cd ~/environment
-   git config --global init.defaultBranch main
-   repos=( gitops-system gitops-workloads )
-   for repo in "${repos[@]}"; do
-     gh repo create --private --clone $repo
-   done
-   ```
+Create empty repos  `gitops-system` and `gitops-workloads` in your GitHub account, and clone them
+into the Cloud9 environment.
+```
+cd ~/environment
+git config --global init.defaultBranch main
+gh repo create --private --clone  gitops-system
+gh repo create --private --clone  gitops-workloads
+```
    
 ### Set the `REPO_PREFIX` variable to point at your GitHub account
 
