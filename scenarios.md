@@ -219,6 +219,15 @@ kubectl config current-context
 ```
 (Replace `<cluster-name>` with the cluster name).
 
+**Note:** A convenience script `eks-multi-cluster-gitops/bin/connect-to-cluster.sh` is provided to quickly connect to a cluster.
+In a bash terminal source the script to generate the kubeconfig file and export the `KUBECONFIG` environment variable.
+
+```bash
+source eks-multi-cluster-gitops/bin/connect-to-cluster.sh <cluster-name>
+```
+
+
+
 2. To monitor the bootstrapping of the workload clusters (and subseuently for the
   deployment of the applications into it), list the `Kustomization` resources
   using the following command:
