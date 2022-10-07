@@ -1,6 +1,7 @@
 # Scenarios
 
 This document walks you through steps for a number of scenarios covering:
+
 - Adding a workload cluster
 - Adding an application to a workload cluster (including associated AWS resources)
 - Connecting to a workload cluster to check reconciliation status
@@ -10,18 +11,20 @@ This document walks you through steps for a number of scenarios covering:
 - Removing a workload cluster
 
 For illustration purposes, these scenarios are based on the example of a product catalog application developed by the commercial department of an organisation.
+
 - The department
-runs two clusters `commercial-staging` and `commercial-prod`.
+  runs two clusters `commercial-staging` and `commercial-prod`.
 - The product catalog application comprises two microservices which are owned by different teams.
   - API server: this provides the backend, and makes use of an AWS DynamoDB table to store its state.
   - Front end server: provides a web front end service that can be accessed via a browser.
 
 Pre-prepared manifest files for the application workloads are included in the
 `repos/apps-manifests` directory as follows:
+
 - `reops/apps-manifests/product-catalog-api-manifests`: contains manifests for two distinct versions of the API server, labelled `V1` and `V2`.
 - `reops/apps-manifests/product-catalog-fe-manifests`: contains manifests for the front end
-server.
-You can see that both of these include overlays for both the `commercial-staging` and `commercial-prod` clusters.
+  server.
+  You can see that both of these include overlays for both the `commercial-staging` and `commercial-prod` clusters.
 
 ## Provision and bootstrap a new workload cluster
 
@@ -30,12 +33,14 @@ In this section you will create a new workload cluster called `commercial-stagin
 changes so that flux can pick them up and act on them.
 
 You can make the required changes quickly using the script `add-cluster.sh`:
+
 ```
 cd ~/environment
 multi-cluster-gitops/bin/add-cluster.sh ./gitops-system commercial-staging
 ```
 
 Once done, commit and push the changes as follows:
+
 ```
 cd gitops-system
 git add .
@@ -44,9 +49,11 @@ git push
 ```
 
 Use
+
 ```
 kubectl get kustomization -n flux-system
 ```
+
 to monitor the creation of resources for the new cluster.
 
 You can repeat the same process to create the `commercial-prod` cluster.
@@ -56,36 +63,28 @@ You can repeat the same process to create the `commercial-prod` cluster.
 The `add-cluster.sh` script performs the following steps. You can choose to execute these steps instead of running the script. Please ensure your working directory is set to `~/environment` before executing.
 
 1. **Instantiate the `cluster-configs` template:** This creates a folder for the new `commercial-staging` cluster under `cluster-configs`, and copies the template.
-It then replaces all occurances of `cluster-name` in the template with `commercial-staging`.
-    ```
-    mkdir -p gitops_system/clusters-config/commercial-staging
-    cp -R gitops_system/clusters-config/template/* gitops_system/clusters-config/commercial-staging
-    grep -RiIl 'cluster-name' gitops_system/clusters-config/commercial-staging| xargs sed -i "s/cluster-name/commercial-staging/g"
-    ```
+   It then replaces all occurances of `cluster-name` in the template with `commercial-staging`.
+   `mkdir -p gitops_system/clusters-config/commercial-staging cp -R gitops_system/clusters-config/template/* gitops_system/clusters-config/commercial-staging grep -RiIl 'cluster-name' gitops_system/clusters-config/commercial-staging| xargs sed -i "s/cluster-name/commercial-staging/g"`
 
 2. **Instantiate the `cluster` template:** This create a folder for the `commcercial-staging` cluster
-under `clusters`, and copies the template. It then replaces all occurances of `cluster-name` in the template with `commercial-staging`.
-    ```
-    mkdir -p gitops_system/clusters/commercial-staging
-    cp -R gitops_system/clusters/template/* gitops_system/clusters/commercial-staging
-    grep -RiIl 'cluster-name' gitops_system/clusters/commercial-staging | xargs sed -i "s/cluster-name/commercial-staging/g"
-    ```
+   under `clusters`, and copies the template. It then replaces all occurances of `cluster-name` in the template with `commercial-staging`.
+   `mkdir -p gitops_system/clusters/commercial-staging cp -R gitops_system/clusters/template/* gitops_system/clusters/commercial-staging grep -RiIl 'cluster-name' gitops_system/clusters/commercial-staging | xargs sed -i "s/cluster-name/commercial-staging/g"`
 
 3. **Instantiate the `workloads` template.** This creates a folder for the
- `commcercial-staging` cluster under `workloads` and copies the template. It then
- replaces all occurences of `cluster-name` in the template with `commercial-staging`.
-    ```
-    mkdir -p gitops_system/workloads/commercial-staging
-    cp -R gitops_system/workloads/template/* gitops_system/workloads/commercial-staging
-    grep -RiIl 'cluster-name'  gitops_system/workloads/commercial-staging | xargs sed -i "s/cluster-name/commercial-staging/g"
-    ```
+   `commcercial-staging` cluster under `workloads` and copies the template. It then
+   replaces all occurences of `cluster-name` in the template with `commercial-staging`.
 
-4.  **Add `commercial-staging` to `clusters-config/kustomization.yaml`.**
-    This forces Flux to pick up the new cluster config.
-    ```
-    yq -i e ".resources += [\"commercial-staging\"]" gitops_system/clusters-config/kustomization.yaml
-    ```
+   ```
+   mkdir -p gitops_system/workloads/commercial-staging
+   cp -R gitops_system/workloads/template/* gitops_system/workloads/commercial-staging
+   grep -RiIl 'cluster-name'  gitops_system/workloads/commercial-staging | xargs sed -i "s/cluster-name/commercial-staging/g"
+   ```
 
+4. **Add `commercial-staging` to `clusters-config/kustomization.yaml`.**
+   This forces Flux to pick up the new cluster config.
+   ```
+   yq -i e ".resources += [\"commercial-staging\"]" gitops_system/clusters-config/kustomization.yaml
+   ```
 
 ## Add an application to a cluster
 
@@ -95,6 +94,7 @@ create manifest files for the new application in `gitops-workloads/commercial-st
 changes so that flux can pick them up and act on them.
 
 First, prepare a repo for `product-catalog-api-manifests` as follows:
+
 ```
 cd ~/environment
 gh repo create --private --clone product-catalog-api-manifests
@@ -107,12 +107,14 @@ git push --set-upstream origin main
 ```
 
 Next, tag the current commit as version 1.0 and push the tag:
+
 ```
 git tag -a v1.0 -m "Version 1.0"
 git push origin v1.0
 ```
 
-You can make the required changes in `gitops-workloads`  using the script `add-cluster-app.sh`:
+You can make the required changes in `gitops-workloads` using the script `add-cluster-app.sh`:
+
 ```
 cd ~/environment
 multi-cluster-gitops/bin/add-cluster-app.sh \
@@ -125,21 +127,25 @@ multi-cluster-gitops/bin/add-cluster-app.sh \
 ```
 
 Once done, commit and push the changes as follows:
+
 ```
 cd gitops-workloads
 git add .
 git commit -m "Add product-catalog-api to commercial-staging"
 ```
+
 If this is the first commit on `gitops-workloads`, you need to rename the branch to `main`, and push the changes as follows:
+
 ```
 git branch -M main
 git push --set-upstream origin main
 ```
+
 Otherwise, you just push the changes as follows:
+
 ```
 git push
 ```
-
 
 To view the reconciliation of resources in the workload cluster, and verify that application
 resources have been created, see the section [Connect to a workload cluster](#connect-to-a-workload-cluster). You can also see the resources created in the workload cluster through the EKS console. In this case, you have to access the EKS console using the IAM entity whose ARN is set in `EKS_CONSOLE_IAM_ENTITY_ARN` environment variable during the initial setup.
@@ -157,12 +163,14 @@ include overlays for each of `commercial-staging` and `commercial-prod`.
 The `add-cluster-app.sh` script performs the following steps. You can choose to execute these steps instead of running the script. Please ensure your working directory is set to `~/environment` before executing.
 
 1. **Ensure a directory for the application exists under `gitops-workloads/commercial-staging`:** create a directory if it does not yet exist (i.e. this is the first app in this cluster).
+
 ```
 mkdir -p gitops-workloads/commercial-staging/product-catalog-api
 ```
 
 2. **Ensure a `kustomization.yaml` file exists:** check if the file exists, and if not then
-create one by copying the template (only happens for the first app that is added to the cluster).
+   create one by copying the template (only happens for the first app that is added to the cluster).
+
 ```
 if [[ ! -f gitops-workloads/commercial-staging/kustomization.yaml ]]
 then
@@ -171,7 +179,8 @@ fi
 ```
 
 3. **Instantiate the workloads application template:** this copies the application template
-from `gitops-workloads/template/app-template` to `gitops-workloads/commercial-staging/product-catalog-api`, and then updates the cluster name and app name to the correct values.
+   from `gitops-workloads/template/app-template` to `gitops-workloads/commercial-staging/product-catalog-api`, and then updates the cluster name and app name to the correct values.
+
 ```
 cp -R gitops-workloads/template/app-template/* gitops-workloads/commercial-staging/product-catalog-api
 grep -RiIl 'cluster-name' gitops-workloads/commercial-staging/product-catalog-api | xargs sed -i "s/cluster-name/commercial-staging/g"
@@ -180,11 +189,11 @@ grep -RiIl 'release-tag' gitops-workloads/commercial-staging/product-catalog-api
 ```
 
 4. **Prepare the sealed secret for the application:** this prepares a sealed secret for the
-application, which contains the Git credentials needed to access the repo. A
-temporary file is used to store a copy of the Git credentials template (which is
-a K8s `Secret`). This file is updated to use the correct name, public/private key pair, and
-known hosts. `kubeseal` is then used to create a sealed secret, using a supplied `.pem` file
-containing a key to encrypt the sealed secret which is stored in `gitops-workloads/commercial-staging/product-catalog-api/git-secret.yaml`.
+   application, which contains the Git credentials needed to access the repo. A
+   temporary file is used to store a copy of the Git credentials template (which is
+   a K8s `Secret`). This file is updated to use the correct name, public/private key pair, and
+   known hosts. `kubeseal` is then used to create a sealed secret, using a supplied `.pem` file
+   containing a key to encrypt the sealed secret which is stored in `gitops-workloads/commercial-staging/product-catalog-api/git-secret.yaml`.
 
 ```
 tmp_git_creds=$(mktemp /tmp/git-creds.yaml.XXXXXXXXX)
@@ -208,7 +217,7 @@ yq -i e ".resources += [\"product-catalog-api\"]" gitops-workloads/commercial-st
 To connect to `<cluster-name>` workload cluster using `kubeconfig` stored as a `Secret`
 
 1. In a terminal window that is currently configured for the management cluster, obtain a
-config file for the workload cluster using:
+   config file for the workload cluster using:
 
 ```bash
 unset KUBECONFIG
@@ -217,6 +226,7 @@ export KUBECONFIG=wl-kube.conf
 
 kubectl config current-context
 ```
+
 (Replace `<cluster-name>` with the cluster name).
 
 **Note:** A convenience script `eks-multi-cluster-gitops/bin/connect-to-cluster.sh` is provided to quickly connect to a cluster.
@@ -226,15 +236,13 @@ In a bash terminal source the script to generate the kubeconfig file and export 
 source eks-multi-cluster-gitops/bin/connect-to-cluster.sh <cluster-name>
 ```
 
-
-
 2. To monitor the bootstrapping of the workload clusters (and subseuently for the
-  deployment of the applications into it), list the `Kustomization` resources
-  using the following command:
+   deployment of the applications into it), list the `Kustomization` resources
+   using the following command:
 
-  ```bash
-  kubectl get kustomization -n flux-system
-  ```
+```bash
+kubectl get kustomization -n flux-system
+```
 
 ## Upgrade an existing application
 
@@ -244,6 +252,7 @@ the cluster `commercial-staging`. To achieve this, you need to update the releas
 The new version of the application makes use of a DynamoDB table which is created by Crossplane. So, the service account used by the application pods needs to be attached to an IAM role with the required permissions.
 
 First, the policy document specified in the `Policy` CRD that exists in `gitops-workloads/commercial-staging/product-catalog-api/app-iam.yaml` has to be changed as follows:
+
 ```
         {
           "Version": "2012-10-17",
@@ -259,6 +268,7 @@ First, the policy document specified in the `Policy` CRD that exists in `gitops-
 ```
 
 Next, commit this change:
+
 ```
 cd ~/environment/gitops-workloads
 git add .
@@ -267,6 +277,7 @@ git push
 ```
 
 Next, update the repo for `product-catalog-api` to the new version (v2):
+
 ```
 cd ~/environment
 cp -r multi-cluster-gitops/repos/apps-manifests/product-catalog-api-manifests/v2/* product-catalog-api-manifests/
@@ -277,6 +288,7 @@ git push origin main
 ```
 
 Next, tag the current commit as version 2.0 and push the tag:
+
 ```
 git tag -a v2.0 -m "Version 2.0"
 git push origin v2.0
@@ -284,12 +296,14 @@ git push origin v2.0
 
 Update the release tag in `gitops-workloads/commercial-staging/product-catalog-api`. You
 can do this using the `update-cluster-app.sh` script as follows:
+
 ```
 cd ~/environment
 multi-cluster-gitops/bin/update-cluster-app.sh ./gitops-workloads commercial-staging product-catalog-api v2.0
 ```
 
 Finally, commit this change:
+
 ```
 cd gitops-workloads
 git add .
@@ -299,22 +313,24 @@ git push
 
 Monitor the reconciliation in the cluster. You can verify that the application deployment
 has been updated by checking the deployment history:
+
 ```
 kubectl rollout history deployment/product-catalog-api-staging -n product-catalog-api
 ```
 
 You can also verify that the container image in the deployment has been updated:
+
 ```
 kubectl describe deployment/product-catalog-api-staging -n product-catalog-api
 ```
 
 You can verify the creation of the DynamoDB table using the [DynamoDB console](https://console.aws.amazon.com/dynamodb/), or via the AWS CLI:
+
 ```
 aws dynamodb list-tables
 ```
 
 ### Detailed explanation of `update-cluster-app.sh` script
-
 
 The `update-cluster-app.sh` script makes a single change as follows. Please ensure your working directory is set to `~/envionment` before executing.
 
@@ -322,33 +338,51 @@ The `update-cluster-app.sh` script makes a single change as follows. Please ensu
 yq -i e ".spec.ref.tag = \"v2.0\"" gitops-workloads/commercial-staging/product-catalog-api/git-repo.yaml
 ```
 
-
 ## Upgrade an existing cluster
 
 In this section you will upgrade the cluster `commercial-staging` to a newer version
-of Kubernetes. To achieve this, you need to update the cluster configuration
-in `gitops-system/clusters-config/commercial-staging/def/eks-cluster.yaml`.
-Once done, you then push the changes so that flux can pick them up and act on them.
-
+of Kubernetes. As described in Amazon EKS documentaiton on ["Updating Kubernetes version"](https://docs.aws.amazon.com/eks/latest/userguide/update-cluster.html#update-existing-cluster), a cluster upgrade is a process of multiple steps. First you'll have to upgrade the Amazon EKS Cluster itslef, and after a successful completion of the cluster upgrade, you'll have to upgrade the nodes to the same Kubernetes version. In our sample, we are using [Managed Node Group](https://docs.aws.amazon.com/eks/latest/userguide/managed-node-groups.html), so we will perform the upgrade of the node, by [updating](https://docs.aws.amazon.com/eks/latest/userguide/update-managed-node-group.html) the Managed Node Group that was created with the cluster.
 
 1. Open `gitops-system/clusters-config/commercial-staging/def/eks-cluster.yaml`.
 
-2. Change the value for `spec.parameters.k8s-version` (e.g. from `1.20` to `1.21`).
+2. Change the value for `spec.parameters.eks-k8s-version` (e.g. from `1.20` to `1.21`).
 
 3. Commit changes.
-```bash
-cd ~/environment/gitops-system/
-git add .
-git commit -m "upgrading commercial-staging cluster"
-git push
-```
+
+   ```bash
+   cd ~/environment/gitops-system/
+   git add .
+   git commit -m "upgrading commercial-staging cluster"
+   git push
+   ```
 
 4. Confirm that the cluster is updating using the following commands:
-```bash
-eksctl get cluster
-eksctl get cluster --name <cluster-name>
-```
-Alternatively, you can check the cluster status on the EKS console.
+
+   ```bash
+   eksctl get cluster
+   eksctl get cluster --name <cluster-name>
+   ```
+
+   Alternatively, you can check the cluster status on the EKS console.
+
+5. Change the `gitops-system/clusters-config/commercial-staging/def/eks-cluster.yaml` file again. This time change the value for `spec.parameters.mng-k8s-version` from 1.21 to 1.22.
+
+6. Commit again the changes.
+
+   ```bash
+   cd ~/environment/gitops-system/
+   git add .
+   git commit -m "updating managed node group version for commercial-staging cluster"
+   git push
+   ```
+
+7. Confirm that the cluster is updating using the following commands:
+
+   ```bash
+   eksctl get nodegroup --cluster <cluster-name> -o yaml
+   ```
+
+   Alternatively, you can check the managed node group status on the EKS console.
 
 ## Delete an application from a cluster
 
@@ -360,12 +394,14 @@ You also need to tidy up the `gitops-workloads/commercial-staging` directory by 
 the `product-catalog-api` directory.
 
 You can make the required changes quickly using the script `remove-cluster-app.sh`:
+
 ```
 cd ~/environment
 multi-cluster-gitops/bin/remove-cluster-app.sh ./gitops-workloads commercial-staging product-catalog-api
 ```
 
 Once done, commit and push the changes as follows:
+
 ```
 cd gitops-workloads
 git add .
@@ -373,7 +409,7 @@ git commit -m "Removed product-catalog-api from cluster commercial-staging"
 git push
 ```
 
-You can monitor the reconciliation of resources in the cluster using the 
+You can monitor the reconciliation of resources in the cluster using the
 method described previously.
 
 ### Detailed explanation of `remove-cluster-app.sh` script
@@ -381,17 +417,18 @@ method described previously.
 The `remove-cluster-app.sh` script performs the following steps. You can choose to execute these steps instead of running the script. Please ensure your working directory is set to `~/envionment` before executing.
 
 1. **Remove `product-catalog-api` from `gitops-workloads/commrical-staging/kustomization.yaml`:**
-this forces Flux to remove the application resources from the cluster.
+   this forces Flux to remove the application resources from the cluster.
+
 ```
 yq -i e "del ( .resources[] | select (. == \"product-catalog-api\" ))" gitops-workloads/commercial-staging/kustomization.yaml
 ```
 
 2. **Tidy up `gitops-workloads/commercial-staging`:** remove the application folder from the
-`gitops-workloads/commrical-staging` as it is no longer needed. 
+   `gitops-workloads/commrical-staging` as it is no longer needed.
+
 ```
 rm -rf gitops-workloads/commercial-staging/product-catalog-api
 ```
-
 
 ## Delete an existing cluster
 
@@ -404,12 +441,14 @@ Before proceeding, you should ensure that all applications running in the cluste
 have been removed.
 
 You can make the required repo changes quickly using the script `remove-cluster.sh`:
+
 ```
 cd ~/environment
 multi-cluster-gitops/bin/remove-cluster.sh ./gitops-system ./gitops-workloads commercial-staging
 ```
 
 Once done, commit and push the changes as follows:
+
 ```
 cd gitops-system
 git add .
@@ -421,7 +460,8 @@ git commit -m "Removed cluster commercial-staging"
 git push
 ```
 
-You can monitor the reconciliation of resources in the management cluster using 
+You can monitor the reconciliation of resources in the management cluster using
+
 ```
 kubectl get kustomization -n flux-system
 ```
@@ -431,7 +471,8 @@ kubectl get kustomization -n flux-system
 The `remove-cluster.sh` script performs the following steps. You can choose to execute these steps instead of running the script. Please ensure your working directory is set to `~/environment` before executing.
 
 1. **Remove `commercial-staging` from `gitops-system/clusters-config/kustomization.yaml`:**
-this forces Flux to remove the application resources from the cluster.
+   this forces Flux to remove the application resources from the cluster.
+
 ```
 yq -i e "del ( .resources[] | select (. == \"commercial-staging\" ))" gitops-system/clusters-config/kustomization.yaml
 ```

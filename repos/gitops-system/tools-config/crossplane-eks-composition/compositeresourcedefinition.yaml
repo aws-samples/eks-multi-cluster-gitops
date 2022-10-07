@@ -13,116 +13,121 @@ spec:
     - apiserver-endpoint
     - value
   versions:
-  - name: v1beta1
-    served: true
-    referenceable: true
-    schema:
-      openAPIV3Schema:
-        type: object
-        properties:
-          spec:
-            type: object
-            properties:
-              parameters:
-                type: object
-                properties:
-                  region:
-                    description: Geographic location of this VPC
-                    type: string       
-                    
-                  vpc-cidrBlock:
-                    description: CIDR block for VPC
-                    type: string   
-                  vpc-name:
-                    description: Name for VPC
-                    type: string       
+    - name: v1beta1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                parameters:
+                  type: object
+                  properties:
+                    region:
+                      description: Geographic location of this VPC
+                      type: string
 
-                  subnet1-public-name:
-                    description: Name for public subnet 1
-                    type: string  
-                  subnet1-public-cidrBlock:
-                    description: CIDR block for public subnet 1
-                    type: string
-                  subnet1-public-availabilityZone:
-                    description: AZ for public subnet 1
-                    type: string                      
+                    vpc-cidrBlock:
+                      description: CIDR block for VPC
+                      type: string
+                    vpc-name:
+                      description: Name for VPC
+                      type: string
 
-                  subnet2-public-name:
-                    description: Name for public subnet 2
-                    type: string  
-                  subnet2-public-cidrBlock:
-                    description: CIDR block for public subnet 2
-                    type: string  
-                  subnet2-public-availabilityZone:
-                    description: AZ for public subnet 2
-                    type: string   
+                    subnet1-public-name:
+                      description: Name for public subnet 1
+                      type: string
+                    subnet1-public-cidrBlock:
+                      description: CIDR block for public subnet 1
+                      type: string
+                    subnet1-public-availabilityZone:
+                      description: AZ for public subnet 1
+                      type: string
 
-                  subnet1-private-name:
-                    description: Name for private subnet 1
-                    type: string  
-                  subnet1-private-cidrBlock:
-                    description: CIDR block for private subnet 1
-                    type: string
-                  subnet1-private-availabilityZone:
-                    description: AZ for private subnet 1
-                    type: string                      
+                    subnet2-public-name:
+                      description: Name for public subnet 2
+                      type: string
+                    subnet2-public-cidrBlock:
+                      description: CIDR block for public subnet 2
+                      type: string
+                    subnet2-public-availabilityZone:
+                      description: AZ for public subnet 2
+                      type: string
 
-                  subnet2-private-name:
-                    description: Name for private subnet 2
-                    type: string  
-                  subnet2-private-cidrBlock:
-                    description: CIDR block for private subnet 2
-                    type: string  
-                  subnet2-private-availabilityZone:
-                    description: AZ for private subnet 2
-                    type: string  
+                    subnet1-private-name:
+                      description: Name for private subnet 1
+                      type: string
+                    subnet1-private-cidrBlock:
+                      description: CIDR block for private subnet 1
+                      type: string
+                    subnet1-private-availabilityZone:
+                      description: AZ for private subnet 1
+                      type: string
 
-                  k8s-version:
-                    description: Kubernetes version
-                    type: string
-                    enum: ["1.20", "1.21", "1.22"]    
-                  workers-size:
-                    description: Desired number of worker nodes in the cluster
-                    type: integer
-                  workload-type:
-                    description: Type of workloads to be run on this cluster (GPU or non-GPU)"
-                    type: string       
-                    enum: ["gpu", "non-gpu"]                       
-                    
-                required:
-                  - region
-                  - vpc-name
-                  - vpc-cidrBlock
-                  - subnet1-public-name
-                  - subnet1-public-cidrBlock
-                  - subnet1-public-availabilityZone
-                  - subnet2-public-name
-                  - subnet2-public-cidrBlock
-                  - subnet2-public-availabilityZone
-                  - subnet1-private-name
-                  - subnet1-private-cidrBlock
-                  - subnet1-private-availabilityZone
-                  - subnet2-private-name
-                  - subnet2-private-cidrBlock
-                  - subnet2-private-availabilityZone    
-                  - k8s-version
-                  - workers-size
-                  - workload-type              
-            required:
-              - parameters
-          status:
-            description: A Status represents the observed state
-            properties:
-              account_id:
-                description: Account ID
-                type: string
-              eks_cluster_arn:
-                description: ARN of the EKS cluster
-                type: string
-              eks_cluster_oidc_issuer_url:
-                description: OIDC issuer url for the EKS cluster
-                type: string
-              eks_cluster_oidc_issuer:
-                description: OIDC issuer for the EKS cluster
-                type: string
-            type: object
+                    subnet2-private-name:
+                      description: Name for private subnet 2
+                      type: string
+                    subnet2-private-cidrBlock:
+                      description: CIDR block for private subnet 2
+                      type: string
+                    subnet2-private-availabilityZone:
+                      description: AZ for private subnet 2
+                      type: string
+
+                    eks-k8s-version:
+                      description: Kubernetes version
+                      type: string
+                      enum: ['1.20', '1.21', '1.22']
+                    mng-k8s-version:
+                      description: Kubernetes version
+                      type: string
+                      enum: ['1.20', '1.21', '1.22']
+                    workers-size:
+                      description: Desired number of worker nodes in the cluster
+                      type: integer
+                    workload-type:
+                      description: Type of workloads to be run on this cluster (GPU or non-GPU)"
+                      type: string
+                      enum: ['gpu', 'non-gpu']
+
+                  required:
+                    - region
+                    - vpc-name
+                    - vpc-cidrBlock
+                    - subnet1-public-name
+                    - subnet1-public-cidrBlock
+                    - subnet1-public-availabilityZone
+                    - subnet2-public-name
+                    - subnet2-public-cidrBlock
+                    - subnet2-public-availabilityZone
+                    - subnet1-private-name
+                    - subnet1-private-cidrBlock
+                    - subnet1-private-availabilityZone
+                    - subnet2-private-name
+                    - subnet2-private-cidrBlock
+                    - subnet2-private-availabilityZone
+                    - eks-k8s-version
+                    - mng-k8s-version
+                    - workers-size
+                    - workload-type
+              required:
+                - parameters
+            status:
+              description: A Status represents the observed state
+              properties:
+                account_id:
+                  description: Account ID
+                  type: string
+                eks_cluster_arn:
+                  description: ARN of the EKS cluster
+                  type: string
+                eks_cluster_oidc_issuer_url:
+                  description: OIDC issuer url for the EKS cluster
+                  type: string
+                eks_cluster_oidc_issuer:
+                  description: OIDC issuer for the EKS cluster
+                  type: string
+              type: object

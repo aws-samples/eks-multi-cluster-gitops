@@ -16,8 +16,8 @@ spec:
   patchSets:
     - name: common-parameters
       patches:
-        - fromFieldPath: "spec.parameters.region"
-          toFieldPath: "spec.forProvider.region"
+        - fromFieldPath: 'spec.parameters.region'
+          toFieldPath: 'spec.forProvider.region'
     - name: cluster-info-mappings
       patches:
         - fromFieldPath: status.account_id
@@ -46,9 +46,9 @@ spec:
             enableDnsHostNames: true
             tags:
               - key: Name
-      patches:    
+      patches:
         - type: PatchSet
-          patchSetName: common-parameters      
+          patchSetName: common-parameters
         - fromFieldPath: spec.parameters.vpc-cidrBlock
           toFieldPath: spec.forProvider.cidrBlock
         - fromFieldPath: spec.parameters.vpc-name
@@ -69,17 +69,17 @@ spec:
             vpcIdSelector:
               matchControllerRef: true
             tags:
-              - key: Name              
-      patches:    
+              - key: Name
+      patches:
         - type: PatchSet
-          patchSetName: common-parameters 
+          patchSetName: common-parameters
         - type: CombineFromComposite
           combine:
             variables:
               - fromFieldPath: spec.parameters.vpc-name
             strategy: string
             string:
-              fmt: "%s-igw"
+              fmt: '%s-igw'
           toFieldPath: spec.forProvider.tags[0].value
           policy:
             fromFieldPath: Required
@@ -100,8 +100,8 @@ spec:
             tags:
               - key: Name
               - key: kubernetes.io/role/elb
-                value: "1"
-      patches:             
+                value: '1'
+      patches:
         - type: CombineFromComposite
           combine:
             variables:
@@ -109,18 +109,18 @@ spec:
               - fromFieldPath: spec.parameters.subnet1-public-name
             strategy: string
             string:
-              fmt: "%s-%s"
+              fmt: '%s-%s'
           toFieldPath: spec.forProvider.tags[0].value
           policy:
             fromFieldPath: Required
         - type: PatchSet
-          patchSetName: common-parameters      
+          patchSetName: common-parameters
         - fromFieldPath: spec.parameters.subnet1-public-cidrBlock
           toFieldPath: spec.forProvider.cidrBlock
         - fromFieldPath: spec.parameters.subnet1-public-availabilityZone
           toFieldPath: spec.forProvider.availabilityZone
         - fromFieldPath: spec.parameters.subnet1-public-availabilityZone
-          toFieldPath: metadata.labels.zone     
+          toFieldPath: metadata.labels.zone
 
     - name: subnet-public-2
       base:
@@ -129,7 +129,7 @@ spec:
         metadata:
           labels:
             type: subnet
-            visibility: public          
+            visibility: public
         spec:
           forProvider:
             mapPublicIpOnLaunch: true
@@ -138,8 +138,8 @@ spec:
             tags:
               - key: Name
               - key: kubernetes.io/role/elb
-                value: "1"
-      patches:             
+                value: '1'
+      patches:
         - type: CombineFromComposite
           combine:
             variables:
@@ -147,18 +147,18 @@ spec:
               - fromFieldPath: spec.parameters.subnet2-public-name
             strategy: string
             string:
-              fmt: "%s-%s"
+              fmt: '%s-%s'
           toFieldPath: spec.forProvider.tags[0].value
           policy:
             fromFieldPath: Required
         - type: PatchSet
-          patchSetName: common-parameters      
+          patchSetName: common-parameters
         - fromFieldPath: spec.parameters.subnet2-public-cidrBlock
           toFieldPath: spec.forProvider.cidrBlock
         - fromFieldPath: spec.parameters.subnet2-public-availabilityZone
           toFieldPath: spec.forProvider.availabilityZone
         - fromFieldPath: spec.parameters.subnet2-public-availabilityZone
-          toFieldPath: metadata.labels.zone  
+          toFieldPath: metadata.labels.zone
 
     - name: subnet-private-1
       base:
@@ -167,7 +167,7 @@ spec:
         metadata:
           labels:
             type: subnet
-            visibility: private          
+            visibility: private
         spec:
           forProvider:
             mapPublicIpOnLaunch: false
@@ -176,8 +176,8 @@ spec:
             tags:
               - key: Name
               - key: kubernetes.io/role/internal-elb
-                value: "1"
-      patches:             
+                value: '1'
+      patches:
         - type: CombineFromComposite
           combine:
             variables:
@@ -185,19 +185,19 @@ spec:
               - fromFieldPath: spec.parameters.subnet1-private-name
             strategy: string
             string:
-              fmt: "%s-%s"
+              fmt: '%s-%s'
           toFieldPath: spec.forProvider.tags[0].value
           policy:
             fromFieldPath: Required
         - type: PatchSet
-          patchSetName: common-parameters      
+          patchSetName: common-parameters
         - fromFieldPath: spec.parameters.subnet1-private-cidrBlock
           toFieldPath: spec.forProvider.cidrBlock
         - fromFieldPath: spec.parameters.subnet1-private-availabilityZone
           toFieldPath: spec.forProvider.availabilityZone
         - fromFieldPath: spec.parameters.subnet1-private-availabilityZone
-          toFieldPath: metadata.labels.zone                   
-          
+          toFieldPath: metadata.labels.zone
+
     - name: subnet-private-2
       base:
         apiVersion: ec2.aws.crossplane.io/v1beta1
@@ -205,7 +205,7 @@ spec:
         metadata:
           labels:
             type: subnet
-            visibility: private           
+            visibility: private
         spec:
           forProvider:
             mapPublicIpOnLaunch: false
@@ -214,8 +214,8 @@ spec:
             tags:
               - key: Name
               - key: kubernetes.io/role/internal-elb
-                value: "1"
-      patches:             
+                value: '1'
+      patches:
         - type: CombineFromComposite
           combine:
             variables:
@@ -223,18 +223,18 @@ spec:
               - fromFieldPath: spec.parameters.subnet2-private-name
             strategy: string
             string:
-              fmt: "%s-%s"
+              fmt: '%s-%s'
           toFieldPath: spec.forProvider.tags[0].value
           policy:
             fromFieldPath: Required
         - type: PatchSet
-          patchSetName: common-parameters      
+          patchSetName: common-parameters
         - fromFieldPath: spec.parameters.subnet2-private-cidrBlock
           toFieldPath: spec.forProvider.cidrBlock
         - fromFieldPath: spec.parameters.subnet2-private-availabilityZone
           toFieldPath: spec.forProvider.availabilityZone
         - fromFieldPath: spec.parameters.subnet2-private-availabilityZone
-          toFieldPath: metadata.labels.zone             
+          toFieldPath: metadata.labels.zone
 
     - name: elastic-ip-1
       base:
@@ -246,7 +246,7 @@ spec:
         spec:
           forProvider:
             domain: vpc
-      patches:    
+      patches:
         - type: PatchSet
           patchSetName: common-parameters
         - fromFieldPath: spec.parameters.vpc-name
@@ -258,13 +258,13 @@ spec:
         kind: Address
         metadata:
           labels:
-            type: eip-2        
+            type: eip-2
         spec:
           forProvider:
             domain: vpc
-      patches:    
+      patches:
         - type: PatchSet
-          patchSetName: common-parameters     
+          patchSetName: common-parameters
         - fromFieldPath: spec.parameters.vpc-name
           toFieldPath: metadata.labels.vpc-name
 
@@ -287,27 +287,26 @@ spec:
               matchControllerRef: true
               matchLabels:
                 type: subnet
-                visibility: public                   
+                visibility: public
             tags:
-              - key: Name                    
-      patches:             
+              - key: Name
+      patches:
         - type: CombineFromComposite
           combine:
             variables:
               - fromFieldPath: spec.parameters.vpc-name
             strategy: string
             string:
-              fmt: "%s-nat-gateway-1"
+              fmt: '%s-nat-gateway-1'
           toFieldPath: spec.forProvider.tags[0].value
           policy:
             fromFieldPath: Required
         - type: PatchSet
-          patchSetName: common-parameters      
+          patchSetName: common-parameters
         - fromFieldPath: spec.parameters.subnet1-public-availabilityZone
           toFieldPath: spec.forProvider.subnetIdSelector.matchLabels.zone
         - fromFieldPath: spec.parameters.vpc-name
           toFieldPath: spec.forProvider.allocationIdSelector.matchLabels.vpc-name
-
 
     - name: natgateway-2
       base:
@@ -321,31 +320,31 @@ spec:
             allocationIdSelector:
               matchControllerRef: true
               matchLabels:
-                type: eip-2 
+                type: eip-2
             vpcIdSelector:
-              matchControllerRef: true   
+              matchControllerRef: true
             subnetIdSelector:
               matchControllerRef: true
               matchLabels:
                 type: subnet
-                visibility: public                   
+                visibility: public
             tags:
-              - key: Name                    
-      patches:             
+              - key: Name
+      patches:
         - type: CombineFromComposite
           combine:
             variables:
               - fromFieldPath: spec.parameters.vpc-name
             strategy: string
             string:
-              fmt: "%s-nat-gateway-2"
+              fmt: '%s-nat-gateway-2'
           toFieldPath: spec.forProvider.tags[0].value
           policy:
             fromFieldPath: Required
         - type: PatchSet
-          patchSetName: common-parameters      
+          patchSetName: common-parameters
         - fromFieldPath: spec.parameters.subnet2-public-availabilityZone
-          toFieldPath: spec.forProvider.subnetIdSelector.matchLabels.zone       
+          toFieldPath: spec.forProvider.subnetIdSelector.matchLabels.zone
         - fromFieldPath: spec.parameters.vpc-name
           toFieldPath: spec.forProvider.allocationIdSelector.matchLabels.vpc-name
 
@@ -368,31 +367,31 @@ spec:
                   matchControllerRef: true
                   matchLabels:
                     type: subnet
-                    visibility: public                   
+                    visibility: public
               - subnetIdSelector:
                   matchControllerRef: true
                   matchLabels:
                     type: subnet
-                    visibility: public                   
+                    visibility: public
             tags:
               - key: Name
-      patches:    
+      patches:
         - type: CombineFromComposite
           combine:
             variables:
               - fromFieldPath: spec.parameters.vpc-name
             strategy: string
             string:
-              fmt: "%s-public-route-table"
+              fmt: '%s-public-route-table'
           toFieldPath: spec.forProvider.tags[0].value
           policy:
             fromFieldPath: Required
         - type: PatchSet
-          patchSetName: common-parameters 
+          patchSetName: common-parameters
         - fromFieldPath: spec.parameters.subnet1-public-availabilityZone
-          toFieldPath: spec.forProvider.associations[0].subnetIdSelector.matchLabels.zone 
+          toFieldPath: spec.forProvider.associations[0].subnetIdSelector.matchLabels.zone
         - fromFieldPath: spec.parameters.subnet2-public-availabilityZone
-          toFieldPath: spec.forProvider.associations[1].subnetIdSelector.matchLabels.zone 
+          toFieldPath: spec.forProvider.associations[1].subnetIdSelector.matchLabels.zone
 
     - name: routetable-private-1
       base:
@@ -413,24 +412,24 @@ spec:
                   matchControllerRef: true
                   matchLabels:
                     type: subnet
-                    visibility: private                   
+                    visibility: private
             tags:
               - key: Name
-      patches:    
+      patches:
         - type: CombineFromComposite
           combine:
             variables:
               - fromFieldPath: spec.parameters.vpc-name
             strategy: string
             string:
-              fmt: "%s-private-route-table-1"
+              fmt: '%s-private-route-table-1'
           toFieldPath: spec.forProvider.tags[0].value
           policy:
             fromFieldPath: Required
         - type: PatchSet
-          patchSetName: common-parameters           
+          patchSetName: common-parameters
         - fromFieldPath: spec.parameters.subnet1-public-availabilityZone
-          toFieldPath: spec.forProvider.associations[0].subnetIdSelector.matchLabels.zone 
+          toFieldPath: spec.forProvider.associations[0].subnetIdSelector.matchLabels.zone
 
     - name: routetable-private-2
       base:
@@ -451,24 +450,24 @@ spec:
                   matchControllerRef: true
                   matchLabels:
                     type: subnet
-                    visibility: private                   
+                    visibility: private
             tags:
               - key: Name
-      patches:    
+      patches:
         - type: CombineFromComposite
           combine:
             variables:
               - fromFieldPath: spec.parameters.vpc-name
             strategy: string
             string:
-              fmt: "%s-private-route-table-2"
+              fmt: '%s-private-route-table-2'
           toFieldPath: spec.forProvider.tags[0].value
           policy:
             fromFieldPath: Required
         - type: PatchSet
-          patchSetName: common-parameters   
+          patchSetName: common-parameters
         - fromFieldPath: spec.parameters.subnet2-public-availabilityZone
-          toFieldPath: spec.forProvider.associations[0].subnetIdSelector.matchLabels.zone 
+          toFieldPath: spec.forProvider.associations[0].subnetIdSelector.matchLabels.zone
 
     - name: eks-cluster
       base:
@@ -488,17 +487,17 @@ spec:
                   type: subnet
           writeConnectionSecretToRef:
             namespace: crossplane-system
-      patches:    
+      patches:
         - type: PatchSet
-          patchSetName: common-parameters      
-        - fromFieldPath: "spec.parameters.k8s-version"
-          toFieldPath: "spec.forProvider.version"            
-        - fromFieldPath: "metadata.uid"
-          toFieldPath: "spec.writeConnectionSecretToRef.name"
+          patchSetName: common-parameters
+        - fromFieldPath: 'spec.parameters.eks-k8s-version'
+          toFieldPath: 'spec.forProvider.version'
+        - fromFieldPath: 'metadata.uid'
+          toFieldPath: 'spec.writeConnectionSecretToRef.name'
           transforms:
             - type: string
               string:
-                fmt: "%s-ekscluster-connection"
+                fmt: '%s-ekscluster-connection'
         - type: ToCompositeFieldPath
           fromFieldPath: status.atProvider.arn
           toFieldPath: status.eks_cluster_arn
@@ -530,34 +529,34 @@ spec:
             nodeRoleSelector:
               matchLabels:
                 type: eks-nodegroup-role
-            instanceTypes: 
-              - m5.large            
+            instanceTypes:
+              - m5.large
             scalingConfig:
               minSize: 1
             subnetSelector:
               matchControllerRef: true
               matchLabels:
                 type: subnet
-                visibility: private                 
+                visibility: private
             clusterNameSelector:
               matchControllerRef: true
-      patches:    
+      patches:
         - type: PatchSet
-          patchSetName: common-parameters      
-        - fromFieldPath: "spec.parameters.k8s-version"
-          toFieldPath: "spec.forProvider.version"
-        - fromFieldPath: "spec.parameters.workers-size"
-          toFieldPath: "spec.forProvider.scalingConfig.desiredSize"    
-        - fromFieldPath: "spec.parameters.workers-size"
-          toFieldPath: "spec.forProvider.scalingConfig.maxSize"      
-        - fromFieldPath: "spec.parameters.workload-type"
-          toFieldPath: "spec.forProvider.amiType"            
+          patchSetName: common-parameters
+        - fromFieldPath: 'spec.parameters.mng-k8s-version'
+          toFieldPath: 'spec.forProvider.version'
+        - fromFieldPath: 'spec.parameters.workers-size'
+          toFieldPath: 'spec.forProvider.scalingConfig.desiredSize'
+        - fromFieldPath: 'spec.parameters.workers-size'
+          toFieldPath: 'spec.forProvider.scalingConfig.maxSize'
+        - fromFieldPath: 'spec.parameters.workload-type'
+          toFieldPath: 'spec.forProvider.amiType'
           transforms:
-          - type: map
-            map:
-              gpu: AL2_x86_64_GPU
-              non-gpu: AL2_x86_64        
-    
+            - type: map
+              map:
+                gpu: AL2_x86_64_GPU
+                non-gpu: AL2_x86_64
+
     - name: cluster-oidc-idp
       base:
         apiVersion: iam.aws.crossplane.io/v1beta1
@@ -569,19 +568,19 @@ spec:
             clientIDList:
               - sts.amazonaws.com
             thumbprintList:
-              - "9e99a48a9960b14926bb7f3b02e22da2b0ab7280"
+              - '9e99a48a9960b14926bb7f3b02e22da2b0ab7280'
       patches:
         - fromFieldPath: metadata.name
           toFieldPath: metadata.name
           transforms:
             - type: string
               string:
-                fmt: "cluster-oidc-idp-%s"
+                fmt: 'cluster-oidc-idp-%s'
         - fromFieldPath: status.eks_cluster_oidc_issuer_url
           toFieldPath: spec.forProvider.url
           policy:
             fromFieldPath: Required
-    
+
     - name: configmap-cluster-info-workload-cluster
       base:
         apiVersion: kubernetes.crossplane.io/v1alpha1
@@ -599,10 +598,10 @@ spec:
                 labels:
                   createdBy: crossplane
               data:
-                ACCOUNT_ID: ""
-                AWS_REGION: ""
-                CLUSTER_ARN: ""
-                OIDC_PROVIDER: ""
+                ACCOUNT_ID: ''
+                AWS_REGION: ''
+                CLUSTER_ARN: ''
+                OIDC_PROVIDER: ''
           providerConfigRef:
             name: k8s-providerconfig
       patches:
@@ -611,16 +610,16 @@ spec:
           transforms:
             - type: string
               string:
-                fmt: "configmap-cluster-info-%s"
+                fmt: 'configmap-cluster-info-%s'
         - fromFieldPath: metadata.name
           toFieldPath: spec.forProvider.manifest.metadata.name
           transforms:
             - type: string
               string:
-                fmt: "cluster-info-%s"
+                fmt: 'cluster-info-%s'
         - type: PatchSet
           patchSetName: cluster-info-mappings
-    
+
     # Creating cluster-info ConfigMap for the workload cluster here
     # because of a bug in serverside patch apply
     # https://github.com/kubernetes/kubernetes/issues/94275
@@ -646,15 +645,15 @@ spec:
           transforms:
             - type: string
               string:
-                fmt: "remote-k8s-providerconfig-%s"
+                fmt: 'remote-k8s-providerconfig-%s'
         # This ProviderConfig uses the above EKS cluster's connection secret as
         # its credentials secret.
-        - fromFieldPath: "metadata.uid"
+        - fromFieldPath: 'metadata.uid'
           toFieldPath: spec.credentials.secretRef.name
           transforms:
             - type: string
               string:
-                fmt: "%s-ekscluster-connection"
+                fmt: '%s-ekscluster-connection'
       readinessChecks:
         - type: None
 
@@ -681,13 +680,13 @@ spec:
           transforms:
             - type: string
               string:
-                fmt: "remote-k8s-providerconfig-%s"
+                fmt: 'remote-k8s-providerconfig-%s'
         - fromFieldPath: metadata.name
           toFieldPath: metadata.name
           transforms:
             - type: string
               string:
-                fmt: "remote-namespace-flux-system-%s"
+                fmt: 'remote-namespace-flux-system-%s'
 
     - name: remote-configmap-cluster-info-workload-cluster
       base:
@@ -706,10 +705,10 @@ spec:
                 labels:
                   createdBy: crossplane
               data:
-                ACCOUNT_ID: ""
-                AWS_REGION: ""
-                CLUSTER_ARN: ""
-                OIDC_PROVIDER: ""
+                ACCOUNT_ID: ''
+                AWS_REGION: ''
+                CLUSTER_ARN: ''
+                OIDC_PROVIDER: ''
           providerConfigRef:
             name: remote-k8s-providerconfig-workload-cluster
       patches:
@@ -718,12 +717,12 @@ spec:
           transforms:
             - type: string
               string:
-                fmt: "remote-k8s-providerconfig-%s"
+                fmt: 'remote-k8s-providerconfig-%s'
         - fromFieldPath: metadata.name
           toFieldPath: metadata.name
           transforms:
             - type: string
               string:
-                fmt: "remote-configmap-cluster-info-%s"
+                fmt: 'remote-configmap-cluster-info-%s'
         - type: PatchSet
           patchSetName: cluster-info-mappings
