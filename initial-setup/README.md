@@ -96,7 +96,7 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
 1. Install Kubernetes CLI (`kubectl`)
    ```bash
    sudo curl --silent --location -o /usr/local/bin/kubectl \
-      https://s3.us-west-2.amazonaws.com/amazon-eks/1.21.2/2021-07-05/bin/linux/amd64/kubectl
+      https://s3.us-west-2.amazonaws.com/amazon-eks/1.24.7/2022-10-31/bin/linux/amd64/kubectl
 
    sudo chmod +x /usr/local/bin/kubectl
    ```
@@ -108,7 +108,8 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
 
 3. Install `kubeseal`
    ```bash
-   wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.16.0/kubeseal-linux-amd64 -O kubeseal
+   wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.19.0/kubeseal-0.19.0-darwin-amd64.tar.gz
+   tar xfz kubeseal-0.19.0-darwin-amd64.tar.gz
    sudo install -m 755 kubeseal /usr/local/bin/kubeseal
    ```
 

@@ -80,11 +80,11 @@ spec:
                     eks-k8s-version:
                       description: Kubernetes version
                       type: string
-                      enum: ['1.20', '1.21', '1.22']
+                      enum: ['1.21', '1.22', '1.23', '1.24']
                     mng-k8s-version:
                       description: Kubernetes version
                       type: string
-                      enum: ['1.20', '1.21', '1.22']
+                      enum: ['1.21', '1.22', '1.23', '1.24']
                     workers-size:
                       description: Desired number of worker nodes in the cluster
                       type: integer
