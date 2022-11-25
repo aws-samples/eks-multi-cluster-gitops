@@ -345,7 +345,7 @@ of Kubernetes. As described in Amazon EKS documentaiton on ["Updating Kubernetes
 
 1. Open `gitops-system/clusters-config/commercial-staging/def/eks-cluster.yaml`.
 
-2. Change the value for `spec.parameters.eks-k8s-version` (e.g. from `1.20` to `1.21`).
+2. Change the value for `spec.parameters.eks-k8s-version` (e.g. from `1.23` to `1.24`).
 
 3. Commit changes.
 
@@ -365,7 +365,7 @@ of Kubernetes. As described in Amazon EKS documentaiton on ["Updating Kubernetes
 
    Alternatively, you can check the cluster status on the EKS console.
 
-5. Change the `gitops-system/clusters-config/commercial-staging/def/eks-cluster.yaml` file again. This time change the value for `spec.parameters.mng-k8s-version` from 1.21 to 1.22.
+5. Change the `gitops-system/clusters-config/commercial-staging/def/eks-cluster.yaml` file again. This time change the value for `spec.parameters.mng-k8s-version` from 1.23 to 1.24.
 
 6. Commit again the changes.
 

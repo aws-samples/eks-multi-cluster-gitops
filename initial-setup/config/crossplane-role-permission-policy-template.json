@@ -114,7 +114,11 @@
               "iam:UntagPolicy",
               "iam:UntagRole",
               "iam:UpdateRole",
-              "iam:UpdateRoleDescription"
+              "iam:UpdateRoleDescription",
+              "iam:ListOpenIDConnectProviders",
+              "iam:ListOpenIDConnectProviderTags",
+              "iam:TagOpenIDConnectProvider",
+              "iam:UntagOpenIDConnectProvider"
             ],
             "Effect": "Allow",
             "Resource": "*"
