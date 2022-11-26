@@ -8,7 +8,7 @@ spec:
   serviceAccountName: app-name-team
   prune: true
   interval: 2m0s
-  path: ./kubernetes/overlays/cluster-name
+  path: ./kubernetes/overlays/overlay-dir-name
   sourceRef:
     kind: GitRepository
     name: app-name
