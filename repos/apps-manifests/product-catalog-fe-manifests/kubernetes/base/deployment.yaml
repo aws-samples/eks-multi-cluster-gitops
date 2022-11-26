@@ -18,8 +18,7 @@ spec:
         app: product-catalog-fe
     spec:
       containers:
-      - image: public.ecr.aws/h2c3y9h0/multi-cluster-gitops/product-catalog-fe:latest
-        env:
+      - env:
         - name: BASE_URL
           value: "http://product-catalog-api.product-catalog-api/products/"
         name: product-catalog-fe
