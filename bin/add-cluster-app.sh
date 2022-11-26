@@ -2,22 +2,24 @@
 # $1 = location of gitops-workloads
 # $2 = cluster name
 # $3 = app name
-# $4 = git release tag
-# $5 = location of git-credentials template file
-# $6 = private key file
-# $7 = public key
-# $8 = known hosts
-# $9 = Sealed secrets public key .pem file
+# $4 = overlay directory name
+# $5 = git branch name
+# $6 = location of git-credentials template file
+# $7 = private key file
+# $8 = public key
+# $9 = known hosts
+# $10 = Sealed secrets public key .pem file
 
 gitops_workloads=$(realpath "$1")
 cluster_name=$2
 app_name=$3
-release_tag=$4
-git_creds_file=$(realpath "$5")
-private_key_file=$(realpath "$6")
-public_key_file=$(realpath "$7")
-known_hosts=$8
-pem_file=$(realpath "$9")
+overlay_dir_name=$4
+branch_name=$5
+git_creds_file=$(realpath "$6")
+private_key_file=$(realpath "$7")
+public_key_file=$(realpath "$8")
+known_hosts=$9
+pem_file=$(realpath "${10}")
 
 mkdir -p $gitops_workloads/$cluster_name/$app_name
 if [[ ! -f $gitops_workloads/$cluster_name/kustomization.yaml ]]
@@ -26,8 +28,9 @@ then
 fi
 cp -R $gitops_workloads/template/app-template/* $gitops_workloads/$cluster_name/$app_name
 grep -RiIl 'cluster-name' $gitops_workloads/$cluster_name/$app_name | xargs sed -i "s/cluster-name/$cluster_name/g"
+grep -RiIl 'overlay-dir-name' $gitops_workloads/$cluster_name/$app_name | xargs sed -i "s/overlay-dir-name/$overlay_dir_name/g"
 grep -RiIl 'app-name' $gitops_workloads/$cluster_name/$app_name | xargs sed -i "s/app-name/$app_name/g"
-grep -RiIl 'release-tag' $gitops_workloads/$cluster_name/$app_name | xargs sed -i "s/release-tag/$release_tag/g"
+grep -RiIl 'branch-name' $gitops_workloads/$cluster_name/$app_name | xargs sed -i "s/branch-name/$branch_name/g"
 
 
 # Prep the sealed secret

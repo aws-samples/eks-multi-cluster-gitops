@@ -1,0 +1,11 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-catalog-api
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+      - image: public.ecr.aws/h2c3y9h0/multi-cluster-gitops/product-catalog-api:v1
+        name: product-catalog-api

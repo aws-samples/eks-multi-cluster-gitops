@@ -7,7 +7,5 @@ spec:
   template:
     spec:
       containers:
-      - name: product-catalog-api
-        env:
-        - name: PRODUCTS_TABLE_NAME
-          value: products-staging
+      - image: public.ecr.aws/h2c3y9h0/multi-cluster-gitops/product-catalog-api:v1
+        name: product-catalog-api
