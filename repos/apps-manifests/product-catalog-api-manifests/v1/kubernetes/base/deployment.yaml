@@ -19,8 +19,7 @@ spec:
     spec:
       serviceAccountName: product-catalog-api-sa
       containers:
-      - image: public.ecr.aws/h2c3y9h0/multi-cluster-gitops/product-catalog-api:v1
-        name: product-catalog-api
+      - name: product-catalog-api
         ports:
         - containerPort: 5000
           name: http

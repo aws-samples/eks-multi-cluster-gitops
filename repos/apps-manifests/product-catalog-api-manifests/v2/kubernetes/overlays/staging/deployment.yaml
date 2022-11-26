@@ -3,11 +3,14 @@ kind: Deployment
 metadata:
   name: product-catalog-api
 spec:
-  replicas: 3
+  replicas: 2
   template:
     spec:
       containers:
       - name: product-catalog-api
+        image: public.ecr.aws/h2c3y9h0/multi-cluster-gitops/product-catalog-api:v2
         env:
+        - name: PRODUCTS_TABLE_REGION
+          value: ${AWS_REGION}
         - name: PRODUCTS_TABLE_NAME
-          value: products-prod
+          value: products-staging
