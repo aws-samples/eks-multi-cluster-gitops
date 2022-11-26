@@ -19,7 +19,7 @@ git_creds_file=$(realpath "$6")
 private_key_file=$(realpath "$7")
 public_key_file=$(realpath "$8")
 known_hosts=$9
-pem_file=$(realpath "$10")
+pem_file=$(realpath "${10}")
 
 mkdir -p $gitops_workloads/$cluster_name/$app_name
 if [[ ! -f $gitops_workloads/$cluster_name/kustomization.yaml ]]
