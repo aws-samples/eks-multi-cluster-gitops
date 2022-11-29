@@ -21,6 +21,13 @@ public_key_file=$(realpath "$8")
 known_hosts=$9
 pem_file=$(realpath "${10}")
 
+# check if the add is already added to the cluster
+if [ -d "$gitops_workloads/$cluster_name/$app_name" ] 
+then
+    echo "Error: The app $app_name is already added to the cluster $cluster_name" 
+    exit 1
+fi
+
 mkdir -p $gitops_workloads/$cluster_name/$app_name
 if [[ ! -f $gitops_workloads/$cluster_name/kustomization.yaml ]]
 then

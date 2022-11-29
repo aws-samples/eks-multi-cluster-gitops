@@ -5,6 +5,13 @@
 gitops_system=$(realpath "$1")
 cluster_name=$2
 
+# check if the cluster is already added
+if [ -d "$gitops_system/clusters-config/$cluster_name" ] 
+then
+    echo "Error: The cluster $cluster_name already exists." 
+    exit 1
+fi
+
 # gitops-system clusters-config template
 
 mkdir -p $gitops_system/clusters-config/$cluster_name
