@@ -106,20 +106,13 @@ git branch -M main
 git push --set-upstream origin main
 ```
 
-Next, tag the current commit as version 1.0 and push the tag:
-
-```
-git tag -a v1.0 -m "Version 1.0"
-git push origin v1.0
-```
-
-You can make the required changes in `gitops-workloads` using the script `add-cluster-app.sh`:
+Next, make the required changes in `gitops-workloads` using the script `add-cluster-app.sh`:
 
 ```
 cd ~/environment
 multi-cluster-gitops/bin/add-cluster-app.sh \
   ./gitops-workloads \
-  commercial-staging product-catalog-api v1.0 \
+  commercial-staging product-catalog-api staging main \
   multi-cluster-gitops/initial-setup/secrets-template/git-credentials.yaml \
   ~/.ssh/gitops ~/.ssh/gitops.pub \
   "github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=" \
@@ -185,7 +178,8 @@ fi
 cp -R gitops-workloads/template/app-template/* gitops-workloads/commercial-staging/product-catalog-api
 grep -RiIl 'cluster-name' gitops-workloads/commercial-staging/product-catalog-api | xargs sed -i "s/cluster-name/commercial-staging/g"
 grep -RiIl 'app-name' gitops-workloads/commercial-staging/product-catalog-api | xargs sed -i "s/app-name/product-catalog-api/g"
-grep -RiIl 'release-tag' gitops-workloads/commercial-staging/product-catalog-api | xargs sed -i "s/release-tag/v1.0/g"
+grep -RiIl 'branch-name' gitops_workloads/commercial-staging/product-catalog-api | xargs sed -i "s/branch-name/main/g"
+grep -RiIl 'overlay-dir-name' gitops-workloads/commercial-staging/product-catalog-api | xargs sed -i "s/overlay-dir-name/staging/g"
 ```
 
 4. **Prepare the sealed secret for the application:** this prepares a sealed secret for the
