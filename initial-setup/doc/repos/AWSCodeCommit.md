@@ -1,7 +1,7 @@
 ## Create and prepare the Git repositories
 ### Create Git SSH keys
-1. Create a new IAM user that will be used to interact with the CodeCommit repos from the Cloud9 environment and from the EKS clusters by Flux source controller. While the same IAM user is used for all the
-   repositories in these instructions, but the structure supports using
+1. Create a new IAM user that will be used to interact with the CodeCommit repos from the Cloud9 environment, and from the EKS clusters by the Flux source controller. While the same IAM user is used for all the
+   repositories in these instructions, the structure supports using
    different users for different repos.
 
 ```bash
@@ -19,7 +19,7 @@ cat >gitops-policy.json <<EOF
         "codecommit:GitPull",
         "codecommit:GitPush"
       ],
-      "Resource": "arn:aws:codecommit:${AWS_REGION}:${AWS_ACCOUNT_ID}:*"
+      "Resource": "arn:aws:codecommit:${AWS_REGION}:${ACCOUNT_ID}:*"
     }
   ]
 }
