@@ -6,8 +6,6 @@ metadata:
   namespace: flux-system
 spec:
   prune: true
-  dependsOn:
-  - name: sealed-secrets
   interval: 2m0s
   path: ./clusters-config
   sourceRef:
