@@ -109,7 +109,7 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
 3. Install `kubeseal`
    ```bash
    wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.19.4/kubeseal-0.19.4-linux-amd64.tar.gz
-   tar xfz kubeseal-0.19.4-amd64.tar.gz
+   tar xfz kubeseal-0.19.4-linux-amd64.tar.gz
    sudo install -m 755 kubeseal /usr/local/bin/kubeseal
    ```
 
