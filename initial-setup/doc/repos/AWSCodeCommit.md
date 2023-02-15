@@ -95,6 +95,12 @@ done
 export REPO_PREFIX=ssh://${SSH_KEY_ID_GITOPS}@git-codecommit.${AWS_REGION}.amazonaws.com/v1/repos
 ```
 
+### Clone the repos locally
+```
+git clone $REPO_PREFIX/gitops-system
+git clone $REPO_PREFIX/gitops-workloads
+```
+
 ### Create a `Secret` resource that contains the Git Credentials for `gitops-system`
 
 1. Create `codecommit_known_hosts` file for AWS CodeCommit regional endpoint
