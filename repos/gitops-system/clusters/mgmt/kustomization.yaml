@@ -4,8 +4,4 @@ kind: Kustomization
 resources:
   - crossplane.yaml
   - crossplane-eks-composition.yaml
-  - external-secrets-iam.yaml
-  - external-secrets.yaml
-  - external-secrets-config.yaml
-  - sealed-secrets.yaml
   - clusters-config.yaml

@@ -139,6 +139,8 @@
         {
             "Effect": "Allow",
             "Action": [
+                "secretsmanager:PutSecretValue",
+                "secretsmanager:UpdateSecret",
                 "secretsmanager:DeleteSecret"
             ],
             "Resource": "arn:aws:secretsmanager:${AWS_REGION}:${ACCOUNT_ID}:secret:sealed-secrets*"
