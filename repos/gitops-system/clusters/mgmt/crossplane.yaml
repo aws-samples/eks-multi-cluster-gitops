@@ -17,7 +17,6 @@ spec:
       kind: Job
       name: k8s-provider-config-job
       namespace: crossplane-system
-  validation: client
   patches:
     - target:
         group: kustomize.toolkit.fluxcd.io

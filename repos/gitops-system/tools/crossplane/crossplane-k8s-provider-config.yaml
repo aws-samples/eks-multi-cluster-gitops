@@ -17,6 +17,5 @@ spec:
   - apiVersion: kubernetes.crossplane.io/v1alpha1
     kind: ProviderConfig
     name: k8s-providerconfig
-  validation: client
   timeout: 2m
 

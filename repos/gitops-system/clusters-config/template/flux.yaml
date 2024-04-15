@@ -16,5 +16,4 @@ spec:
   kubeConfig:
     secretRef:
       name: cluster-name-eks-connection
-  validation: client
 ---
