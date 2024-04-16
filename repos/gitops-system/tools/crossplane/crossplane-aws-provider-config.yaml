@@ -17,6 +17,5 @@ spec:
   - apiVersion: aws.crossplane.io/v1beta1
     kind: ProviderConfig
     name: default
-  validation: client
   timeout: 2m
 

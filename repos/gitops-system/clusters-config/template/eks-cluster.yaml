@@ -19,5 +19,4 @@ spec:
   - kind: OpenIDConnectProvider
     apiVersion: iam.aws.crossplane.io/v1beta1
     name: cluster-oidc-idp-cluster-name
-  validation: client
   timeout: 2m

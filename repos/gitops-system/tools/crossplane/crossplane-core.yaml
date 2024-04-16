@@ -27,6 +27,5 @@ spec:
   - kind: Deployment
     name: crossplane-rbac-manager
     namespace: crossplane-system
-  validation: client
   timeout: 2m
 

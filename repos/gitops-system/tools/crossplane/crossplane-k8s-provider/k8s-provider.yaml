@@ -14,6 +14,6 @@ kind: Provider
 metadata:
   name: provider-kubernetes
 spec:
-  package: "crossplane/provider-kubernetes:v0.4.1"
+  package: "xpkg.upbound.io/crossplane-contrib/provider-kubernetes:v0.13.0"
   controllerConfigRef:
     name: k8s-config
