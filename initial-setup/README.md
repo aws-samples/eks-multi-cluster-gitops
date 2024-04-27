@@ -166,7 +166,7 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
 Create the management cluster using `eksctl`
 ```bash
 cd ~/environment
-cp multi-cluster-gitops/initial-setup/config/mgmt-cluster-eksctl.yaml .
+cp eks-multi-cluster-gitops/initial-setup/config/mgmt-cluster-eksctl.yaml .
 sed -i "s/AWS_REGION/$AWS_REGION/g" mgmt-cluster-eksctl.yaml     
 eksctl create cluster -f mgmt-cluster-eksctl.yaml
 ```
@@ -189,8 +189,8 @@ To populate the repos you created, copy the content of the
 `multi-cluster-gitops/repos` directories to the corresponding repos you
 created in the previous step:
 ```
-cp -r multi-cluster-gitops/repos/gitops-system/* gitops-system/
-cp -r multi-cluster-gitops/repos/gitops-workloads/* gitops-workloads/
+cp -r eks-multi-cluster-gitops/repos/gitops-system/* gitops-system/
+cp -r eks-multi-cluster-gitops/repos/gitops-workloads/* gitops-workloads/
 ```
 Some of the files in these repos contain placholder references for `AWS_REGION`, `REPO_PREFIX`, and `EKS_CONSOLE_IAM_ENTITY_ARN` which need to be updated to reflect your working region, the location of your repos, and the ARN of the IAM entity that is used for accessing the EKS console.
 
@@ -230,47 +230,6 @@ sed -i "s/AWS_REGION/$AWS_REGION/g" \
    updating the `url` for the `GitRepository` resource to point at the `payment-app-manifests` repo created in your account:
    ```
    sed -i "s~REPO_PREFIX~$REPO_PREFIX~g" \
-     gitops-workloads/template/app-template/git-repo.yaml
-   ```
-
-### Patch `GitRepository` for AWS CodeCommit
-
-*Note*: Please execute this section only if you are using AWS CodeCommit as the `GitRepository` backend.
-The default `go-git` client used by `GitRepositoryReconciler` does not support
-[version 2 of Git's wire protocol](https://git-scm.com/docs/protocol-v2). AWS CodeCommit git servers only support the newer
-v2 protocol. In this section we will set the git client implementation to `libgit2`. Please refer to
-[Git implementation](https://fluxcd.io/docs/components/source/gitrepositories/#git-implementation) section for the
-feature matrix of the supported git client implementations.
-
-1. Export environment variable with the `yq` expression to use to patch the `GitRepository` resources
-
-   ```bash
-   LIBGIT2='. |= (with(select(.kind=="GitRepository");.spec |= ({"gitImplementation":"libgit2"}) + .))'
-   ```
-
-2. Patch the `git-repo.yaml` files in the `workloads` folder of the `gitops-system` repo,
-   adding the `spec.gitImplementation` node for the `GitRepository` resource
-   to force the use of `libgit2` as the git client to connect to the repo:
-   ```bash
-   yq -i e "$LIBGIT2" \
-     gitops-system/workloads/template/git-repo.yaml
-   ```
-
-3. Patch the `gotk-sync.yaml` files in the `clusters` folder of the `gitops-system` repo,
-   adding the `spec.gitImplementation` node for the `GitRepository` resource
-   to force the use of `libgit2` as the git client to connect to the repo:
-   ```bash
-   yq -i e "$LIBGIT2" \
-     gitops-system/clusters/mgmt/flux-system/gotk-sync.yaml
-   yq -i e "$LIBGIT2" \
-     gitops-system/clusters/template/flux-system/gotk-sync.yaml
-   ```
-
-4. Patch the `git-repo.yaml` files in the `gitops-workloads` repo,
-   adding the `spec.gitImplementation` node for the `GitRepository` resource
-   to force the use of `libgit2` as the git client to connect to the repo:
-   ```bash
-   yq -i e "$LIBGIT2" \
      gitops-workloads/template/app-template/git-repo.yaml
    ```
 
@@ -336,7 +295,7 @@ export OIDC_PROVIDER=${OIDC_PROVIDER_URL#'https://'}
    ```bash
    cd ~/environment
    envsubst \
-     < multi-cluster-gitops/initial-setup/config/crossplane-role-trust-policy-template.json \
+     < eks-multi-cluster-gitops/initial-setup/config/crossplane-role-trust-policy-template.json \
      > crossplane-role-trust-policy.json
    ```
 
@@ -353,7 +312,7 @@ export OIDC_PROVIDER=${OIDC_PROVIDER_URL#'https://'}
    ```bash
    cd ~/environment
    envsubst \
-   < multi-cluster-gitops/initial-setup/config/crossplane-role-permission-policy-template.json \
+   < eks-multi-cluster-gitops/initial-setup/config/crossplane-role-permission-policy-template.json \
    > crossplane-role-permission-policy.json
 
    CROSSPLANE_IAM_POLICY_ARN=$(aws iam create-policy \

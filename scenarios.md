@@ -36,7 +36,7 @@ You can make the required changes quickly using the script `add-cluster.sh`:
 
 ```
 cd ~/environment
-multi-cluster-gitops/bin/add-cluster.sh ./gitops-system commercial-staging
+eks-multi-cluster-gitops/bin/add-cluster.sh ./gitops-system commercial-staging
 ```
 
 Once done, commit and push the changes as follows:
@@ -98,7 +98,7 @@ First, prepare a repo for `product-catalog-api-manifests` as follows:
 ```
 cd ~/environment
 gh repo create --private --clone product-catalog-api-manifests
-cp -r multi-cluster-gitops/repos/apps-manifests/product-catalog-api-manifests/v1/* product-catalog-api-manifests/
+cp -r eks-multi-cluster-gitops/repos/apps-manifests/product-catalog-api-manifests/v1/* product-catalog-api-manifests/
 cd product-catalog-api-manifests
 git add .
 git commit -m "baseline version"
@@ -110,10 +110,10 @@ Next, make the required changes in `gitops-workloads` using the script `add-clus
 
 ```
 cd ~/environment
-multi-cluster-gitops/bin/add-cluster-app.sh \
+eks-multi-cluster-gitops/bin/add-cluster-app.sh \
   ./gitops-workloads \
   commercial-staging product-catalog-api staging main \
-  multi-cluster-gitops/initial-setup/secrets-template/git-credentials.yaml \
+  eks-multi-cluster-gitops/initial-setup/secrets-template/git-credentials.yaml \
   ~/.ssh/gitops ~/.ssh/gitops.pub \
   "github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=" \
   ./sealed-secrets-keypair-public.pem
@@ -191,7 +191,7 @@ grep -RiIl 'overlay-dir-name' gitops-workloads/commercial-staging/product-catalo
 
 ```
 tmp_git_creds=$(mktemp /tmp/git-creds.yaml.XXXXXXXXX)
-cp multi-cluster-gitops/initial-setup/secrets-template/git-credentials.yaml $tmp_git_creds
+cp eks-multi-cluster-gitops/initial-setup/secrets-template/git-credentials.yaml $tmp_git_creds
 APP_NAME=product-catalog-api yq e '.metadata.name=strenv(APP_NAME)' -i $tmp_git_creds
 KEY=$(cat ~/.ssh/gitops | base64 -w 0) yq -i '.data.identity = strenv(KEY)' $tmp_git_creds
 CERT=$(cat ~/.ssh/gitops.pub | base64 -w 0) yq -i '.data."identity.pub" = strenv(CERT)' $tmp_git_creds
@@ -274,7 +274,7 @@ Next, update the repo for `product-catalog-api` to the new version (v2):
 
 ```
 cd ~/environment
-cp -r multi-cluster-gitops/repos/apps-manifests/product-catalog-api-manifests/v2/* product-catalog-api-manifests/
+cp -r eks-multi-cluster-gitops/repos/apps-manifests/product-catalog-api-manifests/v2/* product-catalog-api-manifests/
 cd product-catalog-api-manifests
 git add .
 git commit -m "Updated version"
@@ -293,7 +293,7 @@ can do this using the `update-cluster-app.sh` script as follows:
 
 ```
 cd ~/environment
-multi-cluster-gitops/bin/update-cluster-app.sh ./gitops-workloads commercial-staging product-catalog-api v2.0
+eks-multi-cluster-gitops/bin/update-cluster-app.sh ./gitops-workloads commercial-staging product-catalog-api v2.0
 ```
 
 Finally, commit this change:
@@ -391,7 +391,7 @@ You can make the required changes quickly using the script `remove-cluster-app.s
 
 ```
 cd ~/environment
-multi-cluster-gitops/bin/remove-cluster-app.sh ./gitops-workloads commercial-staging product-catalog-api
+eks-multi-cluster-gitops/bin/remove-cluster-app.sh ./gitops-workloads commercial-staging product-catalog-api
 ```
 
 Once done, commit and push the changes as follows:
@@ -438,7 +438,7 @@ You can make the required repo changes quickly using the script `remove-cluster.
 
 ```
 cd ~/environment
-multi-cluster-gitops/bin/remove-cluster.sh ./gitops-system ./gitops-workloads commercial-staging
+eks-multi-cluster-gitops/bin/remove-cluster.sh ./gitops-system ./gitops-workloads commercial-staging
 ```
 
 Once done, commit and push the changes as follows:
