@@ -1,0 +1,43 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: kubecost
+  namespace: flux-system
+spec:
+  releaseName: kubecost
+  targetNamespace: kubecost
+  interval: 5m
+  install:
+    createNamespace: true
+  chart:
+    spec:
+      chart: cost-analyzer
+      version: '2.2.2'
+      sourceRef:
+        kind: HelmRepository
+        name: kubecost-repository
+        namespace: flux-system
+      interval: 1m
+  values:
+    kubecostFrontend:
+      image: public.ecr.aws/kubecost/frontend
+    kubecostModel:
+      image: public.ecr.aws/kubecost/cost-model
+    forecasting:
+      fullImageName: public.ecr.aws/kubecost/kubecost-modeling:v0.1.6
+    networkCosts:
+      image:
+        repository: public.ecr.aws/kubecost/kubecost-network-costs
+    clusterController:
+      image:
+        repository: public.ecr.aws/kubecost/cluster-controller
+    prometheus:
+      server:
+        image:
+          repository: public.ecr.aws/kubecost/prometheus
+      configmapReload:
+        prometheus:
+          image:
+            repository: public.ecr.aws/kubecost/prometheus-config-reloader
+    reporting:
+      productAnalytics: false
