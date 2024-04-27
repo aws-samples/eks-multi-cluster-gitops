@@ -1,0 +1,59 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: aws-ebs-csi-iam
+  namespace: flux-system
+spec:
+  prune: true
+  interval: 2m0s
+  path: ./tools-config/aws-ebs-csi-iam
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  healthChecks:
+  - kind: ServiceAccount
+    apiVersion: v1
+    name: ebs-csi-controller-sa
+    namespace: kube-system
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-info
+        optional: false
+  patches:
+    - target:
+        group: iam.aws.crossplane.io
+        kind: Role
+        version: v1beta1
+        name: ebs-csi-controller-role
+        namespace: kube-system
+      patch: |-
+        - op: replace
+          path: /metadata/name
+          value: ebs-csi-controller-role-cluster-name
+    - target:
+        group: iam.aws.crossplane.io
+        kind: RolePolicyAttachment
+        version: v1beta1
+        name: ebs-csi-controller-attachment
+        namespace: kube-system
+      patch: |-
+        - op: replace
+          path: /metadata/name
+          value: ebs-csi-controller-attachment-cluster-name
+        - op: replace
+          path: /spec/forProvider/roleNameRef/name
+          value: ebs-csi-controller-role-cluster-name
+    - target:
+        group: ""
+        kind: ServiceAccount
+        version: v1
+        name: ebs-csi-controller-sa
+        namespace: kube-system
+      patch: |-
+        - op: replace
+          path: /metadata/annotations
+          value:
+            eks.amazonaws.com/role-arn: arn:aws:iam::${ACCOUNT_ID}:role/ebs-csi-controller-role-cluster-name
+---
