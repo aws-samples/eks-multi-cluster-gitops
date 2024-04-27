@@ -36,3 +36,11 @@ starting with "product-" using:
     ```
     aws dynamodb delete-table --table-name <table-name>
     ```
+8. Delete the IAM that was used to interact with the CodeCommit repos from the Cloud9 environment, and from the EKS clusters by the Flux source controller. Also, delete the associated IAM policy
+
+    ```
+    POLICY_ARN=$(aws iam list-attached-role-policies --role-name crossplane-role --query AttachedPolicies[0].PolicyArn --output text)
+    aws iam detach-role-policy --role-name crossplane-role --policy-arn $POLICY_ARN
+    aws iam delete-policy --policy-arn $POLICY_ARN 
+    aws iam delete-role --role-name crossplane-role
+    ```
