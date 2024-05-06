@@ -1,0 +1,38 @@
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: Role
+metadata:
+  name: karpenter-role
+  namespace: kube-system
+spec:
+  forProvider:
+    assumeRolePolicyDocument: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Federated": "arn:aws:iam::${ACCOUNT_ID}:oidc-provider/${OIDC_PROVIDER}"
+              },
+              "Action": "sts:AssumeRoleWithWebIdentity",
+              "Condition": {
+                "StringEquals": {
+                  "${OIDC_PROVIDER}:aud": "sts.amazonaws.com",
+                  "${OIDC_PROVIDER}:sub": "system:serviceaccount:kube-system:karpenter-sa"
+                }
+              }
+            }
+          ]
+        }
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: RolePolicyAttachment
+metadata:
+  name: karpenter-attachment
+  namespace: kube-system
+spec:
+  forProvider:
+    policyArnRef:
+      name: karpenter-policy
+    roleNameRef:
+      name: karpenter-role

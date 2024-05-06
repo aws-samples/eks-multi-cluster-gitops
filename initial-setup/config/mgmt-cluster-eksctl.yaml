@@ -24,4 +24,4 @@ managedNodeGroups:
       - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
       - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
   desiredCapacity: 3
-  instanceType: t3.small
+  instanceType: m5.large
