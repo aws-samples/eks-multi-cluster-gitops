@@ -1,0 +1,63 @@
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: Role
+metadata:
+  name: karpenter-node-role
+spec:
+  forProvider:
+    assumeRolePolicyDocument: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "sts:AssumeRole"
+                ],
+                "Principal": {
+                    "Service": [
+                        "ec2.amazonaws.com"
+                    ]
+                }
+            }
+          ]
+        }
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: RolePolicyAttachment
+metadata:
+  name: karpenter-node-role-cni-attachment
+spec:
+  forProvider:
+    policyArn: "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+    roleNameRef:
+      name: karpenter-node-role
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: RolePolicyAttachment
+metadata:
+  name: karpenter-node-role-wn-policy-attachment
+spec:
+  forProvider:
+    policyArn: "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+    roleNameRef:
+      name: karpenter-node-role
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: RolePolicyAttachment
+metadata:
+  name: karpenter-node-role-ecr-attachment
+spec:
+  forProvider:
+    policyArn: "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+    roleNameRef:
+      name: karpenter-node-role
+---
+apiVersion: iam.aws.crossplane.io/v1beta1
+kind: RolePolicyAttachment
+metadata:
+  name: karpenter-node-role-ssm-attachment
+spec:
+  forProvider:
+    policyArn: "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+    roleNameRef:
+      name: karpenter-node-role

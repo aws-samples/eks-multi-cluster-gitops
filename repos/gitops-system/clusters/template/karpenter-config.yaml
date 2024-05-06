@@ -1,0 +1,94 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: karpenter-config
+  namespace: flux-system
+spec:
+  prune: true
+  interval: 2m0s
+  path: ./tools-config/karpenter-config
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-info
+        optional: false
+  dependsOn:
+  - name: karpenter
+  patches:
+  - target:
+      group: karpenter.k8s.aws
+      kind: EC2NodeClass
+      name: default
+    patch: |-
+      apiVersion: karpenter.k8s.aws/v1beta1
+      kind: EC2NodeClass
+      metadata:
+        name: not-used
+      spec:
+        role: karpenter-node-role-cluster-name
+        subnetSelectorTerms:
+          - tags:
+              Name: "cluster-name-eks-vpc-private*"
+  - target:
+      group: iam.aws.crossplane.io
+      kind: Role
+      version: v1beta1
+      name: karpenter-node-role
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: karpenter-node-role-cluster-name
+  - target:
+      group: iam.aws.crossplane.io
+      kind: RolePolicyAttachment
+      version: v1beta1
+      name: karpenter-node-role-cni-attachment
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: karpenter-node-role-cni-attachment-cluster-name
+      - op: replace
+        path: /spec/forProvider/roleNameRef/name
+        value: karpenter-node-role-cluster-name
+  - target:
+      group: iam.aws.crossplane.io
+      kind: RolePolicyAttachment
+      version: v1beta1
+      name: karpenter-node-role-wn-policy-attachment
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: karpenter-node-role-wn-policy-attachment-cluster-name
+      - op: replace
+        path: /spec/forProvider/roleNameRef/name
+        value: karpenter-node-role-cluster-name
+  - target:
+      group: iam.aws.crossplane.io
+      kind: RolePolicyAttachment
+      version: v1beta1
+      name: karpenter-node-role-ecr-attachment
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: karpenter-node-role-ecr-attachment-cluster-name
+      - op: replace
+        path: /spec/forProvider/roleNameRef/name
+        value: karpenter-node-role-cluster-name
+  - target:
+      group: iam.aws.crossplane.io
+      kind: RolePolicyAttachment
+      version: v1beta1
+      name: karpenter-node-role-ssm-attachment
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: karpenter-node-role-ssm-attachment-cluster-name
+      - op: replace
+        path: /spec/forProvider/roleNameRef/name
+        value: karpenter-node-role-cluster-name
+
+---

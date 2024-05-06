@@ -1,0 +1,43 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: aws-auth
+  namespace: flux-system
+spec:
+  prune: true
+  interval: 2m0s
+  path: ./tools-config/aws-auth
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-info
+        optional: false
+  patches:        
+  - target:
+      group: ""
+      kind: ConfigMap
+      name: aws-auth
+    patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: not-used
+      data:
+        mapRoles: |
+          - groups:
+            - system:bootstrappers
+            - system:nodes
+            rolearn: arn:aws:iam::${ACCOUNT_ID}:role/eks-nodegroup-role
+            username: system:node:{{EC2PrivateDNSName}}
+          - rolearn: EKS_CONSOLE_IAM_ENTITY_ARN
+            username: EKS_CONSOLE_IAM_ENTITY_ARN
+          - groups:
+            - system:bootstrappers
+            - system:nodes
+            rolearn: arn:aws:iam::${ACCOUNT_ID}:role/karpenter-node-role-cluster-name
+            username: system:node:{{EC2PrivateDNSName}}
+---

@@ -239,12 +239,14 @@ sed -i "s/AWS_REGION/$AWS_REGION/g" \
    echo $EKS_CONSOLE_IAM_ENTITY_ARN
    ```
 
-2. Update the various manifest files in the `tools-config/eks-console` folder of the `gitops-system` repo, replacing the placeholder for the ARN of the IAM entity that is used to access the EKS console, with the value set in an environment variable.
+2. Update the various manifest files in `gitops-system` repo, replacing the placeholder for the ARN of the IAM entity that is used to access the EKS console, with the value set in an environment variable.
    ```
    sed -i "s~EKS_CONSOLE_IAM_ENTITY_ARN~$EKS_CONSOLE_IAM_ENTITY_ARN~g" \
-     gitops-system/tools-config/eks-console/aws-auth.yaml
+     gitops-system/tools-config/aws-auth/aws-auth-cm.yaml
    sed -i "s~EKS_CONSOLE_IAM_ENTITY_ARN~$EKS_CONSOLE_IAM_ENTITY_ARN~g" \
-     gitops-system/tools-config/eks-console/role-binding.yaml
+     gitops-system/tools-config/aws-auth/role-binding.yaml
+   sed -i "s~EKS_CONSOLE_IAM_ENTITY_ARN~$EKS_CONSOLE_IAM_ENTITY_ARN~g" \
+     gitops-system/clusters/template/aws-auth.yaml
    ```
 
 ## Create sealed secrets for access to Git repos
@@ -287,6 +289,8 @@ export MGMT_CLUSTER_INFO=$(aws eks describe-cluster --name mgmt)
 export CLUSTER_ARN=$(echo $MGMT_CLUSTER_INFO | yq '.cluster.arn')
 export OIDC_PROVIDER_URL=$(echo $MGMT_CLUSTER_INFO | yq '.cluster.identity.oidc.issuer')
 export OIDC_PROVIDER=${OIDC_PROVIDER_URL#'https://'}
+export CLUSTER_NAME=mgmt
+export CLUSTER_NAME_PSUEDO=mgmt
 ```
 
 ### Create an IAM role for Crossplane
@@ -331,7 +335,9 @@ export OIDC_PROVIDER=${OIDC_PROVIDER_URL#'https://'}
      --from-literal=AWS_REGION=${AWS_REGION} \
      --from-literal=ACCOUNT_ID=${ACCOUNT_ID} \
      --from-literal=CLUSTER_ARN=${CLUSTER_ARN} \
-     --from-literal=OIDC_PROVIDER=${OIDC_PROVIDER}
+     --from-literal=OIDC_PROVIDER=${OIDC_PROVIDER} \
+     --from-literal=CLUSTER_NAME=${CLUSTER_NAME} \
+     --from-literal=CLUSTER_NAME_PSUEDO=${CLUSTER_NAME} 
    ```
 
 ## Commit and push the repos
@@ -355,6 +361,20 @@ With the local repos now populated and updated, you can now push them to their r
    git branch -M main
    git push --set-upstream origin main
    ```
+
+## Allow Karpenter IAM role to access the management cluster
+1. Add a mapping for the IAM entity in `aws-auth` `ConfigMap` using `eksctl`.
+
+   ```bash
+   eksctl create iamidentitymapping \
+      --cluster mgmt \
+      --region=${AWS_REGION} \
+      --arn arn:aws:iam::${ACCOUNT_ID}:role/karpenter-node-role \
+      --username system:node:{{EC2PrivateDNSName}} \
+      --group system:bootstrappers,system:nodes \
+      --no-duplicate-arns
+   ```
+Please note that Karpenter IAM role itself is yet to be created via GitOps.
 
 ## Bootstrap the management cluster
 

@@ -34,7 +34,14 @@ spec:
           toFieldPath: spec.forProvider.manifest.data.OIDC_PROVIDER
           policy:
             fromFieldPath: Required
-
+        - fromFieldPath: status.eks_cluster_name
+          toFieldPath: spec.forProvider.manifest.data.CLUSTER_NAME
+          policy:
+            fromFieldPath: Required
+        - fromFieldPath: status.eks_cluster_name_psuedo
+          toFieldPath: spec.forProvider.manifest.data.CLUSTER_NAME_PSUEDO
+          policy:
+            fromFieldPath: Required
   resources:
     - name: vpc
       base:
@@ -502,6 +509,18 @@ spec:
           fromFieldPath: status.atProvider.arn
           toFieldPath: status.eks_cluster_arn
         - type: ToCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: status.eks_cluster_name
+        - type: ToCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: status.eks_cluster_name_psuedo
+          transforms:
+            - type: string
+              string:
+                type: Regexp
+                regexp:
+                  match: '^([^-])+'
+        - type: ToCompositeFieldPath
           fromFieldPath: status.atProvider.identity.oidc.issuer
           toFieldPath: status.eks_cluster_oidc_issuer_url
         - type: ToCompositeFieldPath
@@ -602,6 +621,8 @@ spec:
                 AWS_REGION: ''
                 CLUSTER_ARN: ''
                 OIDC_PROVIDER: ''
+                CLUSTER_NAME: ''
+                CLUSTER_NAME_PSUEDO: ''
           providerConfigRef:
             name: k8s-providerconfig
       patches:
@@ -709,6 +730,8 @@ spec:
                 AWS_REGION: ''
                 CLUSTER_ARN: ''
                 OIDC_PROVIDER: ''
+                CLUSTER_NAME: ''
+                CLUSTER_NAME_PSUEDO: ''
           providerConfigRef:
             name: remote-k8s-providerconfig-workload-cluster
       patches:

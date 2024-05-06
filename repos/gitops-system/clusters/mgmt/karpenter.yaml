@@ -1,0 +1,26 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+kind: Kustomization
+metadata:
+  name: karpenter
+  namespace: flux-system
+spec:
+  prune: true
+  interval: 10m0s
+  path: ./tools/karpenter
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: karpenter
+      namespace: kube-system
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-info
+        optional: false
+  dependsOn:
+  - name: karpenter-iam
+---
