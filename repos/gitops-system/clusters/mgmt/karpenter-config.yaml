@@ -31,5 +31,5 @@ spec:
       spec:
         subnetSelectorTerms:
           - tags:
-              Name: "eksctl-mgmt-cluster/SubnetPrivate*"
+              Name: "mgmtPrivate*"
 ---
