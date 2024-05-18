@@ -6,9 +6,48 @@ Public Subnets, 2 Private Subnets, 2 NAT Gateways, and 2 Elastic IP Addresses
 (attached to the NAT Gateways). Please make sure that the quotas of the AWS
 account you use for deploying this sample implementation can accommodate that.
 
+## Initial setup (automated)
+A CloudFormation template is provided to speed up the initial setup. If you decided to use it, skip the sections below from **Create and prepare the Cloud9 workspace** to **Allow access to the management cluster from the EKS console** i.e. start at **Populate and update the repositories**.
+
+Follow the steps below for deploying the CloudFormation template:
+
+1. Set the environment variables.
+```
+export ACCOUNT_ID=$(aws sts get-caller-identity --output text --query Account)
+export AWS_REGION=$(aws configure get region)
+```
+
+2. Create an S3 bucket, and upload the CloudFormation template to it.
+
+If you are deploying in us-east-1, create an S3 bucket using the following command:
+```
+aws s3api create-bucket \
+    --bucket gitops-cfn-${ACCOUNT_ID} \
+    --region ${AWS_REGION}
+```
+If you are deploying in any other region, create an S3 bucket using the following command:
+```
+aws s3api create-bucket \
+    --bucket gitops-cfn-${ACCOUNT_ID} \
+    --region ${AWS_REGION} \
+    --create-bucket-configuration LocationConstraint=${AWS_REGION}
+```
+
+Use the command below for uploading the CloudFormation template to the S3 bucket:
+```
+aws s3api put-object --bucket gitops-cfn-${ACCOUNT_ID} --key cfn.yaml --body eks-multi-cluster-gitops/initial-setup/auto/cfn.yaml
+```
+
+3. Deploy the CloudFormation template.
+```
+aws cloudformation create-stack \
+   --stack-name gitops-initial-setup \
+   --capabilities CAPABILITY_NAMED_IAM \
+   --template-url https://gitops-cfn-${ACCOUNT_ID}.s3.${AWS_REGION}.amazonaws.com/cfn.yaml \
+   --parameters ParameterKey=ConsoleRoleName,ParameterValue=Admin
+```
+
 ## Create and prepare the Cloud9 workspace
-
-
 1. Navigate to the [Cloud9 console](https://console.aws.amazon.com/cloud9/).
 
 2. Create a new Cloud9 environment with the name "gitops", using an EC2 *t2.micro* instance and *Ubuntu 18.04* platform. Leave all other settings as default, and select **Create Environment**.
@@ -54,13 +93,12 @@ account you use for deploying this sample implementation can accommodate that.
    aws sts get-caller-identity --query Arn | grep gitops-workshop -q && echo "IAM role valid" || echo "IAM role NOT valid"
    ```
 
-
 8. Install `yq`
    ```bash
    sudo curl --silent --location -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.24.5/yq_linux_amd64
    sudo chmod +x /usr/local/bin/yq
    ```
-   
+
 9. Track the account ID and region using environment variables,
    and update `.bash_profile` and `~/.aws/config`so that these veriables will be available in all Cloud9 Terminal windows.
    ```
@@ -183,6 +221,108 @@ OR
 [Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit.md#create-and-prepare-the-git-repositories)
 
 
+## Setup IAM for Crossplane
+
+The following steps will refer to configuration values from the EKS cluster. Please ensure that the cluster status is
+active before you continue with the following steps.
+
+```bash
+# Wait for the cluster status to change to 'Active'
+aws eks wait cluster-active --name mgmt
+```
+
+### Export environment variables
+
+```bash
+export MGMT_CLUSTER_INFO=$(aws eks describe-cluster --name mgmt) 
+export CLUSTER_ARN=$(echo $MGMT_CLUSTER_INFO | yq '.cluster.arn')
+export OIDC_PROVIDER_URL=$(echo $MGMT_CLUSTER_INFO | yq '.cluster.identity.oidc.issuer')
+export OIDC_PROVIDER=${OIDC_PROVIDER_URL#'https://'}
+export CLUSTER_NAME=mgmt
+export CLUSTER_NAME_PSUEDO=mgmt
+```
+
+### Create an IAM role for Crossplane
+
+1. Create IAM trust policy document
+   ```bash
+   cd ~/environment
+   envsubst \
+     < eks-multi-cluster-gitops/initial-setup/config/crossplane-role-trust-policy-template.json \
+     > crossplane-role-trust-policy.json
+   ```
+
+2. Create the IAM role that will be used by Crossplane for provisioning AWS resources (DynamoDB table, SQS queue, etc.)
+   ```bash
+   CROSSPLANE_IAM_ROLE_ARN=$(aws iam create-role \
+     --role-name crossplane-role \
+     --assume-role-policy-document file://crossplane-role-trust-policy.json \
+     --output text \
+     --query "Role.Arn")
+   ```
+
+3. Create the IAM policy that grants Crossplane the required permissions to provision the workload clusters, and attach it to the role created in the previous step.
+   ```bash
+   cd ~/environment
+   envsubst \
+   < eks-multi-cluster-gitops/initial-setup/config/crossplane-role-permission-policy-template.json \
+   > crossplane-role-permission-policy.json
+
+   CROSSPLANE_IAM_POLICY_ARN=$(aws iam create-policy \
+      --policy-name crossplane-policy \
+      --policy-document file://crossplane-role-permission-policy.json \
+      --output text \
+      --query "Policy.Arn")
+
+   aws iam attach-role-policy --role-name crossplane-role --policy-arn ${CROSSPLANE_IAM_POLICY_ARN}
+   ```
+
+4. Create a `ConfigMap` named `cluster-info` with the cluster details
+   ```bash
+   kubectl create ns flux-system
+   kubectl create configmap cluster-info -n flux-system \
+     --from-literal=AWS_REGION=${AWS_REGION} \
+     --from-literal=ACCOUNT_ID=${ACCOUNT_ID} \
+     --from-literal=CLUSTER_ARN=${CLUSTER_ARN} \
+     --from-literal=OIDC_PROVIDER=${OIDC_PROVIDER} \
+     --from-literal=CLUSTER_NAME=${CLUSTER_NAME} \
+     --from-literal=CLUSTER_NAME_PSUEDO=${CLUSTER_NAME} 
+   ```
+
+## Allow Karpenter IAM role to access the management cluster
+1. Add a mapping for the IAM entity in `aws-auth` `ConfigMap` using `eksctl`.
+
+   ```bash
+   eksctl create iamidentitymapping \
+      --cluster mgmt \
+      --region=${AWS_REGION} \
+      --arn arn:aws:iam::${ACCOUNT_ID}:role/karpenter-node-role \
+      --username system:node:{{EC2PrivateDNSName}} \
+      --group system:bootstrappers,system:nodes \
+      --no-duplicate-arns
+   ```
+Please note that Karpenter IAM role itself is yet to be created via GitOps.
+
+## Allow access to the management cluster from the EKS console
+
+1. Create the RBAC authorization resources needed for granting an IAM entity access to the cluster through the EKS console.
+   ```bash
+   cd ~/environment
+   kubectl apply -f gitops-system/tools-config/eks-console/role.yaml
+   kubectl apply -f gitops-system/tools-config/eks-console/role-binding.yaml
+   ```
+
+2. Add a mapping for the IAM entity in `aws-auth` `ConfigMap` using `eksctl`.
+
+   ```bash
+   eksctl create iamidentitymapping \
+      --cluster mgmt \
+      --region=${AWS_REGION} \
+      --arn ${EKS_CONSOLE_IAM_ENTITY_ARN} \
+      --username ${EKS_CONSOLE_IAM_ENTITY_ARN} \
+      --no-duplicate-arns
+   ```
+
 ## Populate and update the repositories
    
 To populate the repos you created, copy the content of the
@@ -202,7 +342,6 @@ sed -i "s/AWS_REGION/$AWS_REGION/g" \
    gitops-system/clusters-config/template/def/eks-cluster.yaml \
    gitops-system/tools-config/external-secrets/sealed-secrets-key.yaml
 ```
-
 
 ### Update references to GitRepository URLs
 
@@ -272,74 +411,6 @@ kubeseal --cert sealed-secrets-keypair-public.pem --format yaml <git-creds-workl
 cp git-creds-sealed-workloads.yaml gitops-system/workloads/template/git-secret.yaml
 ```
 
-## Setup IAM for Crossplane
-
-The following steps will refer to configuration values from the EKS cluster. Please ensure that the cluster status is
-active before you continue with the following steps.
-
-```bash
-# Wait for the cluster status to change to 'Active'
-aws eks wait cluster-active --name mgmt
-```
-
-### Export environment variables
-
-```bash
-export MGMT_CLUSTER_INFO=$(aws eks describe-cluster --name mgmt) 
-export CLUSTER_ARN=$(echo $MGMT_CLUSTER_INFO | yq '.cluster.arn')
-export OIDC_PROVIDER_URL=$(echo $MGMT_CLUSTER_INFO | yq '.cluster.identity.oidc.issuer')
-export OIDC_PROVIDER=${OIDC_PROVIDER_URL#'https://'}
-export CLUSTER_NAME=mgmt
-export CLUSTER_NAME_PSUEDO=mgmt
-```
-
-### Create an IAM role for Crossplane
-
-1. Create IAM trust policy document
-   ```bash
-   cd ~/environment
-   envsubst \
-     < eks-multi-cluster-gitops/initial-setup/config/crossplane-role-trust-policy-template.json \
-     > crossplane-role-trust-policy.json
-   ```
-
-2. Create the IAM role that will be used by Crossplane for provisioning AWS resources (DynamoDB table, SQS queue, etc.)
-   ```bash
-   CROSSPLANE_IAM_ROLE_ARN=$(aws iam create-role \
-     --role-name crossplane-role \
-     --assume-role-policy-document file://crossplane-role-trust-policy.json \
-     --output text \
-     --query "Role.Arn")
-   ```
-
-3. Create the IAM policy that grants Crossplane the required permissions to provision the workload clusters, and attach it to the role created in the previous step.
-   ```bash
-   cd ~/environment
-   envsubst \
-   < eks-multi-cluster-gitops/initial-setup/config/crossplane-role-permission-policy-template.json \
-   > crossplane-role-permission-policy.json
-
-   CROSSPLANE_IAM_POLICY_ARN=$(aws iam create-policy \
-      --policy-name crossplane-policy \
-      --policy-document file://crossplane-role-permission-policy.json \
-      --output text \
-      --query "Policy.Arn")
-
-   aws iam attach-role-policy --role-name crossplane-role --policy-arn ${CROSSPLANE_IAM_POLICY_ARN}
-   ```
-
-4. Create a `ConfigMap` named `cluster-info` with the cluster details
-   ```bash
-   kubectl create ns flux-system
-   kubectl create configmap cluster-info -n flux-system \
-     --from-literal=AWS_REGION=${AWS_REGION} \
-     --from-literal=ACCOUNT_ID=${ACCOUNT_ID} \
-     --from-literal=CLUSTER_ARN=${CLUSTER_ARN} \
-     --from-literal=OIDC_PROVIDER=${OIDC_PROVIDER} \
-     --from-literal=CLUSTER_NAME=${CLUSTER_NAME} \
-     --from-literal=CLUSTER_NAME_PSUEDO=${CLUSTER_NAME} 
-   ```
-
 ## Commit and push the repos
 
 With the local repos now populated and updated, you can now push them to their respective remote upstream repos.
@@ -362,47 +433,12 @@ With the local repos now populated and updated, you can now push them to their r
    git push --set-upstream origin main
    ```
 
-## Allow Karpenter IAM role to access the management cluster
-1. Add a mapping for the IAM entity in `aws-auth` `ConfigMap` using `eksctl`.
-
-   ```bash
-   eksctl create iamidentitymapping \
-      --cluster mgmt \
-      --region=${AWS_REGION} \
-      --arn arn:aws:iam::${ACCOUNT_ID}:role/karpenter-node-role \
-      --username system:node:{{EC2PrivateDNSName}} \
-      --group system:bootstrappers,system:nodes \
-      --no-duplicate-arns
-   ```
-Please note that Karpenter IAM role itself is yet to be created via GitOps.
-
 ## Bootstrap the management cluster
 
-Make sure that `eksctl` has finished creating the management cluster. Then proceed with one of the following, depending on your choice of `GitRepository` backend.
+Make sure that `eksctl` has finished creating the management cluster. Then proceed with one of the following, depending on your choice of `GitRepository` backend. If you chose to automatically perform the initial setup using CloudFormation, AWS CodeCommit repositories have been created for you.
 
 - [Using GitHub as `GitRepository` backend.](doc/repos/GitHub-Bootstrap.md)
 - [Using AWS CodeCommit as `GitRepository` backend.](doc/repos/AWSCodeCommit-Bootstrap.md)
-
-## Allow access to the management cluster from the EKS console
-
-1. Create the RBAC authorization resources needed for granting an IAM entity access to the cluster through the EKS console.
-   ```bash
-   cd ~/environment
-   kubectl apply -f gitops-system/tools-config/eks-console/role.yaml
-   kubectl apply -f gitops-system/tools-config/eks-console/role-binding.yaml
-   ```
-
-2. Add a mapping for the IAM entity in `aws-auth` `ConfigMap` using `eksctl`.
-
-   ```bash
-   eksctl create iamidentitymapping \
-      --cluster mgmt \
-      --region=${AWS_REGION} \
-      --arn ${EKS_CONSOLE_IAM_ENTITY_ARN} \
-      --username ${EKS_CONSOLE_IAM_ENTITY_ARN} \
-      --no-duplicate-arns
-   ```
-
 
 ## Monitoring Flux Kustomizations
 

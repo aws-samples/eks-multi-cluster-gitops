@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ./flux-system
+- aws-auth.yaml
+- crossplane.yaml
+- karpenter-iam.yaml
+- karpenter.yaml
+- karpenter-config.yaml
+- kubecost.yaml
+- aws-ebs-csi-iam.yaml
+- aws-ebs-csi.yaml
+- aws-load-balancer-controller-iam.yaml
+- aws-load-balancer-controller.yaml
+- workloads.yaml

@@ -1,0 +1,1689 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Multi-cluster GitOps initial setup stack
+
+Parameters:
+  # EKS Parameters
+  ClusterName:
+    Description: Name of the EKS cluster
+    Type: String
+    Default: mgmt
+  ConsoleRoleName:
+    Description: Name of the IAM role that will be used to access EKS console
+    Type: String
+  KubernetesVersion:
+    Description: Kubernetes version
+    Type: String
+    Default: "1.29"
+    AllowedValues:
+      - "1.29"
+      - "1.28"
+      - "1.27"
+  WorkerNodeInstanceType:
+    Description: The instance type of the worker nodes
+    Type: String
+    Default: m5.large
+  
+  # Cloud9 Parameters
+  Cloud9WorkspaceName:
+    Description: Name of the Cloud9 environment
+    Type: String
+    Default: gitops
+  Cloud9WorkspaceDescription:
+    Description: Description of the Cloud9 environment
+    Type: String
+    Default: Cloud9 lab environment for the workshop
+  Cloud9IDEInstanceType:
+    Description: The type of instance to connect to the environment
+    Type: String
+    Default: t3.small
+  Cloud9ImageId:
+    Description: The AMI used to create the Cloud9 environment
+    Type: String
+    Default: amazonlinux-2-x86_64
+    AllowedValues:
+      - amazonlinux-2-x86_64
+      - ubuntu-18.04-x86_64
+  Cloud9EBSVolumeSize:
+    Description: The size of the EBS volume attached to the Cloud9 instance
+    Type: String
+    Default: "30"
+
+  WorkshopRepoCloneUrl:
+    Description: Workshop git repo clone URL
+    Type: String
+    Default: https://github.com/aws-samples/eks-multi-cluster-gitops.git
+
+  SsmRunCommandCloudWatchLogGroupName:
+    Description: CloudWatch LogGroup name for SSM RunCommand
+    Type: String
+    Default: "/aws/runcommand"
+
+Resources:
+  SsmRunCommandCloudWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Ref SsmRunCommandCloudWatchLogGroupName
+      RetentionInDays: 1
+
+  ResizeEBSVolumeDoc:
+    Type: AWS::SSM::Document
+    Properties:
+      Content:
+        schemaVersion: "2.2"
+        description: "Command document to resize EBS volume."
+        parameters:
+          VolumeSize:
+            type: "String"
+            description: "Size in GB to grow the volume"
+        mainSteps:
+        - action: "aws:runShellScript"
+          name: "resizeEBSVolume"
+          inputs:
+            runCommand:
+            - "SIZE_PARAM={{VolumeSize}}"
+            - "export SIZE=${SIZE_PARAM:-20}"
+            - "export INSTANCEID=$(curl http://169.254.169.254/latest/meta-data/instance-id)"
+            - "echo \"INSTANCEID: $INSTANCEID\""
+            - "export AWS_REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/\\(.*\\)[a-z]/\\1/')"
+            - "echo \"AWS_REGION: $AWS_REGION\""
+            - "export AWS_DEFAULT_REGION=$AWS_REGION"
+            - "export VOLUMEID=$(aws ec2 describe-instances --instance-id $INSTANCEID --query 'Reservations[0].Instances[0].BlockDeviceMappings[0].Ebs.VolumeId' --output text)"
+            - "echo \"VOLUMEID: $VOLUMEID\""
+            - "aws ec2 modify-volume --volume-id $VOLUMEID --size $SIZE"
+            - "while [ \"$(aws ec2 describe-volumes-modifications --volume-id $VOLUMEID --filters Name=modification-state,Values='optimizing','completed' --query 'length(VolumesModifications)' --output text)\" != \"1\" ]; do"
+            - "  sleep 1"
+            - "done"
+            - "if [[ -e \"/dev/xvda\" && $(readlink -f /dev/xvda) = \"/dev/xvda\" ]]; then"
+            - "  growpart /dev/xvda 1"
+            - "  STR=$(cat /etc/os-release)"
+            - "  SUB='VERSION_ID=\"2\"'"
+            - "  if [[ \"$STR\" == *\"$SUB\"* ]]; then"
+            - "    xfs_growfs -d /"
+            - "  else"
+            - "    resize2fs /dev/xvda1"
+            - "  fi"
+            - "else"
+            - "  growpart /dev/nvme0n1 1"
+            - "  STR=$(cat /etc/os-release)"
+            - "  SUB='VERSION_ID=\"2\"'"
+            - "  if [[ \"$STR\" == *\"$SUB\"* ]]; then"
+            - "    xfs_growfs -d /"
+            - "  else"
+            - "    resize2fs /dev/nvme0n1p1"
+            - "  fi"
+            - "fi"
+      DocumentFormat: YAML
+      DocumentType: Command
+      Name: Resize-EBS-Volume
+      TargetType: /AWS::EC2::Instance
+
+  InstallK8sClientToolsDoc:
+    Type: AWS::SSM::Document
+    Properties: 
+      Content:
+        schemaVersion: "2.2"
+        description: "Command document to install tools for EKS workshops."
+        parameters:
+          Version:
+            type: "String"
+            description: "Kubernetes Version"
+            allowedValues:
+            - "1.29"
+            - "1.28"
+            - "1.27"
+        mainSteps:
+        - action: "aws:runShellScript"
+          name: "installK8sClients"
+          inputs:
+            runCommand:
+            - "export MACHINE_ARCH=$(uname -m)"
+            - |
+              case $MACHINE_ARCH in
+                amd64 | x86_64)
+                  export CPU_ARCH=amd64
+                  export ALT_CPU_ARCH=x86_64
+                  ;;
+                aarch64 | arm64)
+                  export CPU_ARCH=arm64
+                  export ALT_CPU_ARCH=aarch64
+                  ;;
+                *)
+                  echo "Cannot run on this architecture: $MACHINE_ARCH"
+                  exit 99
+                  ;;
+              esac
+            - |
+              export OS_NAME=$(grep '^ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"')
+              export OS_VER=$(grep '^VERSION_ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"')
+              case $OS_NAME in
+                amzn)
+                  if [[ "$OS_VER" != "2" ]]; then
+                    echo "Cannot run on this OS version: $OS_NAME $OS_VER"
+                    exit 103
+                  fi
+                  export OS_USER=ec2-user
+                  ;;
+                ubuntu)
+                  export OS_USER=ubuntu
+                  ;;
+                *)
+                  echo "Cannot run on this OS: $OS_NAME"
+                  exit 101
+                  ;;
+              esac
+            - "export PATH=$PATH:/usr/local/bin"
+            - "export PREFIX=/tmp"
+            - "export TOOLS_DIR=/opt/k8s-tools"
+            - |
+              case {{Version}} in
+                1.29)
+                  export K8S_VERSION=1.29.0
+                  export RELEASE_DATE=2024-01-04
+                  ;;
+                1.28)
+                  export K8S_VERSION=1.28.5
+                  export RELEASE_DATE=2024-01-04
+                  ;;
+                1.27)
+                  export K8S_VERSION=1.27.9
+                  export RELEASE_DATE=2024-01-04
+                  ;;
+                *)
+                  echo "Unknown or unsupported Kubernetes version: {{Version}}"
+                  exit 99
+                  ;;
+              esac
+            - "mkdir -p $TOOLS_DIR/bin"
+            - "chmod -R +x $TOOLS_DIR"
+            - |
+              if [[ "$OS_NAME" == "amzn" ]]; then
+                echo "Installing 'Development Tools' group..."
+                yum groupinstall 'Development Tools' -y
+                echo "Installing terminal utilities..."
+                yum install -y -q -e 0 jq gettext bash-completion moreutils
+              elif [[ "$OS_NAME" == "ubuntu" ]]; then
+                echo "Installing build essentials..."
+                apt update -y -qq
+                apt install -y -qq build-essential
+                echo "Installing terminal utilities..."
+                apt install -y -qq jq gettext bash-completion moreutils
+              fi
+            - "echo \"Upgrading pip...\""
+            - "pip install --upgrade pip"
+            - "echo \"Checking aws cli version...\""
+            - "AWS_CLI_VERSION=$(aws --version | cut -d/ -f2 | cut -d. -f1)"
+            - "AWS_CLI_INSTALL_OPTS=\"\""
+            - |
+              if [[ "$AWS_CLI_VERSION" -eq 2 ]]; then
+                echo "Found aws cli v2. Will use update flag."
+                AWS_CLI_INSTALL_OPTS="--update"
+              fi
+            - "echo \"Downloading latest archive...\""
+            - "curl --silent \"https://awscli.amazonaws.com/awscli-exe-linux-$ALT_CPU_ARCH.zip\" -o \"$PREFIX/awscliv2.zip\""
+            - "echo \"Extracting archive...\""
+            - "unzip -qq $PREFIX/awscliv2.zip -d $PREFIX"
+            - "echo \"Installing aws cli...\""
+            - "$PREFIX/aws/install $AWS_CLI_INSTALL_OPTS"
+            - "echo \"Cleaning up...\""
+            - "rm -rf $PREFIX/awscliv2.zip $PREFIX/aws"
+            - "echo \"Downloading kubectl...\""
+            - "curl -o $PREFIX/kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/$K8S_VERSION/$RELEASE_DATE/bin/linux/$CPU_ARCH/kubectl"
+            - "echo \"Downloading kubectl.sha256...\""
+            - "curl -o $PREFIX/kubectl.sha256 https://amazon-eks.s3.us-west-2.amazonaws.com/$K8S_VERSION/$RELEASE_DATE/bin/linux/$CPU_ARCH/kubectl.sha256"
+            - "export KUBECTL_COMPUTED_HASH=$(openssl sha1 -sha256 $PREFIX/kubectl | cut -d' ' -f2)"
+            - "echo \"Computed hash: $KUBECTL_COMPUTED_HASH\""
+            - "echo \"$KUBECTL_COMPUTED_HASH kubectl\" | diff $PREFIX/kubectl.sha256 - && echo \"Hash matched.\" || (EXIT_CODE=$? && echo \"Hash mismatch.\" && return $EXIT_CODE)"
+            - "echo \"Cleaning up...\""
+            - "rm -rf $PREFIX/kubectl.sha256"
+            - "echo \"Changing file mode to executable...\""
+            - "chmod +x $PREFIX/kubectl"
+            - "echo \"Moving to directory $TOOLS_DIR/bin...\""
+            - "mv $PREFIX/kubectl $TOOLS_DIR/bin/"
+            - "echo \"Creating symlink in /usr/local/bin...\""
+            - "ln -s -T $TOOLS_DIR/bin/kubectl /usr/local/bin/kubectl"
+            - "echo \"Checking installed version...\""
+            - "kubectl version --short --client"
+            - "echo \"source <(kubectl completion bash)\" >> /home/$OS_USER/.bash_profile"
+            - "echo \"Downloading archive and extracting eksctl...\""
+            - "curl --silent --location \"https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_$CPU_ARCH.tar.gz\" | tar xz -C $PREFIX"
+            - "echo \"Moving to directory $TOOLS_DIR/bin...\""
+            - "mv $PREFIX/eksctl $TOOLS_DIR/bin/eksctl"
+            - "echo \"Creating symlink in /usr/local/bin...\""
+            - "ln -s -T $TOOLS_DIR/bin/eksctl /usr/local/bin/eksctl"
+            - "echo \"Checking installed version...\""
+            - "eksctl version"
+            - "echo \"Downloading helm 3 installer...\""
+            - "curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 > $PREFIX/get_helm.sh"
+            - "echo \"Changing helm 3 installer permissions...\""
+            - "chmod 700 $PREFIX/get_helm.sh"
+            - "echo \"Launching helm 3 installer...\""
+            - "$PREFIX/get_helm.sh"
+            - "echo \"Checking installed version...\""
+            - "helm version --short"
+            - "echo \"Cleaning up...\""
+            - "rm -rf $PREFIX/get_helm.sh"
+            - "echo \"Installing flux v2...\""
+            - "curl -s https://fluxcd.io/install.sh | sudo FLUX_VERSION=0.35.0 bash"
+            - "echo \"Checking installed version...\""
+            - "flux --version"
+            - "echo \". <(flux completion bash)\" >> /home/$OS_USER/.bash_profile"
+            - "echo \"Installing GitHub CLI...\""
+            - |
+              if [[ "$OS_NAME" == "amzn" ]]; then
+                yum-config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
+                yum-config-manager --enable gh-cli
+                yum install -y -q -e 0 gh
+              elif [[ "$OS_NAME" == "ubuntu" ]]; then
+                curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+                echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+                apt update -y -qq
+                apt install -y -qq gh
+              fi
+            - "gh --version"
+            - "echo \"Installing kubeseal...\""
+            - "curl -s -D kubeseal-latest-header.txt https://github.com/bitnami-labs/sealed-secrets/releases/latest"
+            - "KUBESEAL_LATEST_TAG_URL=$(grep 'location:' kubeseal-latest-header.txt | cut -d' ' -f2 | tr -d '\\r')"
+            - "KUBESEAL_LATEST_TAG_VER=${KUBESEAL_LATEST_TAG_URL##*/}"
+            - "KUBESEAL_LATEST_VER_NUMBER=${KUBESEAL_LATEST_TAG_VER/v/}"
+            - "KUBESEAL_DOWNLOAD_URL=https://github.com/bitnami-labs/sealed-secrets/releases/download/${KUBESEAL_LATEST_TAG_VER}/kubeseal-${KUBESEAL_LATEST_VER_NUMBER}-linux-${CPU_ARCH}.tar.gz"
+            - "curl -L $KUBESEAL_DOWNLOAD_URL | tar -xz -C $PREFIX"
+            - "echo \"Moving to directory $TOOLS_DIR/bin...\""
+            - "mv $PREFIX/kubeseal $TOOLS_DIR/bin/"
+            - "echo \"Creating symlink in /usr/local/bin...\""
+            - "ln -s -T $TOOLS_DIR/bin/kubeseal /usr/local/bin/kubeseal"
+            - "echo \"Checking installed version...\""
+            - "kubeseal --version"
+            - "echo \"Cleaning up...\""
+            - "rm -rf $PREFIX/README.md $PREFIX/LICENSE"
+            - "echo \"Installing yq...\""
+            - "curl -s -D yq-latest-header.txt https://github.com/mikefarah/yq/releases/latest"
+            - "YQ_LATEST_TAG_URL=$(grep 'location:' yq-latest-header.txt | cut -d' ' -f2 | tr -d '\\r')"
+            - "YQ_LATEST_TAG_VER=${YQ_LATEST_TAG_URL##*/}"
+            - "YQ_LATEST_VER_NUMBER=${YQ_LATEST_TAG_VER/v/}"
+            - "YQ_DOWNLOAD_URL=https://github.com/mikefarah/yq/releases/download/${YQ_LATEST_TAG_VER}/yq_linux_${CPU_ARCH}.tar.gz"
+            - "curl -L $YQ_DOWNLOAD_URL | tar -xz -C $PREFIX"
+            - "echo \"Moving to directory $TOOLS_DIR/bin...\""
+            - "mv $PREFIX/yq_linux_${CPU_ARCH} $TOOLS_DIR/bin/yq"
+            - "echo \"Creating symlink in /usr/local/bin...\""
+            - "ln -s -T $TOOLS_DIR/bin/yq /usr/local/bin/yq"
+            - "echo \"Checking installed version...\""
+            - "yq -V"
+            - "echo \"Cleaning up...\""
+            - "rm -rf $PREFIX/install-man-page.sh $PREFIX/yq.1"
+            - "export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)"
+            - "export AWS_ACCOUNT_ID=$ACCOUNT_ID"
+            - "export AWS_REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.region')"
+            - "export AWS_DEFAULT_REGION=$AWS_REGION"
+            - "export AWS_DEFAULT_OUTPUT=json"
+            - "echo \"export ACCOUNT_ID=$ACCOUNT_ID\" >> /home/$OS_USER/.bash_profile"
+            - "echo \"export AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID\" >> /home/$OS_USER/.bash_profile"
+            - "echo \"export AWS_REGION=$AWS_REGION\" >> /home/$OS_USER/.bash_profile"
+            - "echo \"export AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION\" >> /home/$OS_USER/.bash_profile"
+            - "echo \"export AWS_DEFAULT_OUTPUT=$AWS_DEFAULT_OUTPUT\" >> /home/$OS_USER/.bash_profile"
+      DocumentFormat: YAML
+      DocumentType: Command
+      Name: Install-Kubernetes-Clients
+      TargetType: /AWS::EC2::Instance
+
+  CloneWorkshopRepo:
+    Type: AWS::SSM::Document
+    Properties:
+      Content:
+        schemaVersion: "2.2"
+        description: "Command document to clone workshop repository."
+        parameters:
+          CloneUrl:
+            type: "String"
+            description: "Workshop git repository clone URL"
+        mainSteps:
+        - action: "aws:runShellScript"
+          name: "cloneWorkshopRepo"
+          inputs:
+            runCommand:
+            - |
+              export OS_NAME=$(grep '^ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"')
+              export OS_VER=$(grep '^VERSION_ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"')
+              case $OS_NAME in
+                amzn)
+                  export OS_USER=ec2-user
+                  ;;
+                ubuntu)
+                  export OS_USER=ubuntu
+                  ;;
+                *)
+                  echo "Cannot run on this OS: $OS_NAME"
+                  exit 101
+                  ;;
+              esac
+            - "su -c \"cd /home/$OS_USER/environment;git clone {{CloneUrl}};\" $OS_USER"
+      DocumentFormat: YAML
+      DocumentType: Command
+      Name: Clone-Workshop-Repo
+      TargetType: /AWS::EC2::Instance
+
+  CreateEKSClusterDoc:
+    Type: AWS::SSM::Document
+    Properties: 
+      Content:
+        schemaVersion: "2.2"
+        description: "Command document to create cluster for EKS workshops."
+        parameters:
+          Version:
+            type: "String"
+            description: "Kubernetes Version"
+            allowedValues:
+            - "1.29"
+            - "1.28"
+            - "1.27"
+          ClusterName:
+            type: "String"
+            description: "EKS cluster name"
+          WorkerNodeInstanceType:
+            type: "String"
+            description: "Worker node instance type"
+          PublicSubnets:
+            type: "String"
+            description: "Public subnets for service load balancers"
+          PrivateSubnets:
+            type: "String"
+            description: "Private subnets for workloads"
+          CliRole:
+            type: "String"
+            description: "IAM role used to access EKS cluster from the CLI. This role will be assigned as admin user in the cluster."
+          ConsoleRole:
+            type: "String"
+            description: "IAM role used to access EKS cluster from the console. This role will be assigned as readonly user in the cluster."
+        mainSteps:
+        - action: "aws:runShellScript"
+          name: "createEKSCluster"
+          inputs:
+            runCommand:
+            - |
+              export OS_NAME=$(grep '^ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"')
+              export OS_VER=$(grep '^VERSION_ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"')
+              case $OS_NAME in
+                amzn)
+                  export OS_USER=ec2-user
+                  ;;
+                ubuntu)
+                  export OS_USER=ubuntu
+                  ;;
+                *)
+                  echo "Cannot run on this OS: $OS_NAME"
+                  exit 101
+                  ;;
+              esac
+            - "export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)"
+            - "export AWS_REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.region')"
+            - "export AWS_DEFAULT_REGION=$AWS_REGION"
+            - "echo \"Creating EKS cluster {{ClusterName}} with Kubernetes version {{Version}}...\""
+            - |
+              eksctl create cluster \
+                --region $AWS_REGION \
+                --name {{ClusterName}} \
+                --version {{Version}} \
+                --vpc-private-subnets={{PrivateSubnets}} \
+                --vpc-public-subnets={{PublicSubnets}} \
+                --vpc-nat-mode Disable \
+                --managed \
+                --nodes 2 \
+                --nodes-min 1 \
+                --nodes-max 3 \
+                --node-type {{WorkerNodeInstanceType}} \
+                --with-oidc \
+                --ssh-access=false \
+                --timeout 60m0s
+            - "echo \"Adding CLI role {{CliRole}} as cluster admin...\""
+            - |
+              eksctl create iamidentitymapping \
+                --region $AWS_REGION \
+                --cluster {{ClusterName}} \
+                --arn {{CliRole}} \
+                --group system:masters \
+                --username admin
+            - "echo \"Adding console access role {{ConsoleRole}} as cluster admin...\""
+            - |
+              eksctl create iamidentitymapping \
+                --region $AWS_REGION \
+                --cluster {{ClusterName}} \
+                --arn {{ConsoleRole}} \
+                --username {{ConsoleRole}}
+            - "echo \"Allowing Karpenter IAM role to access the management cluster...\""
+            - |
+              eksctl create iamidentitymapping \
+                --cluster {{ClusterName}} \
+                --region=$AWS_REGION \
+                --arn arn:aws:iam::${AWS_ACCOUNT_ID}:role/karpenter-node-role \
+                --username system:node:\{\{EC2PrivateDNSName\}\} \
+                --group system:bootstrappers,system:nodes \
+                --no-duplicate-arns
+            - "echo \"Creating directory to hold kubeconfig...\""
+            - "mkdir -p /home/$OS_USER/.kube"
+            - "echo \"Updating cluster kubeconfig...\""
+            - |
+              aws eks update-kubeconfig \
+                --name {{ClusterName}} \
+                --kubeconfig /home/$OS_USER/.kube/config
+            - "echo \"Changing ownership of kubeconfig...\""
+            - "chown -Rv $OS_USER: /home/$OS_USER/.kube"
+            - "echo \"Appending environment variables to profile...\""
+            - "echo \"export EKS_CONSOLE_IAM_ENTITY_ARN={{ConsoleRole}}\" >> /home/$OS_USER/.bash_profile"
+            - "export MGMT_CLUSTER_INFO=$(aws eks describe-cluster --name {{ClusterName}})"
+            - "export CLUSTER_ARN=$(echo $MGMT_CLUSTER_INFO | yq '.cluster.arn')"
+            - "export OIDC_PROVIDER_URL=$(echo $MGMT_CLUSTER_INFO | yq '.cluster.identity.oidc.issuer')"
+            - "export OIDC_PROVIDER=${OIDC_PROVIDER_URL#'https://'}"
+            - "export CLUSTER_NAME={{ClusterName}}"
+            - "export CLUSTER_NAME_PSUEDO={{ClusterName}}"
+            - "echo \"export CLUSTER_ARN=$CLUSTER_ARN\" >> /home/$OS_USER/.bash_profile"
+            - "echo \"export OIDC_PROVIDER_URL=$OIDC_PROVIDER_URL\" >> /home/$OS_USER/.bash_profile"
+            - "echo \"export OIDC_PROVIDER=$OIDC_PROVIDER\" >> /home/$OS_USER/.bash_profile"
+            - "echo \"export CLUSTER_NAME=$CLUSTER_NAME\" >> /home/$OS_USER/.bash_profile"
+            - "echo \"export CLUSTER_NAME_PSUEDO=$CLUSTER_NAME_PSUEDO\" >> /home/$OS_USER/.bash_profile"
+            - "echo \"Creating extended readonly ClusterRole rules to add to view...\""
+            - "cat > eks-console-readonly-access-clusterrole.yaml <<EOF"
+            - "apiVersion: rbac.authorization.k8s.io/v1"
+            - "kind: ClusterRole"
+            - "metadata:"
+            - "  name: eks-console-readonly-access-clusterrole"
+            - "  labels:"
+            - "    rbac.authorization.k8s.io/aggregate-to-view: \"true\""
+            - "rules:"
+            - "- apiGroups:"
+            - "  - \"\""
+            - "  resources:"
+            - "  - nodes"
+            - "  - nodes/status"
+            - "  verbs:"
+            - "  - get"
+            - "  - list"
+            - "  - watch"
+            - "- apiGroups:"
+            - "  - apiextensions.k8s.io"
+            - "  resources:"
+            - "  - customresourcedefinitions"
+            - "  - customresourcedefinitions/status"
+            - "  verbs:"
+            - "  - get"
+            - "  - list"
+            - "  - watch"
+            - "- apiGroups:"
+            - "  - admissionregistration.k8s.io"
+            - "  resources:"
+            - "  - mutatingwebhookconfigurations"
+            - "  - validatingwebhookconfigurations"
+            - "  verbs:"
+            - "  - get"
+            - "  - list"
+            - "  - watch"
+            - "- apiGroups:"
+            - "  - policy"
+            - "  resources:"
+            - "  - podsecuritypolicies"
+            - "  verbs:"
+            - "  - get"
+            - "  - list"
+            - "  - watch"
+            - "- apiGroups:"
+            - "  - storage.k8s.io"
+            - "  resources:"
+            - "  - csidrivers"
+            - "  - csinodes"
+            - "  - csistoragecapacities"
+            - "  - storageclasses"
+            - "  - volumeattachments"
+            - "  verbs:"
+            - "  - get"
+            - "  - list"
+            - "  - watch"
+            - "- apiGroups:"
+            - "  - \"\""
+            - "  resources:"
+            - "  - persistentvolumes"
+            - "  - persistentvolumes/status"
+            - "  verbs:"
+            - "  - get"
+            - "  - list"
+            - "  - watch"
+            - "- apiGroups:"
+            - "  - apiregistration.k8s.io"
+            - "  resources:"
+            - "  - apiservices"
+            - "  - apiservices/status"
+            - "  verbs:"
+            - "  - get"
+            - "  - list"
+            - "  - watch"
+            - "- apiGroups:"
+            - "  - coordination.k8s.io"
+            - "  resources:"
+            - "  - leases"
+            - "  verbs:"
+            - "  - get"
+            - "  - list"
+            - "  - watch"
+            - "- apiGroups:"
+            - "  - node.k8s.io"
+            - "  resources:"
+            - "  - runtimeclasses"
+            - "  verbs:"
+            - "  - get"
+            - "  - list"
+            - "  - watch"
+            - "- apiGroups:"
+            - "  - flowcontrol.apiserver.k8s.io"
+            - "  resources:"
+            - "  - flowschemas"
+            - "  - flowschemas/status"
+            - "  - prioritylevelconfigurations"
+            - "  - prioritylevelconfigurations/status"
+            - "  verbs:"
+            - "  - get"
+            - "  - list"
+            - "  - watch"
+            - "EOF"
+            - "echo \"Creating readonly ClusterRoleBinding for console access...\""
+            - "cat > eks-console-readonly-access-clusterrole-binding.yaml <<EOF"
+            - "apiVersion: rbac.authorization.k8s.io/v1"
+            - "kind: ClusterRoleBinding"
+            - "metadata:"
+            - "  name: eks-console-readonly-access-clusterrole-binding"
+            - "subjects:"
+            - "- kind: User"
+            - "  name: {{ConsoleRole}}"
+            - "  apiGroup: rbac.authorization.k8s.io"
+            - "roleRef:"
+            - "  kind: ClusterRole"
+            - "  name: view"
+            - "  apiGroup: rbac.authorization.k8s.io"
+            - "EOF"
+            - "kubectl apply -f eks-console-readonly-access-clusterrole.yaml -f eks-console-readonly-access-clusterrole-binding.yaml"
+            - "rm -rf eks-console-readonly-access-clusterrole.yaml eks-console-readonly-access-clusterrole-binding.yaml"
+      DocumentFormat: YAML
+      DocumentType: Command
+      Name: Create-EKS-Cluster
+      TargetType: /AWS::EC2::Instance
+
+  CreateRootSealedSecretsEncryptionKeysDoc:
+    Type: AWS::SSM::Document
+    Properties:
+      Content:
+        schemaVersion: "2.2"
+        description: "Command Document to create root encryption keys for sealed-secrets"
+        mainSteps:
+        - action: "aws:runShellScript"
+          name: "createRootSealedSecretsEncryptionKeys"
+          inputs:
+            runCommand:
+            - |
+              export OS_NAME=$(grep '^ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"')
+              export OS_VER=$(grep '^VERSION_ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"')
+              case $OS_NAME in
+                amzn)
+                  export OS_USER=ec2-user
+                  ;;
+                ubuntu)
+                  export OS_USER=ubuntu
+                  ;;
+                *)
+                  echo "Cannot run on this OS: $OS_NAME"
+                  exit 101
+                  ;;
+              esac
+            - "cd /home/$OS_USER/environment"
+            - |
+              cat >create_root_sealed_secrets_encryption_keys.sh <<EOF
+              #!/bin/bash
+              cd ~/environment
+              openssl genrsa -out sealed-secrets-keypair.pem 4096
+              openssl req \\
+                -new \\
+                -x509 \\
+                -key sealed-secrets-keypair.pem \\
+                -out sealed-secrets-keypair-public.pem \\
+                -days 3650 \\
+                -subj "/C=XX/CN=eksmulticlustergitops"
+              
+              CRT=\$(cat sealed-secrets-keypair-public.pem)
+              KEY=\$(cat sealed-secrets-keypair.pem)
+              cat <<EoF >secret.json
+              {
+                "crt": "\$CRT",
+                "key": "\$KEY"
+              }
+              EoF
+              aws secretsmanager create-secret \\
+                --name sealed-secrets \\
+                --secret-string file://secret.json
+              EOF
+            - "chmod +x create_root_sealed_secrets_encryption_keys.sh"
+            - "chown $OS_USER: create_root_sealed_secrets_encryption_keys.sh"
+            - "runuser - $OS_USER /home/$OS_USER/environment/create_root_sealed_secrets_encryption_keys.sh"
+      DocumentFormat: YAML
+      DocumentType: Command
+      Name: Create-Root-SealedSecrets-Encryption-Keys
+      TargetType: /AWS::EC2::Instance
+
+  SetupCodeCommitSSHAccessDoc:
+    Type: AWS::SSM::Document
+    Properties:
+      Content:
+        schemaVersion: "2.2"
+        description: "Command Document to setup SSH access to AWS CodeCommit repositories"
+        mainSteps:
+        - action: "aws:runShellScript"
+          name: "setupCodeCommitSSHAccess"
+          inputs:
+            runCommand:
+            - |
+              export OS_NAME=$(grep '^ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"')
+              export OS_VER=$(grep '^VERSION_ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"')
+              case $OS_NAME in
+                amzn)
+                  export OS_USER=ec2-user
+                  ;;
+                ubuntu)
+                  export OS_USER=ubuntu
+                  ;;
+                *)
+                  echo "Cannot run on this OS: $OS_NAME"
+                  exit 101
+                  ;;
+              esac
+            - "cd /home/$OS_USER/environment"
+            - |
+              cat >setup_codecommit_ssh.sh <<EOF
+              #!/bin/bash
+              cd ~/.ssh
+              ssh-keygen -q -t rsa -b 4096 -N '' -C gitops -f gitops <<<y >/dev/null 2>&1
+              chmod 600 gitops*
+              export SSH_PUB_KEY_ID=\$(aws iam upload-ssh-public-key \\
+                --user-name gitops \\
+                --ssh-public-key-body file://gitops.pub \\
+                --query 'SSHPublicKey.SSHPublicKeyId' \\
+                --output text)
+              echo "Sleeing for 2 minutes"
+              sleep 120
+              echo "SSH key id of user gitops: \$SSH_PUB_KEY_ID"
+              printf "\n%s" "export SSH_PUB_KEY_ID=\$SSH_PUB_KEY_ID" >> ~/.bash_profile
+              echo "Generating sshd config file for AWS CodeCommit user..."
+              cat >config <<EoF
+              Host git-codecommit.*.amazonaws.com
+                User \$SSH_PUB_KEY_ID
+                IdentityFile \$HOME/.ssh/gitops
+              EoF
+              chmod 600 config
+              echo "Generating known_hosts for AWS CodeCommit service endpoints..."
+              ssh-keyscan \\
+                -t rsa \\
+                git-codecommit.\$AWS_REGION.amazonaws.com \\
+                > codecommit_known_hosts 2>/dev/null
+              cp codecommit_known_hosts known_hosts
+              chmod 600 codecommit_known_hosts known_hosts
+              kubectl create secret generic flux-system -n flux-system \\
+                --from-file=identity=\$HOME/.ssh/gitops \\
+                --from-file=identity.pub=\$HOME/.ssh/gitops.pub \\
+                --from-file=known_hosts=\$HOME/.ssh/codecommit_known_hosts \\
+                --dry-run=client \\
+                --output=yaml \\
+                >\$HOME/environment/git-creds-system.yaml
+              EOF
+            - "chmod +x setup_codecommit_ssh.sh"
+            - "chown $OS_USER: setup_codecommit_ssh.sh"
+            - "runuser - $OS_USER /home/$OS_USER/environment/setup_codecommit_ssh.sh"
+      DocumentFormat: YAML
+      DocumentType: Command
+      Name: Setup-CodeCommit-SSH-Access
+      TargetType: /AWS::EC2::Instance
+
+  CloneCodeCommitReposDoc:
+    Type: AWS::SSM::Document
+    Properties:
+      Content:
+        schemaVersion: "2.2"
+        description: "Command Document to clone AWS CodeCommit repositories"
+        mainSteps:
+        - action: "aws:runShellScript"
+          name: "cloneCodeCommitRepos"
+          inputs:
+            runCommand:
+            - |
+              export OS_NAME=$(grep '^ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"')
+              export OS_VER=$(grep '^VERSION_ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"')
+              case $OS_NAME in
+                amzn)
+                  export OS_USER=ec2-user
+                  ;;
+                ubuntu)
+                  export OS_USER=ubuntu
+                  ;;
+                *)
+                  echo "Cannot run on this OS: $OS_NAME"
+                  exit 101
+                  ;;
+              esac
+            - "cd /home/$OS_USER/environment"
+            - |
+              cat >clone_codecommit_repos.sh <<EOF
+              #!/bin/bash
+              cd ~/environment
+              git config --global init.defaultBranch main
+              GIT_REPOS=\$(aws codecommit list-repositories --output text --query 'repositories[*].repositoryName')
+              repos=( gitops-system gitops-workloads product-catalog-api-manifests product-catalog-fe-manifests )
+              for repo in "\${repos[@]}"; do
+                if [[ "\$GIT_REPOS" == *"\$repo"* ]]; then
+                  echo "Repository \$repo found."
+                else
+                  echo "Repository \$repo not found."
+                  echo "Creating repository \$repo..."
+                  aws codecommit create-repository \\
+                    --repository-name \$repo
+                  echo "SSH Clone URL for user gitops"
+                  echo " - ssh://\${SSH_KEY_ID_GITOPS}@git-codecommit.\${AWS_REGION}.amazonaws.com/v1/repos/\$repo"
+                fi
+              done
+              export REPO_PREFIX=ssh://\$SSH_PUB_KEY_ID@git-codecommit.\$AWS_REGION.amazonaws.com/v1/repos
+              printf "\n%s" "export REPO_PREFIX=\$REPO_PREFIX" >> ~/.bash_profile
+              git clone -q \$REPO_PREFIX/gitops-system
+              git clone -q \$REPO_PREFIX/gitops-workloads
+              git clone -q \$REPO_PREFIX/product-catalog-api-manifests
+              git clone -q \$REPO_PREFIX/product-catalog-fe-manifests
+              EOF
+            - "chmod +x clone_codecommit_repos.sh"
+            - "chown $OS_USER: clone_codecommit_repos.sh"
+            - "runuser - $OS_USER /home/$OS_USER/environment/clone_codecommit_repos.sh"
+      DocumentFormat: YAML
+      DocumentType: Command
+      Name: Clone-CodeCommit-Repos
+      TargetType: /AWS::EC2::Instance
+
+  CreateIAMRoleForCrossplaneDoc:
+    Type: AWS::SSM::Document
+    Properties:
+      Content:
+        schemaVersion: "2.2"
+        description: "Command Document to create IAM role for crossplane"
+        mainSteps:
+        - action: "aws:runShellScript"
+          name: "createIAMRoleForCrossplane"
+          inputs:
+            runCommand:
+            - |
+              export OS_NAME=$(grep '^ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"')
+              export OS_VER=$(grep '^VERSION_ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"')
+              case $OS_NAME in
+                amzn)
+                  export OS_USER=ec2-user
+                  ;;
+                ubuntu)
+                  export OS_USER=ubuntu
+                  ;;
+                *)
+                  echo "Cannot run on this OS: $OS_NAME"
+                  exit 101
+                  ;;
+              esac
+            - "cd /home/$OS_USER/environment"
+            - |
+              cat >create_iam_role_for_crossplane.sh <<EOF
+              #!/bin/bash
+              CROSSPLANE_TRUST_POLICY_TEMPLATE_FILE=eks-multi-cluster-gitops/initial-setup/config/crossplane-role-trust-policy-template.json
+              CROSSPLANE_TRUST_POLICY_FILE=crossplane-role-trust-policy.json
+              cd ~/environment
+              envsubst \\
+                < \$CROSSPLANE_TRUST_POLICY_TEMPLATE_FILE \\
+                > \$CROSSPLANE_TRUST_POLICY_FILE
+              CROSSPLANE_IAM_ROLE_NAME=crossplane-role
+              CROSSPLANE_IAM_ROLE_ARN=\$(aws iam create-role \\
+                --role-name \$CROSSPLANE_IAM_ROLE_NAME \\
+                --assume-role-policy-document file://\$CROSSPLANE_TRUST_POLICY_FILE \\
+                --output text \\
+                --query "Role.Arn")
+              CROSSPLANE_IAM_POLICY_TEMPLATE_FILE=eks-multi-cluster-gitops/initial-setup/config/crossplane-role-permission-policy-template.json
+              CROSSPLANE_IAM_POLICY_FILE=crossplane-role-permission-policy.json
+              envsubst \\
+                < \$CROSSPLANE_IAM_POLICY_TEMPLATE_FILE \\
+                > \$CROSSPLANE_IAM_POLICY_FILE
+              CROSSPLANE_IAM_POLICY_ARN=\$(aws iam create-policy \\
+                --policy-name crossplane-policy \\
+                --policy-document file://\$CROSSPLANE_IAM_POLICY_FILE \\
+                --output text \\
+                --query "Policy.Arn")
+              aws iam attach-role-policy --role-name \$CROSSPLANE_IAM_ROLE_NAME --policy-arn \${CROSSPLANE_IAM_POLICY_ARN}
+              kubectl create ns flux-system
+              kubectl create configmap cluster-info -n flux-system \\
+                --from-literal=AWS_REGION=\${AWS_REGION} \\
+                --from-literal=ACCOUNT_ID=\${ACCOUNT_ID} \\
+                --from-literal=CLUSTER_ARN=\${CLUSTER_ARN} \\
+                --from-literal=OIDC_PROVIDER=\${OIDC_PROVIDER} \\
+                --from-literal=CLUSTER_NAME=\${CLUSTER_NAME} \\
+                --from-literal=CLUSTER_NAME_PSUEDO=\${CLUSTER_NAME_PSUEDO}
+              EOF
+            - "chmod +x create_iam_role_for_crossplane.sh"
+            - "chown $OS_USER: create_iam_role_for_crossplane.sh"
+            - "runuser - $OS_USER /home/$OS_USER/environment/create_iam_role_for_crossplane.sh"
+      DocumentFormat: YAML
+      DocumentType: Command
+      Name: Create-IAM-Role-For-Crossplane
+      TargetType: /AWS::EC2::Instance
+
+  ConfigureWorkshopEnvironmentDoc:
+    Type: AWS::SSM::Document
+    Properties: 
+      Content:
+        schemaVersion: "2.2"
+        description: "Configure workshop environment"
+        parameters:
+          VolumeSize:
+            type: "String"
+            description: "Cloud9 EBS volume size"
+          ClusterName:
+            type: "String"
+            description: "EKS cluster name"
+          WorkerNodeInstanceType:
+            type: "String"
+            description: "Worker node instance type"
+          Version:
+            type: "String"
+            description: "Kubernetes Version"
+            default: "1.22"
+          PrivateSubnets:
+            type: "String"
+            description: "Private subnets for workloads"
+          PublicSubnets:
+            type: "String"
+            description: "Public subnets for service load balancers"
+          ConsoleRole:
+            type: "String"
+            description: "IAM role used to access EKS cluster from the console. This role will be assigned as admin user in the cluster."
+          CliRole:
+            type: "String"
+            description: "IAM role used to access EKS cluster from the CLI. This role will be assigned as admin user in the cluster."
+          CloneUrl:
+            type: "String"
+            description: "Workshop git repo clone URL"
+        mainSteps:
+        - action: "aws:runDocument"
+          name: "resizeEBSVolumeDoc"
+          inputs:
+            documentType: SSMDocument
+            documentPath: Resize-EBS-Volume
+            documentParameters:
+              VolumeSize: "{{VolumeSize}}"
+        - action: "aws:runDocument"
+          name: "installK8sClientTools"
+          inputs:
+            documentType: SSMDocument
+            documentPath: Install-Kubernetes-Clients
+            documentParameters:
+              Version: "{{Version}}"
+        - action: "aws:runDocument"
+          name: "cloneWorkshopRepo"
+          inputs:
+            documentType: SSMDocument
+            documentPath: Clone-Workshop-Repo
+            documentParameters:
+              CloneUrl: "{{CloneUrl}}"
+        - action: "aws:runDocument"
+          name: "createEksCluster"
+          inputs:
+            documentType: SSMDocument
+            documentPath: Create-EKS-Cluster
+            documentParameters:
+              ClusterName: "{{ClusterName}}"
+              WorkerNodeInstanceType: "{{WorkerNodeInstanceType}}"
+              Version: "{{Version}}"
+              PrivateSubnets: "{{PrivateSubnets}}"
+              PublicSubnets: "{{PublicSubnets}}"
+              ConsoleRole: "{{ConsoleRole}}"
+              CliRole: "{{CliRole}}"
+        - action: "aws:runDocument"
+          name: "createRootSealedSecretsEncryptionKeys"
+          inputs:
+            documentType: SSMDocument
+            documentPath: Create-Root-SealedSecrets-Encryption-Keys
+        - action: "aws:runDocument"
+          name: "setupCodeCommitSSHAccess"
+          inputs:
+            documentType: SSMDocument
+            documentPath: Setup-CodeCommit-SSH-Access
+      DocumentFormat: YAML
+      DocumentType: Command
+      Name: Configure-Workshop-Environment
+      TargetType: /AWS::EC2::Instance
+
+  BootstrapGitAndManagementClusterDoc:
+    Type: AWS::SSM::Document
+    Properties:
+      Content:
+        schemaVersion: "2.2"
+        description: "Bootstrap git and management cluster"
+        mainSteps:
+        - action: "aws:runDocument"
+          name: "cloneCodeCommitRepos"
+          inputs:
+            documentType: SSMDocument
+            documentPath: Clone-CodeCommit-Repos
+        - action: "aws:runDocument"
+          name: "createIAMRoleForCrossplane"
+          inputs:
+            documentType: SSMDocument
+            documentPath: Create-IAM-Role-For-Crossplane
+      DocumentFormat: YAML
+      DocumentType: Command
+      Name: Bootstrap-Git-And-Management-Cluster
+      TargetType: /AWS::EC2::Instance
+
+  EKSEnvironment:
+    Type: AWS::Cloud9::EnvironmentEC2
+    Properties:
+      Name: !Ref Cloud9WorkspaceName
+      AutomaticStopTimeMinutes: 900
+      Description: !Ref Cloud9WorkspaceDescription
+      InstanceType: !Ref Cloud9IDEInstanceType
+      ImageId: !Ref Cloud9ImageId
+
+  EKSEnvironmentInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref EKSEnvironmentRole
+
+  EKSEnvironmentRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: TeamMemberRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+                - cloudformation.amazonaws.com
+                - codebuild.amazonaws.com
+                - eks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: TeamRolePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloud9:*
+                  - lambda:*
+                  - ecr:*
+                  - codebuild:*
+                  - cloudformation:*
+                  - cloudwatch:*
+                  - ec2:*
+                  - ecs:*
+                  - elasticloadbalancing:*
+                  - eks:*
+                  - logs:*
+                  - s3:*
+                  - ssm:*
+                  - dynamodb:*
+                  - iam:*
+                  - autoscaling:*
+                  - appmesh:*
+                  - xray:*
+                  - sns:*
+                  - codepipeline:*
+                  - ec2messages:*
+                  - ssmmessages:*
+                  - secretsmanager:*
+                  - codecommit:*
+                Resource: "*"
+              - Effect: Deny
+                Action:
+                  - iam:*AccessKey
+                  - iam:*User*
+                  - iam:*User
+                  - ec2:Purchase*
+                  - ec2:*CapacityReservation
+                Resource: "*"
+
+  GitOpsUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: gitops
+      Policies:
+        - PolicyName: gitops-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codecommit:GitPull
+                  - codecommit:GitPush
+                Resource: !Sub "arn:aws:codecommit:${AWS::Region}:${AWS::AccountId}:*"
+  
+  GitOpsSystemRepo:
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      RepositoryName: gitops-system
+  
+  GitOpsWorkloadsRepo:
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      RepositoryName: gitops-workloads
+  
+  ProductCatalogApiManifestsRepo:
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      RepositoryName: product-catalog-api-manifests
+  
+  ProductCatalogFEManifestsRepo:
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      RepositoryName: product-catalog-fe-manifests
+
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+                - codebuild.amazonaws.com
+                - eks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: CodeBuildPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:AddRoleToInstanceProfile
+                  - iam:AttachRolePolicy
+                  - iam:CreateInstanceProfile
+                  - iam:CreateRole
+                  - iam:CreateServiceLinkedRole
+                  - iam:DeleteInstanceProfile
+                  - iam:DeleteRole
+                  - iam:DeleteRolePolicy
+                  - iam:DeleteServiceLinkedRole
+                  - iam:DetachRolePolicy
+                  - iam:GetInstanceProfile
+                  - iam:GetRole
+                  - iam:GetRolePolicy
+                  - iam:ListAttachedRolePolicies
+                  - iam:ListInstanceProfiles
+                  - iam:ListInstanceProfilesForRole
+                  - iam:PassRole
+                  - iam:PutRolePolicy
+                  - iam:RemoveRoleFromInstanceProfile
+                  - iam:ListRoleTags
+                Resource:
+                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup"
+                  - !Sub "arn:aws:iam::${AWS::AccountId}:instance-profile/eksctl-*"
+                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/eksctl-*"
+
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:DescribeParameters
+                  - ssm:SendCommand
+                  - ssm:ListCommandInvocations
+                Resource: "*"
+
+              - Effect: Allow
+                Action: "cloudformation:*"
+                Resource: "*"
+
+              - Effect: Allow
+                Action: "eks:*"
+                Resource: "*"
+
+              - Effect: Allow
+                Action: "cloud9:*"
+                Resource: "*"
+
+              - Effect: Allow
+                Action:
+                  - autoscaling:CreateLaunchConfiguration
+                  - autoscaling:DeleteLaunchConfiguration
+                Resource: "arn:aws:autoscaling:*:*:launchConfiguration:*:launchConfigurationName/*"
+              - Effect: Allow
+                Action:
+                  - autoscaling:UpdateAutoScalingGroup
+                  - autoscaling:DeleteAutoScalingGroup
+                  - autoscaling:CreateAutoScalingGroup
+                Resource: "arn:aws:autoscaling:*:*:autoScalingGroup:*:autoScalingGroupName/*"
+
+              - Effect: Allow
+                Action:
+                  - autoscaling:DescribeAutoScalingGroups
+                  - autoscaling:DescribeLaunchConfigurations
+                  - autoscaling:DescribeScalingActivities
+                Resource: "*"
+
+              - Effect: Allow
+                Action: ["logs:*"]
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*"
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/runcommand/*"
+
+              ## Permissions to associate a role to Cloud9
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeInstances
+                  - ec2:ReplaceIamInstanceProfileAssociation
+                  - ec2:AssociateIamInstanceProfile
+                  - ec2:DisassociateIamInstanceProfile
+                  - ec2:DescribeIamInstanceProfileAssociations
+                  - iam:PassRole
+                Resource: "*"
+
+              - Effect: Allow
+                Action:
+                  - iam:GetOpenIDConnectProvider
+                  - iam:CreateOpenIDConnectProvider
+                  - iam:DeleteOpenIDConnectProvider
+                Resource: !Sub "arn:aws:iam::${AWS::AccountId}:oidc-provider/*"
+
+              - Effect: Allow
+                Action:
+                  - ec2:AuthorizeSecurityGroupIngress
+                  - ec2:DeleteSubnet
+                  - ec2:DeleteTags
+                  - ec2:CreateNatGateway
+                  - ec2:CreateVpc
+                  - ec2:AttachInternetGateway
+                  - ec2:DescribeVpcAttribute
+                  - ec2:DeleteRouteTable
+                  - ec2:AssociateRouteTable
+                  - ec2:DescribeInternetGateways
+                  - ec2:CreateRoute
+                  - ec2:CreateInternetGateway
+                  - ec2:RevokeSecurityGroupEgress
+                  - ec2:CreateSecurityGroup
+                  - ec2:ModifyVpcAttribute
+                  - ec2:ModifySubnetAttribute
+                  - ec2:DeleteInternetGateway
+                  - ec2:DescribeRouteTables
+                  - ec2:ReleaseAddress
+                  - ec2:AuthorizeSecurityGroupEgress
+                  - ec2:DescribeTags
+                  - ec2:CreateTags
+                  - ec2:DeleteRoute
+                  - ec2:CreateRouteTable
+                  - ec2:DetachInternetGateway
+                  - ec2:DescribeNatGateways
+                  - ec2:DisassociateRouteTable
+                  - ec2:AllocateAddress
+                  - ec2:DescribeSecurityGroups
+                  - ec2:RevokeSecurityGroupIngress
+                  - ec2:DeleteSecurityGroup
+                  - ec2:DeleteNatGateway
+                  - ec2:DeleteVpc
+                  - ec2:CreateSubnet
+                  - ec2:DescribeSubnets
+                  - ec2:DescribeAvailabilityZones
+                  - ec2:DescribeImages
+                  - ec2:describeAddresses
+                  - ec2:DescribeVpcs
+                  - ec2:CreateLaunchTemplate
+                  - ec2:DescribeLaunchTemplates
+                  - ec2:DeleteLaunchTemplate
+                  - ec2:DescribeLaunchTemplateVersions
+                  - ec2:RunInstances
+                  - ec2:RebootInstances
+                Resource: "*"
+
+  BuildProject:
+    Type: AWS::CodeBuild::Project
+    DependsOn:
+      - SsmRunCommandCloudWatchLogGroup
+      - ConfigureWorkshopEnvironmentDoc
+      - BootstrapGitAndManagementClusterDoc
+    Properties:
+      Name: !Sub CodeBuild-${AWS::StackName}
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      Artifacts:
+        Type: NO_ARTIFACTS
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        EnvironmentVariables:
+          - Name: CFN_RESPONSE_URL
+            Value: !Ref WaitForStackCreationHandle
+          - Name: CLOUD9_EBS_VOLUME_SIZE
+            Value: !Ref Cloud9EBSVolumeSize
+          - Name: CLOUD9_INSTANCE_ROLE_ARN
+            Value: !GetAtt EKSEnvironmentRole.Arn
+          - Name: CLOUD9_INSTANCE_PROFILE_NAME
+            Value: !Ref EKSEnvironmentInstanceProfile
+          - Name: CLOUD9_ENVIRONMENT_ID
+            Value: !Ref EKSEnvironment
+          - Name: ACCOUNT_ID
+            Value: !Ref "AWS::AccountId"
+          - Name: PRIVATE_SUBNETS
+            Value: !Sub "${PrivateSubnetOne},${PrivateSubnetTwo}"
+          - Name: PUBLIC_SUBNETS
+            Value: !Sub "${PublicSubnetOne},${PublicSubnetTwo}"
+          - Name: CLUSTER_NAME
+            Value: !Ref ClusterName
+          - Name: WORKER_NODE_INSTANCE_TYPE
+            Value: !Ref WorkerNodeInstanceType
+          - Name: CONSOLE_ROLE
+            Value: !Sub "arn:aws:iam::${AWS::AccountId}:role/${ConsoleRoleName}"
+          - Name: K8S_VERSION
+            Value: !Ref KubernetesVersion
+          - Name: SSM_RUNCOMMAND_CWLGRP
+            Value: !Ref SsmRunCommandCloudWatchLogGroupName
+          - Name: WORKSHOP_REPO_CLONE_URL
+            Value: !Ref WorkshopRepoCloneUrl
+      Source:
+        Type: NO_SOURCE
+        BuildSpec: |
+          version: 0.2
+          phases:
+            install:
+              runtime-versions:
+                python: 3.8
+              commands:
+                - echo ">>> installed python 3.8"
+            pre_build:
+              commands:
+                - echo ">>> build cluster config"
+                - echo ">>> install awscli "
+                - pip3 install --upgrade --user awscli
+            build:
+              commands:
+                - echo ">>> find instance using environment Id= $CLOUD9_ENVIRONMENT_ID"
+                - CLOUD9_INSTANCE_ID=$(aws ec2 describe-instances --filter Name=tag:aws:cloud9:environment,Values=$CLOUD9_ENVIRONMENT_ID --query Reservations[0].Instances[0].InstanceId --output text)
+                - echo ">>> cloud9 instance id= $CLOUD9_INSTANCE_ID"
+                - echo ">>> assign profile $CLOUD9_INSTANCE_PROFILE_NAME to instance $CLOUD9_INSTANCE_ID"
+                - aws ec2 associate-iam-instance-profile --instance-id $CLOUD9_INSTANCE_ID --iam-instance-profile Name=$CLOUD9_INSTANCE_PROFILE_NAME
+                - echo ">>> sleep for 5 seconds"
+                - sleep 5
+                - |
+                  echo ">>> waiting for instance profile association state to change to associated..."
+                  while true
+                  do
+                    ASSOCIATION_STATE=$(aws ec2 describe-iam-instance-profile-associations --filters Name=instance-id,Values=$CLOUD9_INSTANCE_ID --output text --query 'IamInstanceProfileAssociations[0].State')
+                    if [[ "$ASSOCIATION_STATE" == "associated" ]]; then
+                      break
+                    fi
+                    sleep 5
+                  done
+                - echo ">>> rebooting cloud9 instance id= $CLOUD9_INSTANCE_ID"
+                - aws ec2 reboot-instances --instance-ids $CLOUD9_INSTANCE_ID
+                - echo ">>> sleep for 210 seconds"
+                - sleep 210
+                - |
+                  process_command_status () {
+                    CMD_ID=$1
+                    PREV_EXIT_CODE=$2
+                    CLOUD9_INSTANCE_ID=$3
+                    AWS_REGION=$4
+                    if [ $PREV_EXIT_CODE -ne 0 ]; then
+                      echo ">>> exiting build with failure..."
+                      return $PREV_EXIT_CODE
+                    fi
+                    for i in {1..45}; do
+                      echo ">>> sleeping for 1 minute..."
+                      sleep 60
+                      echo ">>> checking command status for command id= $CMD_ID..."
+                      CMD_STATUS=$(aws ssm list-command-invocations \
+                        --command-id $CMD_ID \
+                        --instance-id $CLOUD9_INSTANCE_ID \
+                        --query CommandInvocations[0].Status \
+                        --output text \
+                        --region $AWS_REGION)
+                      if [ "$CMD_STATUS" = "Pending" ] || [ "$CMD_STATUS" = "InProgress" ]; then
+                        echo ">>> command status= $CMD_STATUS"
+                      elif [ "$CMD_STATUS" = "Success" ]; then
+                        echo ">>> Workshop environment configuration completed successfully"
+                        return 0
+                      else
+                        echo ">>> exiting build with failure, command status= $CMD_STATUS"
+                        return 1
+                      fi
+                    done
+                    if [ "$CMD_STATUS" != "Success" ]; then
+                      echo ">>> command status did not change to 'Success' within 45 minutes"
+                      echo ">>> exiting build with failure..."
+                      return 1
+                    fi
+                  }
+                  echo ">>> sending ssm command to configure workshop environment"
+                  CMD_ID=$(aws ssm send-command \
+                    --document-name "Configure-Workshop-Environment" \
+                    --document-version "1" \
+                    --targets "[{\"Key\":\"InstanceIds\",\"Values\":[\"$CLOUD9_INSTANCE_ID\"]}]" \
+                    --parameters "{\"VolumeSize\":[\"$CLOUD9_EBS_VOLUME_SIZE\"],\"Version\":[\"$K8S_VERSION\"],\"ClusterName\":[\"$CLUSTER_NAME\"],\"WorkerNodeInstanceType\":[\"$WORKER_NODE_INSTANCE_TYPE\"],\"PublicSubnets\":[\"$PUBLIC_SUBNETS\"],\"PrivateSubnets\":[\"$PRIVATE_SUBNETS\"],\"ConsoleRole\":[\"$CONSOLE_ROLE\"],\"CliRole\":[\"$CLOUD9_INSTANCE_ROLE_ARN\"],\"CloneUrl\":[\"$WORKSHOP_REPO_CLONE_URL\"]}" \
+                    --timeout-seconds 3000 \
+                    --max-concurrency "50" \
+                    --max-errors "0" \
+                    --cloud-watch-output-config "{\"CloudWatchOutputEnabled\":true,\"CloudWatchLogGroupName\":\"$SSM_RUNCOMMAND_CWLGRP\"}" \
+                    --query Command.CommandId \
+                    --output text \
+                    --region $AWS_REGION)
+                  PREV_EXIT_CODE=$?
+                  EXIT_CODE=$(process_command_status $CMD_ID $PREV_EXIT_CODE $CLOUD9_INSTANCE_ID $AWS_REGION)
+                  if [ $EXIT_CODE -ne 0 ]; then
+                    return $EXIT_CODE
+                  fi
+                  CMD_ID=$(aws ssm send-command \
+                    --document-name "Bootstrap-Git-And-Management-Cluster" \
+                    --document-version "1" \
+                    --targets "[{\"Key\":\"InstanceIds\",\"Values\":[\"$CLOUD9_INSTANCE_ID\"]}]" \
+                    --timeout-seconds 3000 \
+                    --max-concurrency "50" \
+                    --max-errors "0" \
+                    --cloud-watch-output-config "{\"CloudWatchOutputEnabled\":true,\"CloudWatchLogGroupName\":\"$SSM_RUNCOMMAND_CWLGRP\"}" \
+                    --query Command.CommandId \
+                    --output text \
+                    --region $AWS_REGION)
+                  PREV_EXIT_CODE=$?
+                  EXIT_CODE=$(process_command_status $CMD_ID $PREV_EXIT_CODE $CLOUD9_INSTANCE_ID $AWS_REGION)
+                  if [ $EXIT_CODE -ne 0 ]; then
+                    return $EXIT_CODE
+                  fi
+            post_build:
+              commands: 
+                # CODEBUILD_BUILD_SUCCEEDING = 1 Set to 0 if the build is failing, or 1 if the build is succeeding.
+                - echo ">>> build status $CODEBUILD_BUILD_SUCCEEDING "
+                - |
+                  if [ "$CODEBUILD_BUILD_SUCCEEDING" -eq "1" ]
+                  then
+                    curl -X PUT -H 'Content-Type:' --data-binary '{"Status" : "SUCCESS","Reason" : "Creation Complete", "UniqueId" : "$CODEBUILD_BUILD_ID","Data" : "Creation complete"}' $CFN_RESPONSE_URL
+                  else
+                    curl -X PUT -H 'Content-Type:' --data-binary '{"Status" : "FAILURE","Reason" : "Creation Failed", "UniqueId" : "$CODEBUILD_BUILD_ID","Data" : "See Codebuild logs for details. $CODEBUILD_LOG_PATH"}' $CFN_RESPONSE_URL
+                  fi
+      TimeoutInMinutes: 120
+
+  WaitForStackCreationHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+  WaitCondition:
+    Type: AWS::CloudFormation::WaitCondition
+    # dont start till we create a lambda function
+    DependsOn: [CustomTriggerBuild]
+    Properties:
+      Handle: !Ref WaitForStackCreationHandle
+      # wait for 120 minutes before giving up
+      Timeout: "7200"
+      # success or failure signal count
+      Count: 1
+
+  CustomTriggerBuild:
+    Type: Custom::ManageCloud9IDEIamRole
+    Properties:
+      ServiceToken: !GetAtt TriggerBuildLambda.Arn
+      CodebuildProjectName: !Ref BuildProject
+
+  TriggerBuildLambdaIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+      Policies:
+        - PolicyName: !Sub IAMPolicy-${AWS::StackName}
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codebuild:*
+                Resource: !GetAtt BuildProject.Arn
+
+  TriggerBuildLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: function to retrive User info
+      Handler: index.handler
+      Role: !GetAtt TriggerBuildLambdaIamRole.Arn
+      Runtime: python3.8
+      Code:
+        ZipFile: |
+          import boto3
+          import logging
+          import sys
+          import json
+          import urllib3
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          http = urllib3.PoolManager()
+
+          codebuild_client = boto3.client('codebuild')
+
+          # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-lambda-function-code-cfnresponsemodule.html
+          def handler(event, context):
+              logger.info('Incoming Event: {0}'.format(event))
+              response = {}
+              response['PhysicalResourceId'] = 'hardcodedphyscialid'
+              response['StackId'] = event['StackId']
+              response['RequestId'] = event['RequestId']    
+              response['LogicalResourceId'] = event['LogicalResourceId']
+              cfn_response_url = event['ResponseURL']
+
+              if event['RequestType'] == 'Delete':
+                  # return 
+                  logger.info('Nothing to do. Request Type : {0}'.format(event['RequestType']))
+                  response['Status'] = 'SUCCESS'
+
+              elif event['RequestType'] == 'Create' or event['RequestType'] == 'Update':
+
+                try:
+                  codebuild_client.start_build(projectName=event['ResourceProperties']['CodebuildProjectName'])
+                  response['Status'] = 'SUCCESS'
+
+                except:
+                  logging.error('Error: {0}'.format(sys.exc_info() ))
+                  response['Status'] = 'FAILED'
+
+              http.request('PUT', cfn_response_url, body=json.dumps(response).encode('utf-8'), headers={'Content-Type': 'application/json'})
+              return 'Done'
+
+  # Base Stack
+  CWLogGroup:
+    Type: AWS::Logs::LogGroup
+
+  # VPC in which containers will be networked.
+  # It has two public subnets, and two private subnets.
+  # We distribute the subnets across the first two available subnets
+  # for the region, for high availability.
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      CidrBlock: 10.0.0.0/16
+      Tags:
+        - Key: Name
+          Value: !Sub ${ClusterName}-VPC-${AWS::StackName}
+
+  # Two public subnets, where a public load balancer will later be created.
+  PublicSubnetOne:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: { Ref: "AWS::Region" }
+      VpcId: !Ref "VPC"
+      CidrBlock: 10.0.0.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${ClusterName}PublicOne-${AWS::StackName}
+        - Key: !Sub kubernetes.io/cluster/${ClusterName}
+          Value: shared
+        - Key: kubernetes.io/role/elb
+          Value: "1"
+  PublicSubnetTwo:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: { Ref: "AWS::Region" }
+      VpcId: !Ref "VPC"
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${ClusterName}PublicTwo-${AWS::StackName}
+        - Key: !Sub kubernetes.io/cluster/${ClusterName}
+          Value: shared
+        - Key: kubernetes.io/role/elb
+          Value: "1"
+
+  # Two private subnets where containers will only have private
+  # IP addresses, and will only be reachable by other members of the
+  # VPC
+  PrivateSubnetOne:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: { Ref: "AWS::Region" }
+      VpcId: !Ref "VPC"
+      CidrBlock: 10.0.2.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${ClusterName}PrivateOne-${AWS::StackName}
+        - Key: !Sub kubernetes.io/cluster/${ClusterName}
+          Value: shared
+  PrivateSubnetTwo:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: { Ref: "AWS::Region" }
+      VpcId: !Ref "VPC"
+      CidrBlock: 10.0.3.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub ${ClusterName}PrivateTwo-${AWS::StackName}
+        - Key: !Sub "kubernetes.io/cluster/${ClusterName}"
+          Value: shared
+
+  # Setup networking resources for the public subnets.
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+  GatewayAttachement:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref "VPC"
+      InternetGatewayId: !Ref "InternetGateway"
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref "VPC"
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: GatewayAttachement
+    Properties:
+      RouteTableId: !Ref "PublicRouteTable"
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref "InternetGateway"
+  PublicSubnetOneRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetOne
+      RouteTableId: !Ref PublicRouteTable
+  PublicSubnetTwoRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetTwo
+      RouteTableId: !Ref PublicRouteTable
+
+  # Setup networking resources for the private subnets. Containers
+  # in these subnets have only private IP addresses, and must use a NAT
+  # gateway to talk to the internet. We launch a single-AZ NAT gateway.
+  NatGatewayOneAttachment:
+    Type: AWS::EC2::EIP
+    DependsOn: GatewayAttachement
+    Properties:
+      Domain: vpc
+  NatGatewayOne:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGatewayOneAttachment.AllocationId
+      SubnetId: !Ref PublicSubnetOne
+  PrivateRouteTableOne:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref "VPC"
+  PrivateRouteOne:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableOne
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayOne
+  PrivateRouteTableOneAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableOne
+      SubnetId: !Ref PrivateSubnetOne
+  PrivateRouteTableTwo:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref "VPC"
+  PrivateRouteTwo:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableTwo
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayOne
+  PrivateRouteTableTwoAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableTwo
+      SubnetId: !Ref PrivateSubnetTwo
+
+  S3VPCEnpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties: 
+      RouteTableIds: 
+        - !Ref PrivateRouteTableOne
+        - !Ref PrivateRouteTableTwo
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      VpcEndpointType:  Gateway
+      VpcId: !Ref "VPC"
+
+  DynamoDBVPCEnpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties: 
+      RouteTableIds: 
+        - !Ref PrivateRouteTableOne
+        - !Ref PrivateRouteTableTwo
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.dynamodb
+      VpcEndpointType:  Gateway
+      VpcId: !Ref "VPC"
+
+Outputs:
+  EKSCloud9EnvUrl:
+    Description: GitOps workshop IDE URL
+    Value: !Sub https://${AWS::Region}.console.aws.amazon.com/cloud9/ide/${EKSEnvironment}?region=${AWS::Region}
