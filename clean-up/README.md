@@ -7,7 +7,7 @@
     ```
     eksctl delete cluster --name mgmt --region $AWS_REGION
     ```
-    
+Note that `eksctl delete cluster` does not delete the hosting VPC; please delete it manually.
 6. Remove the GitHub repos or AWS CodeCommit repos you created.
     - For GitHub you can use:
         ```
