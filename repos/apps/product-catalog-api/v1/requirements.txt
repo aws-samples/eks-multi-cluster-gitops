@@ -1,5 +1,5 @@
 flask-restplus==0.12.1
-Flask==1.1.4
+Flask==2.2.5
 werkzeug==3.0.3
 gunicorn==22.0.0
 requests==v2.24.0
