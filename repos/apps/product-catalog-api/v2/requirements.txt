@@ -3,6 +3,6 @@ Flask==3.0.3
 werkzeug==3.0.6
 gunicorn==23.0.0
 requests==v2.33.0
-flask-cors==4.0.2
+flask-cors==6.0.0
 boto3==1.35.39
 markupsafe==2.1.5
