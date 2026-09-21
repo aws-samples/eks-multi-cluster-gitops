@@ -1,5 +1,5 @@
 ---
-apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: crossplane-core
@@ -17,7 +17,7 @@ spec:
   # When a Kustomization contains HelmRelease objects, instead of checking the underling Deployments, you can define a health check that waits for the HelmReleases to be reconciled with
   #
   healthChecks:
-  - apiVersion: helm.toolkit.fluxcd.io/v2beta1
+  - apiVersion: helm.toolkit.fluxcd.io/v2
     kind: HelmRelease
     name: crossplane-core
     namespace: crossplane-system

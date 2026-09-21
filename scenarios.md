@@ -334,12 +334,11 @@ yq -i e ".spec.ref.tag = \"v2.0\"" gitops-workloads/commercial-staging/product-c
 
 ## Upgrade an existing cluster
 
-In this section you will upgrade the cluster `commercial-staging` to a newer version
-of Kubernetes. As described in Amazon EKS documentaiton on ["Updating Kubernetes version"](https://docs.aws.amazon.com/eks/latest/userguide/update-cluster.html#update-existing-cluster), a cluster upgrade is a process of multiple steps. First you'll have to upgrade the Amazon EKS Cluster itslef, and after a successful completion of the cluster upgrade, you'll have to upgrade the nodes to the same Kubernetes version. In our sample, we are using [Managed Node Group](https://docs.aws.amazon.com/eks/latest/userguide/managed-node-groups.html), so we will perform the upgrade of the node, by [updating](https://docs.aws.amazon.com/eks/latest/userguide/update-managed-node-group.html) the Managed Node Group that was created with the cluster.
+In this section you will upgrade the cluster `commercial-staging` from Kubernetes `1.35` to `1.36`. The workload cluster runs one minor version below the management cluster by intent, so that this scenario has a version gap to exercise. As described in Amazon EKS documentaiton on ["Updating Kubernetes version"](https://docs.aws.amazon.com/eks/latest/userguide/update-cluster.html#update-existing-cluster), a cluster upgrade is a process of multiple steps. First you'll have to upgrade the Amazon EKS Cluster itslef, and after a successful completion of the cluster upgrade, you'll have to upgrade the nodes to the same Kubernetes version. In our sample, we are using [Managed Node Group](https://docs.aws.amazon.com/eks/latest/userguide/managed-node-groups.html), so we will perform the upgrade of the node, by [updating](https://docs.aws.amazon.com/eks/latest/userguide/update-managed-node-group.html) the Managed Node Group that was created with the cluster.
 
 1. Open `gitops-system/clusters-config/commercial-staging/def/eks-cluster.yaml`.
 
-2. Change the value for `spec.parameters.eks-k8s-version` (e.g. from `1.23` to `1.24`).
+2. Change the value for `spec.parameters.eks-k8s-version` (e.g. from `1.35` to `1.36`).
 
 3. Commit changes.
 
@@ -359,7 +358,7 @@ of Kubernetes. As described in Amazon EKS documentaiton on ["Updating Kubernetes
 
    Alternatively, you can check the cluster status on the EKS console.
 
-5. Change the `gitops-system/clusters-config/commercial-staging/def/eks-cluster.yaml` file again. This time change the value for `spec.parameters.mng-k8s-version` from 1.23 to 1.24.
+5. Change the `gitops-system/clusters-config/commercial-staging/def/eks-cluster.yaml` file again. This time change the value for `spec.parameters.mng-k8s-version` from `1.35` to `1.36`.
 
 6. Commit again the changes.
 

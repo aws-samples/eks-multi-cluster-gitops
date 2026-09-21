@@ -1,24 +1,24 @@
 ## Create and prepare the Git repositories
 
-### Create SSH key for Cloud9 access to GitHub repo
+### Create SSH key for Dev_Environment access to GitHub repo
 
 1. Create the SSH key that will be used for interacting with the repos in your
-   GitHub account from the Cloud9 environment.
+   GitHub account from the Dev_Environment.
    ```bash
    cd ~/.ssh
-   ssh-keygen -t ed25519 -C "<youremail@yourcompany.com>" -f gitops-cloud9
+   ssh-keygen -t ed25519 -C "<youremail@yourcompany.com>" -f gitops-devenv
    ```
    (Replace `<youremail@yourcompany.com>` with your email address).
-   This generates two files: `gitops-cloud9` contains a private key, and `gitops-cloud9.pub` contains the corresponding public key.
+   This generates two files: `gitops-devenv` contains a private key, and `gitops-devenv.pub` contains the corresponding public key.
 
 
-2. Create/edit `config` in `~/.ssh` to use the SSH key in `gitops-cloud9` for
-   the Git commands executed in the Cloud9 environment.
+2. Create/edit `config` in `~/.ssh` to use the SSH key in `gitops-devenv` for
+   the Git commands executed in the Dev_Environment.
    ```bash
    cat << EOF > ~/.ssh/config
    Host github.com
    AddKeysToAgent yes
-   IdentityFile ~/.ssh/gitops-cloud9
+   IdentityFile ~/.ssh/gitops-devenv
    EOF
    ```
    
@@ -27,14 +27,14 @@
    gh auth login -p ssh -h github.com
    ```
    
-   - In response to **Upload your SSH public key to your GitHub account?**, choose **/home/ubuntu/.ssh/gitops-cloud9.pub**.
-   - For **Title for your SSH key**, enter **gitops-cloud9**.
+   - In response to **Upload your SSH public key to your GitHub account?**, choose **/home/participant/.ssh/gitops-devenv.pub**.
+   - For **Title for your SSH key**, enter **gitops-devenv**.
    - In response to **How would you like to authenticate GitHub CLI?**, choose **Login with a web browser**.
    - Note the one-time code.
-   - Pressing Enter will result in an error message as you cannot open a browser from your Cloud9 environment.
+   - Pressing Enter will result in an error message as you cannot open a browser directly from your Dev_Environment.
    - Use a separate tab on your browser to navigate to https://github.com/login/device and enter the code.
    - Choose **Authorize github**.
-   - Return to your Cloud9 terminal to continue. You are now logged in to your GitHub account from Cloud9. You can test this by running commands like `gh auth status` and `gh repo list`.
+   - Return to your Dev_Environment terminal to continue. You are now logged in to your GitHub account from the Dev_Environment. You can test this by running commands like `gh auth status` and `gh repo list`.
 
 ### Create SSH key for Flux access to GitHub repo
 
@@ -67,7 +67,7 @@
 ### Create GitHub repos
 
 Create empty repos  `gitops-system` and `gitops-workloads` in your GitHub account, and clone them
-into the Cloud9 environment.
+into the Dev_Environment.
 ```
 cd ~/environment
 git config --global init.defaultBranch main
@@ -90,11 +90,11 @@ gh repo create --private --clone  gitops-workloads
 ### Create a `Secret` resource that contains the Git Credentials for `gitops-system`
 
 1. Copy the content of
-   `multi-cluster-gitops/initial-setup/secrets-template/git-credentials.yaml` to
+   `eks-multi-cluster-gitops/initial-setup/secrets-template/git-credentials.yaml` to
    `~/environment/git-creds-system.yaml`.
    ```
    cd ~/environment
-   cp multi-cluster-gitops/initial-setup/secrets-template/git-credentials.yaml git-creds-system.yaml
+   cp eks-multi-cluster-gitops/initial-setup/secrets-template/git-credentials.yaml git-creds-system.yaml
    ```
 
 2. Replace the value for the field `identity` with the base64

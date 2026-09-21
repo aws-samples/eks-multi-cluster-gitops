@@ -166,6 +166,16 @@ spec:
             "Action": "pricing:GetProducts"
           },
           {
+            "Sid": "AllowInterruptionQueueActions",
+            "Effect": "Allow",
+            "Resource": "arn:aws:sqs:${AWS_REGION}:${ACCOUNT_ID}:${CLUSTER_NAME}",
+            "Action": [
+              "sqs:DeleteMessage",
+              "sqs:GetQueueUrl",
+              "sqs:ReceiveMessage"
+            ]
+          },
+          {
             "Sid": "AllowPassingInstanceRole",
             "Effect": "Allow",
             "Resource": "arn:aws:iam::${ACCOUNT_ID}:role/karpenter-node*",

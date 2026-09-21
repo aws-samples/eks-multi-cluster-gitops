@@ -13,40 +13,15 @@ Parameters:
   KubernetesVersion:
     Description: Kubernetes version
     Type: String
-    Default: "1.29"
+    Default: "1.36"
     AllowedValues:
-      - "1.29"
-      - "1.28"
-      - "1.27"
+      - "1.36"
+      - "1.35"
+      - "1.34"
   WorkerNodeInstanceType:
     Description: The instance type of the worker nodes
     Type: String
     Default: m5.large
-  
-  # Cloud9 Parameters
-  Cloud9WorkspaceName:
-    Description: Name of the Cloud9 environment
-    Type: String
-    Default: gitops
-  Cloud9WorkspaceDescription:
-    Description: Description of the Cloud9 environment
-    Type: String
-    Default: Cloud9 lab environment for the workshop
-  Cloud9IDEInstanceType:
-    Description: The type of instance to connect to the environment
-    Type: String
-    Default: t3.small
-  Cloud9ImageId:
-    Description: The AMI used to create the Cloud9 environment
-    Type: String
-    Default: amazonlinux-2-x86_64
-    AllowedValues:
-      - amazonlinux-2-x86_64
-      - ubuntu-18.04-x86_64
-  Cloud9EBSVolumeSize:
-    Description: The size of the EBS volume attached to the Cloud9 instance
-    Type: String
-    Default: "30"
 
   WorkshopRepoCloneUrl:
     Description: Workshop git repo clone URL
@@ -58,64 +33,98 @@ Parameters:
     Type: String
     Default: "/aws/runcommand"
 
+  # Dev_Environment (VS Code in the browser on Amazon EC2) parameters.
+  # OS is fixed to Amazon Linux 2023 (Req 2.20 — a vendor-supported OS with
+  # security updates); it is not exposed as a parameter.
+  DevEnvironmentInstanceType:
+    Description: Dev_Environment EC2 instance type. A Graviton (arm64) family is the default; an x86_64 family also works and the correct AL2023 AMI is selected automatically.
+    Type: String
+    Default: m7g.large
+  DevEnvironmentVolumeSize:
+    Description: Dev_Environment EC2 root volume size in GB
+    Type: Number
+    Default: 40
+  DevEnvironmentUser:
+    Description: Login user for the Dev_Environment VS Code session
+    Type: String
+    Default: participant
+    AllowedPattern: ^[a-z_][a-z0-9_-]{0,31}$
+    ConstraintDescription: Must be a valid Linux username (1-32 chars, lowercase, starting with a letter or underscore)
+  DevEnvironmentHomeFolder:
+    Description: Folder to open in the Dev_Environment VS Code session (the participant user's ~/environment, where the workshop repo is cloned)
+    Type: String
+    Default: /home/participant/environment
+    AllowedPattern: ^/[A-Za-z0-9_][A-Za-z0-9_/.-]*$
+    ConstraintDescription: Must be an absolute path starting with / and an alphanumeric or underscore character
+
+Mappings:
+  # Amazon Linux 2023 latest AMI resolved from the public SSM parameter store,
+  # one per CPU architecture. AL2023 is a vendor-supported OS that receives
+  # security updates (Req 2.20).
+  DevEnvironmentAMI:
+    arm64:
+      ImageId: "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64}}"
+    x86-64:
+      ImageId: "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}"
+  # AWS-managed prefix list for CloudFront origin-facing address ranges, per
+  # Region. The Dev_Environment security group sources its only inbound rule
+  # from this list (Req 2.22).
+  # aws ec2 describe-managed-prefix-lists --region <REGION> | jq -r '.PrefixLists[] | select (.PrefixListName == "com.amazonaws.global.cloudfront.origin-facing") | .PrefixListId'
+  AWSRegionsPrefixListID:
+    ap-northeast-1:
+      PrefixList: pl-58a04531
+    ap-northeast-2:
+      PrefixList: pl-22a6434b
+    ap-northeast-3:
+      PrefixList: pl-31a14458
+    ap-south-1:
+      PrefixList: pl-9aa247f3
+    ap-southeast-1:
+      PrefixList: pl-31a34658
+    ap-southeast-2:
+      PrefixList: pl-b8a742d1
+    ca-central-1:
+      PrefixList: pl-38a64351
+    eu-central-1:
+      PrefixList: pl-a3a144ca
+    eu-north-1:
+      PrefixList: pl-fab65393
+    eu-west-1:
+      PrefixList: pl-4fa04526
+    eu-west-2:
+      PrefixList: pl-93a247fa
+    eu-west-3:
+      PrefixList: pl-75b1541c
+    sa-east-1:
+      PrefixList: pl-5da64334
+    us-east-1:
+      PrefixList: pl-3b927c52
+    us-east-2:
+      PrefixList: pl-b6a144df
+    us-west-1:
+      PrefixList: pl-4ea04527
+    us-west-2:
+      PrefixList: pl-82a045eb
+
+Conditions:
+  # Graviton iff the instance family contains 'g' AND does not start with 'g'.
+  # Misses a1/g5g/inf/trn (obvious at boot). Mirrors the reference template.
+  IsGravitonDevEnv: !And
+    - !Not
+      - !Equals
+        - !Select [0, !Split [".", !Ref DevEnvironmentInstanceType]]
+        - !Join ["", !Split ["g", !Select [0, !Split [".", !Ref DevEnvironmentInstanceType]]]]
+    - !Not
+      - !Equals
+        - !Select [0, !Split ["g", !Select [0, !Split [".", !Ref DevEnvironmentInstanceType]]]]
+        - ""
+
 Resources:
   SsmRunCommandCloudWatchLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
       LogGroupName: !Ref SsmRunCommandCloudWatchLogGroupName
       RetentionInDays: 1
-
-  ResizeEBSVolumeDoc:
-    Type: AWS::SSM::Document
-    Properties:
-      Content:
-        schemaVersion: "2.2"
-        description: "Command document to resize EBS volume."
-        parameters:
-          VolumeSize:
-            type: "String"
-            description: "Size in GB to grow the volume"
-        mainSteps:
-        - action: "aws:runShellScript"
-          name: "resizeEBSVolume"
-          inputs:
-            runCommand:
-            - "SIZE_PARAM={{VolumeSize}}"
-            - "export SIZE=${SIZE_PARAM:-20}"
-            - "export INSTANCEID=$(curl http://169.254.169.254/latest/meta-data/instance-id)"
-            - "echo \"INSTANCEID: $INSTANCEID\""
-            - "export AWS_REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/\\(.*\\)[a-z]/\\1/')"
-            - "echo \"AWS_REGION: $AWS_REGION\""
-            - "export AWS_DEFAULT_REGION=$AWS_REGION"
-            - "export VOLUMEID=$(aws ec2 describe-instances --instance-id $INSTANCEID --query 'Reservations[0].Instances[0].BlockDeviceMappings[0].Ebs.VolumeId' --output text)"
-            - "echo \"VOLUMEID: $VOLUMEID\""
-            - "aws ec2 modify-volume --volume-id $VOLUMEID --size $SIZE"
-            - "while [ \"$(aws ec2 describe-volumes-modifications --volume-id $VOLUMEID --filters Name=modification-state,Values='optimizing','completed' --query 'length(VolumesModifications)' --output text)\" != \"1\" ]; do"
-            - "  sleep 1"
-            - "done"
-            - "if [[ -e \"/dev/xvda\" && $(readlink -f /dev/xvda) = \"/dev/xvda\" ]]; then"
-            - "  growpart /dev/xvda 1"
-            - "  STR=$(cat /etc/os-release)"
-            - "  SUB='VERSION_ID=\"2\"'"
-            - "  if [[ \"$STR\" == *\"$SUB\"* ]]; then"
-            - "    xfs_growfs -d /"
-            - "  else"
-            - "    resize2fs /dev/xvda1"
-            - "  fi"
-            - "else"
-            - "  growpart /dev/nvme0n1 1"
-            - "  STR=$(cat /etc/os-release)"
-            - "  SUB='VERSION_ID=\"2\"'"
-            - "  if [[ \"$STR\" == *\"$SUB\"* ]]; then"
-            - "    xfs_growfs -d /"
-            - "  else"
-            - "    resize2fs /dev/nvme0n1p1"
-            - "  fi"
-            - "fi"
-      DocumentFormat: YAML
-      DocumentType: Command
-      Name: Resize-EBS-Volume
-      TargetType: /AWS::EC2::Instance
 
   InstallK8sClientToolsDoc:
     Type: AWS::SSM::Document
@@ -128,9 +137,9 @@ Resources:
             type: "String"
             description: "Kubernetes Version"
             allowedValues:
-            - "1.29"
-            - "1.28"
-            - "1.27"
+            - "1.36"
+            - "1.35"
+            - "1.34"
         mainSteps:
         - action: "aws:runShellScript"
           name: "installK8sClients"
@@ -157,7 +166,10 @@ Resources:
               export OS_VER=$(grep '^VERSION_ID=' /etc/os-release | cut -d'=' -f2 | tr -d '"')
               case $OS_NAME in
                 amzn)
-                  if [[ "$OS_VER" != "2" ]]; then
+                  # The Dev_Environment runs Amazon Linux 2023 (OS_VER 2023).
+                  # Amazon Linux 2 (OS_VER 2) is still accepted so the document
+                  # remains portable. OS_USER is ec2-user on both.
+                  if [[ "$OS_VER" != "2" && "$OS_VER" != "2023" ]]; then
                     echo "Cannot run on this OS version: $OS_NAME $OS_VER"
                     exit 103
                   fi
@@ -171,22 +183,24 @@ Resources:
                   exit 101
                   ;;
               esac
+              if [ -r /etc/workshop.env ]; then . /etc/workshop.env; export OS_USER="${WORKSHOP_USER:-$OS_USER}"; fi
             - "export PATH=$PATH:/usr/local/bin"
             - "export PREFIX=/tmp"
             - "export TOOLS_DIR=/opt/k8s-tools"
+            - "mkdir -p /home/$OS_USER/.ssh && chmod 700 /home/$OS_USER/.ssh && touch /home/$OS_USER/.bash_profile && chown $OS_USER: /home/$OS_USER/.ssh /home/$OS_USER/.bash_profile"
             - |
               case {{Version}} in
-                1.29)
-                  export K8S_VERSION=1.29.0
-                  export RELEASE_DATE=2024-01-04
+                1.36)
+                  export K8S_VERSION=1.36.2
+                  export RELEASE_DATE=2026-07-05
                   ;;
-                1.28)
-                  export K8S_VERSION=1.28.5
-                  export RELEASE_DATE=2024-01-04
+                1.35)
+                  export K8S_VERSION=1.35.6
+                  export RELEASE_DATE=2026-07-05
                   ;;
-                1.27)
-                  export K8S_VERSION=1.27.9
-                  export RELEASE_DATE=2024-01-04
+                1.34)
+                  export K8S_VERSION=1.34.9
+                  export RELEASE_DATE=2026-07-05
                   ;;
                 *)
                   echo "Unknown or unsupported Kubernetes version: {{Version}}"
@@ -263,7 +277,7 @@ Resources:
             - "echo \"Cleaning up...\""
             - "rm -rf $PREFIX/get_helm.sh"
             - "echo \"Installing flux v2...\""
-            - "curl -s https://fluxcd.io/install.sh | sudo FLUX_VERSION=0.35.0 bash"
+            - "curl -s https://fluxcd.io/install.sh | sudo FLUX_VERSION=2.9.5 bash"
             - "echo \"Checking installed version...\""
             - "flux --version"
             - "echo \". <(flux completion bash)\" >> /home/$OS_USER/.bash_profile"
@@ -281,11 +295,8 @@ Resources:
               fi
             - "gh --version"
             - "echo \"Installing kubeseal...\""
-            - "curl -s -D kubeseal-latest-header.txt https://github.com/bitnami-labs/sealed-secrets/releases/latest"
-            - "KUBESEAL_LATEST_TAG_URL=$(grep 'location:' kubeseal-latest-header.txt | cut -d' ' -f2 | tr -d '\\r')"
-            - "KUBESEAL_LATEST_TAG_VER=${KUBESEAL_LATEST_TAG_URL##*/}"
-            - "KUBESEAL_LATEST_VER_NUMBER=${KUBESEAL_LATEST_TAG_VER/v/}"
-            - "KUBESEAL_DOWNLOAD_URL=https://github.com/bitnami-labs/sealed-secrets/releases/download/${KUBESEAL_LATEST_TAG_VER}/kubeseal-${KUBESEAL_LATEST_VER_NUMBER}-linux-${CPU_ARCH}.tar.gz"
+            - "KUBESEAL_VERSION=0.40.0"
+            - "KUBESEAL_DOWNLOAD_URL=https://github.com/bitnami/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION}-linux-${CPU_ARCH}.tar.gz"
             - "curl -L $KUBESEAL_DOWNLOAD_URL | tar -xz -C $PREFIX"
             - "echo \"Moving to directory $TOOLS_DIR/bin...\""
             - "mv $PREFIX/kubeseal $TOOLS_DIR/bin/"
@@ -312,7 +323,7 @@ Resources:
             - "rm -rf $PREFIX/install-man-page.sh $PREFIX/yq.1"
             - "export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)"
             - "export AWS_ACCOUNT_ID=$ACCOUNT_ID"
-            - "export AWS_REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.region')"
+            - "export AWS_REGION=$(TOKEN=$(curl -s -X PUT \"http://169.254.169.254/latest/api/token\" -H \"X-aws-ec2-metadata-token-ttl-seconds: 21600\"); curl -s -H \"X-aws-ec2-metadata-token: $TOKEN\" http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.region')"
             - "export AWS_DEFAULT_REGION=$AWS_REGION"
             - "export AWS_DEFAULT_OUTPUT=json"
             - "echo \"export ACCOUNT_ID=$ACCOUNT_ID\" >> /home/$OS_USER/.bash_profile"
@@ -355,6 +366,8 @@ Resources:
                   exit 101
                   ;;
               esac
+              if [ -r /etc/workshop.env ]; then . /etc/workshop.env; export OS_USER="${WORKSHOP_USER:-$OS_USER}"; fi
+            - "mkdir -p /home/$OS_USER/environment && chown $OS_USER: /home/$OS_USER/environment"
             - "su -c \"cd /home/$OS_USER/environment;git clone {{CloneUrl}};\" $OS_USER"
       DocumentFormat: YAML
       DocumentType: Command
@@ -372,9 +385,9 @@ Resources:
             type: "String"
             description: "Kubernetes Version"
             allowedValues:
-            - "1.29"
-            - "1.28"
-            - "1.27"
+            - "1.36"
+            - "1.35"
+            - "1.34"
           ClusterName:
             type: "String"
             description: "EKS cluster name"
@@ -413,8 +426,9 @@ Resources:
                   exit 101
                   ;;
               esac
+              if [ -r /etc/workshop.env ]; then . /etc/workshop.env; export OS_USER="${WORKSHOP_USER:-$OS_USER}"; fi
             - "export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)"
-            - "export AWS_REGION=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.region')"
+            - "export AWS_REGION=$(TOKEN=$(curl -s -X PUT \"http://169.254.169.254/latest/api/token\" -H \"X-aws-ec2-metadata-token-ttl-seconds: 21600\"); curl -s -H \"X-aws-ec2-metadata-token: $TOKEN\" http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r '.region')"
             - "export AWS_DEFAULT_REGION=$AWS_REGION"
             - "echo \"Creating EKS cluster {{ClusterName}} with Kubernetes version {{Version}}...\""
             - |
@@ -629,6 +643,8 @@ Resources:
                   exit 101
                   ;;
               esac
+              if [ -r /etc/workshop.env ]; then . /etc/workshop.env; export OS_USER="${WORKSHOP_USER:-$OS_USER}"; fi
+            - "mkdir -p /home/$OS_USER/environment && chown $OS_USER: /home/$OS_USER/environment"
             - "cd /home/$OS_USER/environment"
             - |
               cat >create_root_sealed_secrets_encryption_keys.sh <<EOF
@@ -689,11 +705,13 @@ Resources:
                   exit 101
                   ;;
               esac
+              if [ -r /etc/workshop.env ]; then . /etc/workshop.env; export OS_USER="${WORKSHOP_USER:-$OS_USER}"; fi
+            - "mkdir -p /home/$OS_USER/environment && chown $OS_USER: /home/$OS_USER/environment"
             - "cd /home/$OS_USER/environment"
             - |
               cat >setup_codecommit_ssh.sh <<EOF
               #!/bin/bash
-              cd ~/.ssh
+              mkdir -p ~/.ssh && chmod 700 ~/.ssh && cd ~/.ssh
               ssh-keygen -q -t rsa -b 4096 -N '' -C gitops -f gitops <<<y >/dev/null 2>&1
               chmod 600 gitops*
               export SSH_PUB_KEY_ID=\$(aws iam upload-ssh-public-key \\
@@ -761,6 +779,8 @@ Resources:
                   exit 101
                   ;;
               esac
+              if [ -r /etc/workshop.env ]; then . /etc/workshop.env; export OS_USER="${WORKSHOP_USER:-$OS_USER}"; fi
+            - "mkdir -p /home/$OS_USER/environment && chown $OS_USER: /home/$OS_USER/environment"
             - "cd /home/$OS_USER/environment"
             - |
               cat >clone_codecommit_repos.sh <<EOF
@@ -822,6 +842,8 @@ Resources:
                   exit 101
                   ;;
               esac
+              if [ -r /etc/workshop.env ]; then . /etc/workshop.env; export OS_USER="${WORKSHOP_USER:-$OS_USER}"; fi
+            - "mkdir -p /home/$OS_USER/environment && chown $OS_USER: /home/$OS_USER/environment"
             - "cd /home/$OS_USER/environment"
             - |
               cat >create_iam_role_for_crossplane.sh <<EOF
@@ -873,9 +895,6 @@ Resources:
         schemaVersion: "2.2"
         description: "Configure workshop environment"
         parameters:
-          VolumeSize:
-            type: "String"
-            description: "Cloud9 EBS volume size"
           ClusterName:
             type: "String"
             description: "EKS cluster name"
@@ -902,13 +921,6 @@ Resources:
             type: "String"
             description: "Workshop git repo clone URL"
         mainSteps:
-        - action: "aws:runDocument"
-          name: "resizeEBSVolumeDoc"
-          inputs:
-            documentType: SSMDocument
-            documentPath: Resize-EBS-Volume
-            documentParameters:
-              VolumeSize: "{{VolumeSize}}"
         - action: "aws:runDocument"
           name: "installK8sClientTools"
           inputs:
@@ -973,15 +985,6 @@ Resources:
       Name: Bootstrap-Git-And-Management-Cluster
       TargetType: /AWS::EC2::Instance
 
-  EKSEnvironment:
-    Type: AWS::Cloud9::EnvironmentEC2
-    Properties:
-      Name: !Ref Cloud9WorkspaceName
-      AutomaticStopTimeMinutes: 900
-      Description: !Ref Cloud9WorkspaceDescription
-      InstanceType: !Ref Cloud9IDEInstanceType
-      ImageId: !Ref Cloud9ImageId
-
   EKSEnvironmentInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -1013,7 +1016,6 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - cloud9:*
                   - lambda:*
                   - ecr:*
                   - codebuild:*
@@ -1147,10 +1149,6 @@ Resources:
                 Resource: "*"
 
               - Effect: Allow
-                Action: "cloud9:*"
-                Resource: "*"
-
-              - Effect: Allow
                 Action:
                   - autoscaling:CreateLaunchConfiguration
                   - autoscaling:DeleteLaunchConfiguration
@@ -1174,17 +1172,6 @@ Resources:
                 Resource:
                   - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*"
                   - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/runcommand/*"
-
-              ## Permissions to associate a role to Cloud9
-              - Effect: Allow
-                Action:
-                  - ec2:DescribeInstances
-                  - ec2:ReplaceIamInstanceProfileAssociation
-                  - ec2:AssociateIamInstanceProfile
-                  - ec2:DisassociateIamInstanceProfile
-                  - ec2:DescribeIamInstanceProfileAssociations
-                  - iam:PassRole
-                Resource: "*"
 
               - Effect: Allow
                 Action:
@@ -1259,18 +1246,10 @@ Resources:
       Environment:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
-        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        Image: aws/codebuild/amazonlinux-x86_64-standard:5.0
         EnvironmentVariables:
           - Name: CFN_RESPONSE_URL
             Value: !Ref WaitForStackCreationHandle
-          - Name: CLOUD9_EBS_VOLUME_SIZE
-            Value: !Ref Cloud9EBSVolumeSize
-          - Name: CLOUD9_INSTANCE_ROLE_ARN
-            Value: !GetAtt EKSEnvironmentRole.Arn
-          - Name: CLOUD9_INSTANCE_PROFILE_NAME
-            Value: !Ref EKSEnvironmentInstanceProfile
-          - Name: CLOUD9_ENVIRONMENT_ID
-            Value: !Ref EKSEnvironment
           - Name: ACCOUNT_ID
             Value: !Ref "AWS::AccountId"
           - Name: PRIVATE_SUBNETS
@@ -1289,6 +1268,16 @@ Resources:
             Value: !Ref SsmRunCommandCloudWatchLogGroupName
           - Name: WORKSHOP_REPO_CLONE_URL
             Value: !Ref WorkshopRepoCloneUrl
+          # Dev_Environment instance discovery (Req 2.17): CodeBuild reads the
+          # SSM Run Command target instance ID directly from the stack resource
+          # reference, replacing the former tag-based instance lookup.
+          - Name: DEV_ENVIRONMENT_INSTANCE_ID
+            Value: !Ref DevEnvironmentInstance
+          # IAM role that the Dev_Environment instance runs as (via
+          # EKSEnvironmentInstanceProfile). Passed to Create-EKS-Cluster as the
+          # CLI admin role, replacing the former instance-role ARN.
+          - Name: CLI_ROLE
+            Value: !GetAtt EKSEnvironmentRole.Arn
       Source:
         Type: NO_SOURCE
         BuildSpec: |
@@ -1296,9 +1285,9 @@ Resources:
           phases:
             install:
               runtime-versions:
-                python: 3.8
+                python: 3.12
               commands:
-                - echo ">>> installed python 3.8"
+                - echo ">>> installed python 3.12"
             pre_build:
               commands:
                 - echo ">>> build cluster config"
@@ -1306,32 +1295,11 @@ Resources:
                 - pip3 install --upgrade --user awscli
             build:
               commands:
-                - echo ">>> find instance using environment Id= $CLOUD9_ENVIRONMENT_ID"
-                - CLOUD9_INSTANCE_ID=$(aws ec2 describe-instances --filter Name=tag:aws:cloud9:environment,Values=$CLOUD9_ENVIRONMENT_ID --query Reservations[0].Instances[0].InstanceId --output text)
-                - echo ">>> cloud9 instance id= $CLOUD9_INSTANCE_ID"
-                - echo ">>> assign profile $CLOUD9_INSTANCE_PROFILE_NAME to instance $CLOUD9_INSTANCE_ID"
-                - aws ec2 associate-iam-instance-profile --instance-id $CLOUD9_INSTANCE_ID --iam-instance-profile Name=$CLOUD9_INSTANCE_PROFILE_NAME
-                - echo ">>> sleep for 5 seconds"
-                - sleep 5
-                - |
-                  echo ">>> waiting for instance profile association state to change to associated..."
-                  while true
-                  do
-                    ASSOCIATION_STATE=$(aws ec2 describe-iam-instance-profile-associations --filters Name=instance-id,Values=$CLOUD9_INSTANCE_ID --output text --query 'IamInstanceProfileAssociations[0].State')
-                    if [[ "$ASSOCIATION_STATE" == "associated" ]]; then
-                      break
-                    fi
-                    sleep 5
-                  done
-                - echo ">>> rebooting cloud9 instance id= $CLOUD9_INSTANCE_ID"
-                - aws ec2 reboot-instances --instance-ids $CLOUD9_INSTANCE_ID
-                - echo ">>> sleep for 210 seconds"
-                - sleep 210
                 - |
                   process_command_status () {
                     CMD_ID=$1
                     PREV_EXIT_CODE=$2
-                    CLOUD9_INSTANCE_ID=$3
+                    DEV_ENVIRONMENT_INSTANCE_ID=$3
                     AWS_REGION=$4
                     if [ $PREV_EXIT_CODE -ne 0 ]; then
                       echo ">>> exiting build with failure..."
@@ -1343,7 +1311,7 @@ Resources:
                       echo ">>> checking command status for command id= $CMD_ID..."
                       CMD_STATUS=$(aws ssm list-command-invocations \
                         --command-id $CMD_ID \
-                        --instance-id $CLOUD9_INSTANCE_ID \
+                        --instance-id $DEV_ENVIRONMENT_INSTANCE_ID \
                         --query CommandInvocations[0].Status \
                         --output text \
                         --region $AWS_REGION)
@@ -1367,8 +1335,8 @@ Resources:
                   CMD_ID=$(aws ssm send-command \
                     --document-name "Configure-Workshop-Environment" \
                     --document-version "1" \
-                    --targets "[{\"Key\":\"InstanceIds\",\"Values\":[\"$CLOUD9_INSTANCE_ID\"]}]" \
-                    --parameters "{\"VolumeSize\":[\"$CLOUD9_EBS_VOLUME_SIZE\"],\"Version\":[\"$K8S_VERSION\"],\"ClusterName\":[\"$CLUSTER_NAME\"],\"WorkerNodeInstanceType\":[\"$WORKER_NODE_INSTANCE_TYPE\"],\"PublicSubnets\":[\"$PUBLIC_SUBNETS\"],\"PrivateSubnets\":[\"$PRIVATE_SUBNETS\"],\"ConsoleRole\":[\"$CONSOLE_ROLE\"],\"CliRole\":[\"$CLOUD9_INSTANCE_ROLE_ARN\"],\"CloneUrl\":[\"$WORKSHOP_REPO_CLONE_URL\"]}" \
+                    --targets "[{\"Key\":\"InstanceIds\",\"Values\":[\"$DEV_ENVIRONMENT_INSTANCE_ID\"]}]" \
+                    --parameters "{\"Version\":[\"$K8S_VERSION\"],\"ClusterName\":[\"$CLUSTER_NAME\"],\"WorkerNodeInstanceType\":[\"$WORKER_NODE_INSTANCE_TYPE\"],\"PublicSubnets\":[\"$PUBLIC_SUBNETS\"],\"PrivateSubnets\":[\"$PRIVATE_SUBNETS\"],\"ConsoleRole\":[\"$CONSOLE_ROLE\"],\"CliRole\":[\"$CLI_ROLE\"],\"CloneUrl\":[\"$WORKSHOP_REPO_CLONE_URL\"]}" \
                     --timeout-seconds 3000 \
                     --max-concurrency "50" \
                     --max-errors "0" \
@@ -1377,14 +1345,15 @@ Resources:
                     --output text \
                     --region $AWS_REGION)
                   PREV_EXIT_CODE=$?
-                  EXIT_CODE=$(process_command_status $CMD_ID $PREV_EXIT_CODE $CLOUD9_INSTANCE_ID $AWS_REGION)
+                  process_command_status $CMD_ID $PREV_EXIT_CODE $DEV_ENVIRONMENT_INSTANCE_ID $AWS_REGION
+                  EXIT_CODE=$?
                   if [ $EXIT_CODE -ne 0 ]; then
-                    return $EXIT_CODE
+                    exit $EXIT_CODE
                   fi
                   CMD_ID=$(aws ssm send-command \
                     --document-name "Bootstrap-Git-And-Management-Cluster" \
                     --document-version "1" \
-                    --targets "[{\"Key\":\"InstanceIds\",\"Values\":[\"$CLOUD9_INSTANCE_ID\"]}]" \
+                    --targets "[{\"Key\":\"InstanceIds\",\"Values\":[\"$DEV_ENVIRONMENT_INSTANCE_ID\"]}]" \
                     --timeout-seconds 3000 \
                     --max-concurrency "50" \
                     --max-errors "0" \
@@ -1393,9 +1362,10 @@ Resources:
                     --output text \
                     --region $AWS_REGION)
                   PREV_EXIT_CODE=$?
-                  EXIT_CODE=$(process_command_status $CMD_ID $PREV_EXIT_CODE $CLOUD9_INSTANCE_ID $AWS_REGION)
+                  process_command_status $CMD_ID $PREV_EXIT_CODE $DEV_ENVIRONMENT_INSTANCE_ID $AWS_REGION
+                  EXIT_CODE=$?
                   if [ $EXIT_CODE -ne 0 ]; then
-                    return $EXIT_CODE
+                    exit $EXIT_CODE
                   fi
             post_build:
               commands: 
@@ -1425,7 +1395,14 @@ Resources:
       Count: 1
 
   CustomTriggerBuild:
-    Type: Custom::ManageCloud9IDEIamRole
+    Type: Custom::TriggerCodeBuild
+    # Readiness gate (Req 2.24): CodeBuild — which runs the setup documents — is
+    # not triggered until the Dev_Environment health check has passed. If the
+    # environment is not reachable within the health-check window, DevEnvironmentHealthcheck
+    # fails the stack (naming the Dev_Environment) and the setup documents never run.
+    DependsOn:
+      - DevEnvironmentHealthcheck
+      - CheckDevEnvironmentSSMDoc
     Properties:
       ServiceToken: !GetAtt TriggerBuildLambda.Arn
       CodebuildProjectName: !Ref BuildProject
@@ -1460,7 +1437,7 @@ Resources:
       Description: function to retrive User info
       Handler: index.handler
       Role: !GetAtt TriggerBuildLambdaIamRole.Arn
-      Runtime: python3.8
+      Runtime: python3.13
       Code:
         ZipFile: |
           import boto3
@@ -1682,8 +1659,689 @@ Resources:
       ServiceName: !Sub com.amazonaws.${AWS::Region}.dynamodb
       VpcEndpointType:  Gateway
       VpcId: !Ref "VPC"
+  # =====================================================================
+  # G. Dev_Environment — VS Code in the browser on Amazon EC2, reachable
+  # over HTTPS through Amazon CloudFront. Replaces the development
+  # environment removed in task 10.1, following the resource pattern of the
+  # reference template initial-setup/auto/reference/code-editor.yaml.
+  # The SSM Run Command orchestration is retargeted to this instance by
+  # task 10.4; here the instance is named clearly (logical id
+  # DevEnvironmentInstance) so that task can reference it.
+  # =====================================================================
+
+  # Access credential generated into AWS Secrets Manager. No literal
+  # credential value appears anywhere in this template (Req 2.23).
+  DevEnvironmentSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Name: !Sub
+        - dev-environment-${RandomGUID}
+        - RandomGUID: !Select [0, !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]]]
+      Description: Dev_Environment VS Code login credential
+      GenerateSecretString:
+        PasswordLength: 16
+        SecretStringTemplate: !Sub '{"username":"${DevEnvironmentUser}"}'
+        GenerateStringKey: "password"
+        ExcludePunctuation: true
+
+  # Helper that returns the generated secret's plaintext so the value can be
+  # injected into the bootstrap document (as the VS Code auth token) and the
+  # stack output URL, without ever stating the credential literally.
+  DevEnvironmentSecretPlaintextLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: !Sub lambda.${AWS::URLSuffix}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: AwsSecretsManager
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref DevEnvironmentSecret
+
+  DevEnvironmentSecretPlaintextLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Return the value of the Dev_Environment secret
+      Handler: index.lambda_handler
+      Runtime: python3.13
+      MemorySize: 128
+      Timeout: 10
+      Architectures:
+        - arm64
+      Role: !GetAtt DevEnvironmentSecretPlaintextLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import json
+          import cfnresponse
+          import logging
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def is_valid_json(json_string):
+              try:
+                  json.loads(json_string)
+                  return True
+              except json.JSONDecodeError:
+                  return False
+
+          def lambda_handler(event, context):
+              try:
+                  if event['RequestType'] == 'Delete':
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData={}, reason='No action to take')
+                  else:
+                      resource_properties = event['ResourceProperties']
+                      secret_name = resource_properties['SecretArn']
+                      secrets_mgr = boto3.client('secretsmanager')
+                      secret = secrets_mgr.get_secret_value(SecretId=secret_name)
+                      secret_value = secret['SecretString']
+                      responseData = secret_value if is_valid_json(secret_value) else json.dumps({'secret': secret_value})
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData=json.loads(responseData), reason='OK', noEcho=True)
+              except Exception as e:
+                  logger.error(e)
+                  cfnresponse.send(event, context, cfnresponse.FAILED, responseData={}, reason=str(e))
+
+  DevEnvironmentSecretPlaintext:
+    Type: Custom::DevEnvironmentSecretPlaintext
+    Properties:
+      ServiceToken: !GetAtt DevEnvironmentSecretPlaintextLambda.Arn
+      ServiceTimeout: 15
+      SecretArn: !Ref DevEnvironmentSecret
+
+  # Bootstrap document: installs and starts VS Code (code-editor) served from
+  # the instance behind nginx, on Amazon Linux 2023. Named CodeEditorSSMDoc to
+  # match the design (area G).
+  CodeEditorSSMDoc:
+    Type: AWS::SSM::Document
+    Properties:
+      DocumentType: Command
+      Content:
+        schemaVersion: "2.2"
+        description: Bootstrap the Dev_Environment VS Code instance
+        parameters:
+          LinuxFlavor:
+            type: String
+            default: "al2023"
+          CodeEditorPassword:
+            type: String
+            default: !Ref AWS::StackId
+        mainSteps:
+          - name: InstallBasePackagesDnf
+            action: aws:runShellScript
+            precondition:
+              StringEquals:
+                - "{{ LinuxFlavor }}"
+                - al2023
+            inputs:
+              timeoutSeconds: 300
+              runCommand:
+                - "#!/bin/bash"
+                - set -euo pipefail
+                - dnf install -y --allowerasing curl gnupg whois argon2 unzip nginx openssl jq git
+          - name: AddUser
+            action: aws:runShellScript
+            inputs:
+              timeoutSeconds: 300
+              runCommand:
+                - "#!/bin/bash"
+                - set -euo pipefail
+                - !Sub |
+                  echo 'Adding user: ${DevEnvironmentUser}'
+                  id -u ${DevEnvironmentUser} >/dev/null 2>&1 || adduser -c '' ${DevEnvironmentUser}
+                  passwd -l ${DevEnvironmentUser}
+                  echo "${DevEnvironmentUser}:{{ CodeEditorPassword }}" | chpasswd
+                  usermod -aG wheel ${DevEnvironmentUser}
+                  sed -i 's/# %wheel/%wheel/g' /etc/sudoers
+                - !Sub getent passwd ${DevEnvironmentUser}
+          - name: UpdateProfile
+            action: aws:runShellScript
+            inputs:
+              timeoutSeconds: 300
+              runCommand:
+                - "#!/bin/bash"
+                - set -euo pipefail
+                - echo LANG=en_US.utf-8 >> /etc/environment
+                - echo LC_ALL=en_US.UTF-8 >> /etc/environment
+                - !Sub echo 'PATH=$PATH:/home/${DevEnvironmentUser}/.local/bin' >> /home/${DevEnvironmentUser}/.bashrc
+                - !Sub echo 'export PATH' >> /home/${DevEnvironmentUser}/.bashrc
+                - !Sub echo 'export AWS_REGION=${AWS::Region}' >> /home/${DevEnvironmentUser}/.bashrc
+                - !Sub echo 'export AWS_ACCOUNTID=${AWS::AccountId}' >> /home/${DevEnvironmentUser}/.bashrc
+                - !Sub chown -R ${DevEnvironmentUser}:${DevEnvironmentUser} /home/${DevEnvironmentUser}
+          - name: InstallAWSCLI
+            action: aws:runShellScript
+            inputs:
+              timeoutSeconds: 300
+              runCommand:
+                - "#!/bin/bash"
+                - set -euo pipefail
+                - !Sub sudo -u ${DevEnvironmentUser} curl -fsSL https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip -o /tmp/aws-cli.zip
+                - unzip -q -d /tmp /tmp/aws-cli.zip
+                - sudo /tmp/aws/install --update
+                - rm -rf /tmp/aws
+                - aws --version
+          - name: InstallGit
+            action: aws:runShellScript
+            inputs:
+              timeoutSeconds: 300
+              runCommand:
+                - "#!/bin/bash"
+                - set -euo pipefail
+                - dnf install -y python3-pip
+                - !Sub sudo -u ${DevEnvironmentUser} PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install git-remote-codecommit
+                - !Sub sudo -u ${DevEnvironmentUser} git config --global user.email "participant@example.com"
+                - !Sub sudo -u ${DevEnvironmentUser} git config --global user.name "Workshop Participant"
+                - !Sub sudo -u ${DevEnvironmentUser} git config --global init.defaultBranch "main"
+                - git --version
+          - name: InstallCodeEditor
+            action: aws:runShellScript
+            inputs:
+              timeoutSeconds: 600
+              runCommand:
+                - "#!/bin/bash"
+                - set -euo pipefail
+                - !Sub export CodeEditorUser=${DevEnvironmentUser}
+                - curl -fsSL https://code-editor.amazonaws.com/content/code-editor-server/dist/aws-workshop-studio/install.sh | bash -s -- 2>&1 || { echo "Code Editor installation failed"; exit 1; }
+          - name: ConfigureNginx
+            action: aws:runShellScript
+            inputs:
+              timeoutSeconds: 600
+              runCommand:
+                - "#!/bin/bash"
+                - set -euo pipefail
+                - echo "Configuring nginx..."
+                - |
+                  tee /etc/nginx/conf.d/code-editor.conf <<EOF
+                  server {
+                      listen 80;
+                      listen [::]:80;
+                      server_name *.cloudfront.net;
+                      proxy_set_header Host \$host;
+                      proxy_set_header X-Real-IP \$remote_addr;
+                      proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                      proxy_set_header X-Forwarded-Proto \$scheme;
+                      proxy_set_header Upgrade \$http_upgrade;
+                      proxy_set_header Connection "upgrade";
+                      proxy_buffering off;
+                      proxy_set_header Accept-Encoding gzip;
+                      location / {
+                          proxy_pass http://localhost:8080/;
+                      }
+                  }
+                  EOF
+                - systemctl enable nginx 2>&1
+                - systemctl restart nginx
+                - nginx -t 2>&1
+          - name: ConfigureAuthToken
+            action: aws:runShellScript
+            inputs:
+              timeoutSeconds: 600
+              runCommand:
+                - "#!/bin/bash"
+                - set -euo pipefail
+                - !Sub |
+                  sudo -u ${DevEnvironmentUser} mkdir -p /home/${DevEnvironmentUser}/.code-editor-server/data
+                  sudo -u ${DevEnvironmentUser} touch /home/${DevEnvironmentUser}/.code-editor-server/data/token
+                  echo -n "{{ CodeEditorPassword }}" > /home/${DevEnvironmentUser}/.code-editor-server/data/token
+          - name: ConfigureCodeEditor
+            action: aws:runShellScript
+            inputs:
+              timeoutSeconds: 600
+              runCommand:
+                - "#!/bin/bash"
+                - set -euo pipefail
+                - !Sub sudo -i -u ${DevEnvironmentUser} mkdir -p /home/${DevEnvironmentUser}/.code-editor-server/data/User
+                - !Sub mkdir -p ${DevEnvironmentHomeFolder} && chown -R ${DevEnvironmentUser}:${DevEnvironmentUser} ${DevEnvironmentHomeFolder}
+                - !Sub printf 'WORKSHOP_USER=%s\nWORKSHOP_HOME=%s\n' '${DevEnvironmentUser}' '${DevEnvironmentHomeFolder}' > /etc/workshop.env
+                - !Sub |
+                  tee /home/${DevEnvironmentUser}/.code-editor-server/data/User/settings.json <<EOF
+                  {
+                    "aws.telemetry": false,
+                    "telemetry.telemetryLevel": "off",
+                    "security.workspace.trust.enabled": false,
+                    "workbench.startupEditor": "none",
+                    "terminal.integrated.cwd": "${DevEnvironmentHomeFolder}"
+                  }
+                  EOF
+                - !Sub chown -R ${DevEnvironmentUser}:${DevEnvironmentUser} /home/${DevEnvironmentUser}
+                - !Sub systemctl enable --now code-editor@${DevEnvironmentUser}
+                - !Sub systemctl restart code-editor@${DevEnvironmentUser}
+                - !Sub systemctl status code-editor@${DevEnvironmentUser}
+
+  # Role shared by the run/check Lambdas that drive the bootstrap document.
+  DevEnvironmentSSMDocLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: !Sub lambda.${AWS::URLSuffix}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SSMDocOnEC2
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:SendCommand
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:document/${CodeEditorSSMDoc}
+                  - !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${DevEnvironmentInstance}
+              - Effect: Allow
+                Action:
+                  - ssm:ListCommandInvocations
+                  - ssm:GetCommandInvocation
+                Resource: "*"
+
+  RunDevEnvironmentSSMDocLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Run the bootstrap SSM document on the Dev_Environment instance
+      Handler: index.lambda_handler
+      Runtime: python3.13
+      MemorySize: 128
+      Timeout: 600
+      Environment:
+        Variables:
+          RetrySleep: 2900
+          AbortTimeRemaining: 5000
+      Architectures:
+        - arm64
+      Role: !GetAtt DevEnvironmentSSMDocLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import logging
+          import time
+          import os
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def lambda_handler(event, context):
+              if event['RequestType'] != 'Create':
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData={}, reason='No action to take')
+                  return
+              sleep_ms = int(os.environ.get('RetrySleep'))
+              abort_time_remaining_ms = int(os.environ.get('AbortTimeRemaining'))
+              rp = event['ResourceProperties']
+              instance_id = rp['InstanceId']
+              document_name = rp['DocumentName']
+              cloudwatch_log_group_name = rp['CloudWatchLogGroupName']
+              for k in ['ServiceToken', 'ServiceTimeout', 'InstanceId', 'DocumentName', 'CloudWatchLogGroupName', 'PhysicalResourceId']:
+                  rp.pop(k, None)
+              parameters = {key: [value] for key, value in rp.items()}
+              ssm = boto3.client('ssm')
+              retry = True
+              attempt_no = 0
+              while retry:
+                  attempt_no += 1
+                  time_remaining_ms = context.get_remaining_time_in_millis()
+                  try:
+                      response = ssm.send_command(
+                          InstanceIds=[instance_id],
+                          DocumentName=document_name,
+                          CloudWatchOutputConfig={'CloudWatchLogGroupName': cloudwatch_log_group_name, 'CloudWatchOutputEnabled': True},
+                          Parameters=parameters
+                      )
+                      command_id = response['Command']['CommandId']
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {'CommandId': command_id}, reason='OK')
+                      retry = False
+                  except ssm.exceptions.InvalidInstanceId as e:
+                      if time_remaining_ms > abort_time_remaining_ms:
+                          logger.info(f'Instance {instance_id} not ready. Sleeping {sleep_ms/1000}s')
+                          time.sleep(sleep_ms/1000)
+                      else:
+                          logger.error(e, exc_info=True)
+                          cfnresponse.send(event, context, cfnresponse.FAILED, responseData={}, reason='Instance not ready, timed out')
+                          retry = False
+                  except Exception as e:
+                      logger.error(e, exc_info=True)
+                      cfnresponse.send(event, context, cfnresponse.FAILED, responseData={}, reason=str(e))
+                      retry = False
+
+  RunDevEnvironmentSSMDoc:
+    Type: Custom::RunDevEnvironmentSSMDoc
+    Properties:
+      ServiceToken: !GetAtt RunDevEnvironmentSSMDocLambda.Arn
+      ServiceTimeout: 305
+      InstanceId: !Ref DevEnvironmentInstance
+      DocumentName: !Ref CodeEditorSSMDoc
+      CloudWatchLogGroupName: !Sub /aws/ssm/${CodeEditorSSMDoc}
+      CodeEditorPassword: !GetAtt DevEnvironmentSecretPlaintext.password
+      LinuxFlavor: al2023
+
+  # Security group whose ONLY inbound rule sources the AWS-managed CloudFront
+  # origin-facing prefix list for the stack's Region (Req 2.22). No other
+  # inbound rule is declared.
+  DevEnvironmentSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Dev_Environment - allow inbound only from the CloudFront origin-facing prefix list
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - Description: Allow HTTP from com.amazonaws.global.cloudfront.origin-facing
+          IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourcePrefixListId: !FindInMap [AWSRegionsPrefixListID, !Ref "AWS::Region", PrefixList]
+      Tags:
+        - Key: Name
+          Value: !Sub ${ClusterName}-dev-environment-sg-${AWS::StackName}
+
+  # Dev_Environment EC2 instance. Amazon Linux 2023 (Req 2.20). The instance
+  # profile (Req 2.18) and the root volume size (Req 2.19) are BOTH stated in
+  # this declaration: there is no post-creation profile association, reboot,
+  # managed-credentials disable, or volume resize anywhere in the stack.
+  # The retained EKSEnvironmentInstanceProfile / EKSEnvironmentRole are reused.
+  DevEnvironmentInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !If
+        - IsGravitonDevEnv
+        - !FindInMap [DevEnvironmentAMI, arm64, ImageId]
+        - !FindInMap [DevEnvironmentAMI, x86-64, ImageId]
+      InstanceType: !Ref DevEnvironmentInstanceType
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: !Ref DevEnvironmentVolumeSize
+            VolumeType: gp3
+            DeleteOnTermination: true
+            Encrypted: true
+      Monitoring: true
+      SubnetId: !Ref PublicSubnetOne
+      SecurityGroupIds:
+        - !Ref DevEnvironmentSecurityGroup
+      IamInstanceProfile: !Ref EKSEnvironmentInstanceProfile
+      UserData:
+        Fn::Base64: !Sub |
+          #cloud-config
+          hostname: dev-environment
+          runcmd:
+            - mkdir -p ${DevEnvironmentHomeFolder} && chown -R ${DevEnvironmentUser}:${DevEnvironmentUser} ${DevEnvironmentHomeFolder}
+      Tags:
+        - Key: Name
+          Value: !Sub ${ClusterName}-dev-environment-${AWS::StackName}
+
+  DevEnvironmentEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  DevEnvironmentEIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt DevEnvironmentEIP.AllocationId
+      InstanceId: !Ref DevEnvironmentInstance
+
+  DevEnvironmentCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        DefaultTTL: 86400
+        MaxTTL: 31536000
+        MinTTL: 1
+        Name: !Sub
+          - dev-environment-${RandomGUID}
+          - RandomGUID: !Select [0, !Split ["-", !Select [2, !Split ["/", !Ref AWS::StackId]]]]
+        ParametersInCacheKeyAndForwardedToOrigin:
+          CookiesConfig:
+            CookieBehavior: all
+          EnableAcceptEncodingGzip: true
+          EnableAcceptEncodingBrotli: true
+          HeadersConfig:
+            HeaderBehavior: whitelist
+            Headers:
+              - Accept-Charset
+              - Authorization
+              - Origin
+              - Accept
+              - Referer
+              - Host
+              - Accept-Language
+              - Accept-Datetime
+          QueryStringsConfig:
+            QueryStringBehavior: all
+
+  # CloudFront distribution: the only public entry point to the Dev_Environment.
+  # It reaches the instance over HTTP on the origin (the instance security group
+  # admits only the CloudFront prefix list) and serves viewers over HTTPS
+  # (Req 2.13).
+  DevEnvironmentDistribution:
+    Type: AWS::CloudFront::Distribution
+    DependsOn: DevEnvironmentEIPAssociation
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        HttpVersion: http2and3
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+            - PUT
+            - PATCH
+            - POST
+            - DELETE
+          CachePolicyId: !Ref DevEnvironmentCachePolicy
+          Compress: true
+          OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3 # Managed-AllViewer
+          ResponseHeadersPolicyId: 67f7725c-6f97-4210-82d7-5512b31e9d03 # Managed-SecurityHeadersPolicy
+          TargetOriginId: !Sub CloudFront-${AWS::StackName}
+          ViewerProtocolPolicy: redirect-to-https
+        Origins:
+          - DomainName: !GetAtt DevEnvironmentInstance.PublicDnsName
+            Id: !Sub CloudFront-${AWS::StackName}
+            CustomOriginConfig:
+              OriginProtocolPolicy: http-only
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+          MinimumProtocolVersion: TLSv1.2_2021
+
+  # Readiness health check (Req 2.24). Polls the Dev_Environment URL until it is
+  # reachable. If it does not become reachable within the polling window the
+  # custom resource FAILS, which fails the stack naming DevEnvironmentHealthcheck
+  # as the failing resource; CustomTriggerBuild depends on it, so the setup
+  # documents never run. The Lambda runs to its 900s (15 min) maximum and,
+  # combined with the upstream bootstrap-completion check, enforces the
+  # 20-minute readiness gate before CodeBuild is triggered.
+  DevEnvironmentHealthCheckLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: !Sub lambda.${AWS::URLSuffix}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  DevEnvironmentHealthCheckLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Run health check on the Dev_Environment instance
+      Handler: index.lambda_handler
+      Runtime: python3.13
+      MemorySize: 128
+      Timeout: 900
+      Environment:
+        Variables:
+          RetrySleep: 15000
+          AbortTimeRemaining: 30000
+      Architectures:
+        - arm64
+      Role: !GetAtt DevEnvironmentHealthCheckLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import cfnresponse
+          import logging
+          import time
+          import os
+          import http.client
+          from urllib.parse import urlparse
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def healthURLOk(url):
+              try:
+                  parsed_url = urlparse(url)
+                  if parsed_url.scheme == 'https':
+                      conn = http.client.HTTPSConnection(parsed_url.netloc, timeout=10)
+                  else:
+                      conn = http.client.HTTPConnection(parsed_url.netloc, timeout=10)
+                  conn.request("GET", parsed_url.path or "/")
+                  response = conn.getresponse()
+                  content = response.read()
+                  if 200 <= response.status < 400:
+                      response_dict = json.loads(content.decode('utf-8'))
+                      if 'hasActiveConnections' in response_dict:
+                          logger.info('Health check OK.')
+                          return True
+                      logger.info(f'Health check failed. Response: {response_dict}')
+                      return False
+                  logger.info(f'Healthcheck failed. Return code: {response.status}')
+                  return False
+              except Exception as e:
+                  logger.info(f'Healthcheck failed: {e}')
+                  return False
+              finally:
+                  if 'conn' in locals():
+                      conn.close()
+
+          def lambda_handler(event, context):
+              try:
+                  if event['RequestType'] != 'Create':
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData={}, reason='No action to take')
+                      return
+                  sleep_ms = int(os.environ.get('RetrySleep'))
+                  abort_time_remaining_ms = int(os.environ.get('AbortTimeRemaining'))
+                  url = event['ResourceProperties']['Url']
+                  logger.info(f'Testing url: {url}')
+                  time_remaining_ms = context.get_remaining_time_in_millis()
+                  attempt_no = 0
+                  health_check = False
+                  while attempt_no == 0 or (time_remaining_ms > abort_time_remaining_ms and not health_check):
+                      attempt_no += 1
+                      health_check = healthURLOk(url)
+                      if not health_check:
+                          time.sleep(sleep_ms/1000)
+                      time_remaining_ms = context.get_remaining_time_in_millis()
+                  if health_check:
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData={}, reason='Dev_Environment healthcheck successful')
+                  else:
+                      cfnresponse.send(event, context, cfnresponse.FAILED, responseData={}, reason='Dev_Environment not reachable within the readiness window; failing resource: DevEnvironmentHealthcheck')
+              except Exception as e:
+                  logger.error(e, exc_info=True)
+                  cfnresponse.send(event, context, cfnresponse.FAILED, responseData={}, reason=str(e))
+
+  DevEnvironmentHealthcheck:
+    Type: Custom::DevEnvironmentHealthCheck
+    DependsOn: RunDevEnvironmentSSMDoc
+    Properties:
+      ServiceToken: !GetAtt DevEnvironmentHealthCheckLambda.Arn
+      ServiceTimeout: 910
+      Url: !Sub https://${DevEnvironmentDistribution.DomainName}/healthz
+
+  # Confirms the bootstrap document reached Success on the instance. Combined
+  # with the health check, this gates CustomTriggerBuild (Req 2.24).
+  CheckDevEnvironmentSSMDocLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Check the bootstrap SSM document on the Dev_Environment instance
+      Handler: index.lambda_handler
+      Runtime: python3.13
+      MemorySize: 128
+      Timeout: 600
+      Environment:
+        Variables:
+          RetrySleep: 15000
+          AbortTimeRemaining: 30000
+      Architectures:
+        - arm64
+      Role: !GetAtt DevEnvironmentSSMDocLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import logging
+          import time
+          import os
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def lambda_handler(event, context):
+              if event['RequestType'] != 'Create':
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData={}, reason='No action to take')
+                  return
+              sleep_ms = int(os.environ.get('RetrySleep'))
+              abort_time_remaining_ms = int(os.environ.get('AbortTimeRemaining'))
+              rp = event['ResourceProperties']
+              instance_id = rp['InstanceId']
+              document_name = rp['DocumentName']
+              ssm = boto3.client('ssm')
+              retry = True
+              while retry:
+                  time_remaining_ms = context.get_remaining_time_in_millis()
+                  try:
+                      response = ssm.list_command_invocations(InstanceId=instance_id, Details=True)
+                      for invocation in response['CommandInvocations']:
+                          if invocation['DocumentName'] == document_name:
+                              status = invocation['Status']
+                              if status == 'Success':
+                                  cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData={}, reason='OK')
+                                  retry = False
+                              elif status in ('Failed', 'Cancelled', 'TimedOut'):
+                                  cfnresponse.send(event, context, cfnresponse.FAILED, responseData={}, reason=f'Bootstrap document {document_name} {status}')
+                                  retry = False
+                      if retry:
+                          if time_remaining_ms > abort_time_remaining_ms:
+                              time.sleep(sleep_ms/1000)
+                          else:
+                              cfnresponse.send(event, context, cfnresponse.FAILED, responseData={}, reason='Timed out waiting for bootstrap document')
+                              retry = False
+                  except Exception as e:
+                      logger.error(e, exc_info=True)
+                      cfnresponse.send(event, context, cfnresponse.FAILED, responseData={}, reason=str(e))
+                      retry = False
+
+  CheckDevEnvironmentSSMDoc:
+    Type: Custom::CheckDevEnvironmentSSMDoc
+    DependsOn: DevEnvironmentHealthcheck
+    Properties:
+      ServiceToken: !GetAtt CheckDevEnvironmentSSMDocLambda.Arn
+      ServiceTimeout: 610
+      InstanceId: !Ref DevEnvironmentInstance
+      DocumentName: !Ref CodeEditorSSMDoc
 
 Outputs:
-  EKSCloud9EnvUrl:
-    Description: GitOps workshop IDE URL
-    Value: !Sub https://${AWS::Region}.console.aws.amazon.com/cloud9/ide/${EKSEnvironment}?region=${AWS::Region}
+  # Reachable Dev_Environment URL (Req 2.21). The credential is read from the
+  # generated Secrets Manager secret at deploy time — no literal credential
+  # value appears in the template (Req 2.23).
+  DevEnvironmentURL:
+    Description: Dev_Environment VS Code URL
+    Value: !Sub https://${DevEnvironmentDistribution.DomainName}/?folder=${DevEnvironmentHomeFolder}&tkn=${DevEnvironmentSecretPlaintext.password}

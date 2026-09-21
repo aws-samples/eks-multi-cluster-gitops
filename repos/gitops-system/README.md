@@ -34,7 +34,7 @@ required by the cluster - [External Secrets][external-secrets], Flux, [Sealed
 Secrets][sealed-secrets] - and their respective configurations.
 
 [external-secrets]: https://github.com/external-secrets/external-secrets
-[sealed-secrets]: https://github.com/bitnami-labs/sealed-secrets
+[sealed-secrets]: https://github.com/bitnami/sealed-secrets
 
 ### `tools`
 
@@ -47,7 +47,7 @@ The `external-secrets` subdirectory contains a `HelmRelease` for installing the
 External Secrets operator (used only by the management cluster).
 
 [crossplane]: https://github.com/crossplane/crossplane
-[crossplane-aws]: https://github.com/crossplane/provider-aws
+[crossplane-aws]: https://github.com/crossplane-contrib/provider-aws
 
 ### `tools-config`
 

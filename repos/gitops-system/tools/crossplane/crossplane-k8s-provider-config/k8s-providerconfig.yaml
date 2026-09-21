@@ -29,9 +29,9 @@ spec:
       serviceAccountName: k8s-provider-config-job-sa
       containers:
       - name: kubectl
-        image: bitnami/kubectl:1.22.11
+        image: alpine/k8s:1.36.0
         command:
-        - "/bin/bash"
+        - "/bin/sh"
         - "-c"
         - |+
           SA="crossplane-system:"$(kubectl get provider.pkg.crossplane.io provider-kubernetes -o go-template --template='{{.status.currentRevision}}{{"\n"}}')
@@ -72,9 +72,9 @@ spec:
           serviceAccountName: k8s-provider-config-job-sa
           containers:
           - name: kubectl
-            image: bitnami/kubectl:1.22.11
+            image: alpine/k8s:1.36.0
             command:
-            - "/bin/bash"
+            - "/bin/sh"
             - "-c"
             - |+
               SA="crossplane-system:"$(kubectl get provider.pkg.crossplane.io provider-kubernetes -o go-template --template='{{.status.currentRevision}}{{"\n"}}')

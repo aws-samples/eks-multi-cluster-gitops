@@ -7,7 +7,7 @@ Public Subnets, 2 Private Subnets, 2 NAT Gateways, and 2 Elastic IP Addresses
 account you use for deploying this sample implementation can accommodate that.
 
 ## Initial setup (automated)
-A CloudFormation template is provided to speed up the initial setup. If you decided to use it, skip the sections below from **Create and prepare the Cloud9 workspace** to **Allow access to the management cluster from the EKS console** i.e. start at **Populate and update the repositories**.
+A CloudFormation template is provided to speed up the initial setup. If you decided to use it, skip the sections below from **Prepare your working environment** to **Allow access to the management cluster from the EKS console** i.e. start at **Populate and update the repositories**.
 
 Follow the steps below for deploying the CloudFormation template:
 
@@ -47,63 +47,70 @@ aws cloudformation create-stack \
    --parameters ParameterKey=ConsoleRoleName,ParameterValue=Admin
 ```
 
-## Create and prepare the Cloud9 workspace
-1. Navigate to the [Cloud9 console](https://console.aws.amazon.com/cloud9/).
+4. Once the stack reaches `CREATE_COMPLETE`, open the **Dev_Environment** it provisioned. The Dev_Environment is VS Code served in your browser from an Amazon EC2 instance running **Amazon Linux 2023**, reachable through an Amazon CloudFront distribution. The stack has already installed the AWS CLI and the Kubernetes client tools on it, created the management cluster and the Git repositories, generated the Sealed Secrets keys, and configured Crossplane IAM and EKS console access — i.e. everything in the sections you are skipping. Open the Dev_Environment and continue from **Populate and update the repositories**, running the remaining steps inside its terminal.
 
-2. Create a new Cloud9 environment with the name "gitops", using an EC2 *t2.micro* instance and *Ubuntu 18.04* platform. Leave all other settings as default, and select **Create Environment**.
+   1. Get the Dev_Environment URL from the stack output:
+      ```bash
+      aws cloudformation describe-stacks \
+        --stack-name gitops-initial-setup \
+        --query "Stacks[0].Outputs[?OutputKey=='DevEnvironmentURL'].OutputValue" \
+        --output text
+      ```
+      The URL embeds the access token as a query parameter. Open it in your browser to reach the VS Code session, which opens the `/workshop` folder by default.
 
-3. While the Cloud9 environment is being created, create an EC2 IAM role for your workspace instance as follows:
-    1. Open another tab to access the [IAM console](https://console.aws.amazon.com/iam/).
-    2. From the menu bar on the left, choose **Roles**.
-    3. Choose **Create Role**.
-    4. For **Trusted entity type** choose **AWS Service**, and then choose the use case **EC2**. Choose **Next**.
-    5. On the **Add Permissions** screen, choose **Create policy**. This action opens new tab in your browser for creating an IAM policy.
-    6. In the new browser tab, choose **JSON**, paste the content of [cloud9-role-permission-policy-template.json](config/cloud9-role-permission-policy-template.json), replace `${ACCOUNT_ID}` (3 occurrences) with your AWS account id, replace `${AWS_REGION}` (2 occurrence) with the AWS region you are using, choose **Next**, then choose **Next** again. ![](img/iam-create-policy-json.png)
-    7. Give the policy a name, for example "gitops-workshop", and choose **Create policy**. ![](img/iam-create-policy.png)
-    8. Return to the previous browser tab, click on the refresh button, select the IAM policy you created in the other browser tab.
-    9. Use the policy filter to find the policy `AmazonSSMManagedInstanceCore` and select this too. Choose **Next**.
-    10. Give the role a name, for example "gitops-workshop", and choose **Create role**. ![](img/iam-create-role.png)
+   2. The login credential is generated into AWS Secrets Manager under a secret named `dev-environment-<id>`. If you are prompted for it, retrieve it with:
+      ```bash
+      SECRET_NAME=$(aws secretsmanager list-secrets \
+        --query "SecretList[?starts_with(Name, 'dev-environment-')].Name | [0]" \
+        --output text)
+      aws secretsmanager get-secret-value \
+        --secret-id "$SECRET_NAME" \
+        --query SecretString --output text
+      ```
+      The secret holds the `username` (default `participant`) and the generated `password`.
 
-4. Attach this IAM role to your Cloud9 EC2 instance as follows:
+   3. Open a terminal in the VS Code session, then continue at **Populate and update the repositories**.
 
-    1. Switch to the tab running your Cloud9 IDE.
+## Prepare your working environment
 
-    2. If it has still not finished being created, then wait until creation is complete.
-    3. Click the grey circle button (in top right corner) and choose  **Manage EC2 Instance**.  ![](img/cloud9-role.png)
-    4. This opens the EC2 console in a separate tab, with a filter applied to show the EC2 instance for your Cloud9 IDE. Select the instance, then choose **Actions / Security / Modify IAM Role**. ![](img/c9instancerole.png)
-    5. On the **Modify IAM role** screen, choose *gitops-workshop* from the IAM role dropdown. ![](img/c9-modify-role.png)
-    6. Choose **Update IAM role**.
-    7. Close the tab and return to your Cloud9 IDE tab.
+> **Skip this section if you used the CloudFormation template.** The stack has already installed these tools and set these variables on the Dev_Environment. The steps below are for a **manual** setup from your own terminal.
 
-5. In a Cloud9 Terminal window, upgrade to the latest AWS CLI using:
+Install the following tools and configure your terminal with credentials for the AWS account you are deploying into:
+
+* AWS CLI v2
+* `kubectl` (1.36)
+* `eksctl`
+* Flux CLI (2.9)
+* `kubeseal` (0.40)
+* `yq` (v4.53.6)
+* `git`, `openssl`, and `envsubst` (from `gettext`)
+* the GitHub CLI (`gh`) — only if you use GitHub as the Git backend
+
+### Set up shell tools and variables
+
+1. Upgrade to the latest AWS CLI v2 using:
    ```
    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
    unzip awscliv2.zip
    sudo ./aws/install
    ```
 
-6. Disable Cloud9 managed credentials using:
+2. Verify that your terminal is authenticated to the correct AWS account.
    ```
-   aws cloud9 update-environment  --environment-id $C9_PID --managed-credentials-action DISABLE
-   rm -vf ${HOME}/.aws/credentials
-   ```
-
-7. Verify that Cloud9 is using the *gitops-workshop* IAM role you created.
-   ```
-   aws sts get-caller-identity --query Arn | grep gitops-workshop -q && echo "IAM role valid" || echo "IAM role NOT valid"
+   aws sts get-caller-identity
    ```
 
-8. Install `yq`
+3. Install `yq`
    ```bash
-   sudo curl --silent --location -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.24.5/yq_linux_amd64
+   sudo curl --silent --location -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.53.6/yq_linux_amd64
    sudo chmod +x /usr/local/bin/yq
    ```
 
-9. Track the account ID and region using environment variables,
-   and update `.bash_profile` and `~/.aws/config`so that these veriables will be available in all Cloud9 Terminal windows.
+4. Track the account ID and region using environment variables,
+   and update `.bash_profile` and `~/.aws/config` so that these variables will be available in all terminal windows.
    ```
    export ACCOUNT_ID=$(aws sts get-caller-identity --output text --query Account)
-   export AWS_REGION=$(curl -s 169.254.169.254/latest/dynamic/instance-identity/document | yq -e '.region')
+   export AWS_REGION=$(aws configure get region)
    echo $ACCOUNT_ID:$AWS_REGION
    echo "export ACCOUNT_ID=${ACCOUNT_ID}" | tee -a ~/.bash_profile
    echo "export AWS_REGION=${AWS_REGION}" | tee -a ~/.bash_profile
@@ -111,7 +118,7 @@ aws cloudformation create-stack \
    aws configure get default.region
    ```
 
-10. Track the ARN of the IAM entity that is used for accessing the EKS console using environment variables.
+5. Track the ARN of the IAM entity that is used for accessing the EKS console using environment variables.
 
 (Replace `<IAM user/role ARN>` in the command below with the ARN of the IAM user or role used for accessing the EKS console).
 
@@ -120,35 +127,28 @@ aws cloudformation create-stack \
    echo "export EKS_CONSOLE_IAM_ENTITY_ARN=${EKS_CONSOLE_IAM_ENTITY_ARN}" | tee -a ~/.bash_profile
    ```
 
-11. Increase the volume of the EBS volume to 30GB as follows.
-    1. Copy the [volume resize script from the Cloud9 documentation](https://docs.aws.amazon.com/cloud9/latest/user-guide/move-environment.html#move-environment-resize) into a file `resize.sh` in your Cloud9 environment.
-    2. Run 
-       ```
-       bash resize.sh 30
-       ```
-
 
 ## Install tools and workshop files
 
-Having set up your Cloud9 environment, you can now install a number of tools that will be used to build the multi-cluster GitOps environment.
+Having prepared your working environment, you can now install a number of tools that will be used to build the multi-cluster GitOps environment.
 
 1. Install Kubernetes CLI (`kubectl`)
    ```bash
    sudo curl --silent --location -o /usr/local/bin/kubectl \
-      https://s3.us-west-2.amazonaws.com/amazon-eks/1.24.7/2022-10-31/bin/linux/amd64/kubectl
+      https://s3.us-west-2.amazonaws.com/amazon-eks/1.36.2/2026-07-05/bin/linux/amd64/kubectl
 
    sudo chmod +x /usr/local/bin/kubectl
    ```
 
 2. Install Flux CLI
    ```bash
-   curl -s https://fluxcd.io/install.sh | sudo bash
+   curl -s https://fluxcd.io/install.sh | sudo FLUX_VERSION=2.9.5 bash
    ```
 
 3. Install `kubeseal`
    ```bash
-   wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.19.4/kubeseal-0.19.4-linux-amd64.tar.gz
-   tar xfz kubeseal-0.19.4-linux-amd64.tar.gz
+   wget https://github.com/bitnami/sealed-secrets/releases/download/v0.40.0/kubeseal-0.40.0-linux-amd64.tar.gz
+   tar xfz kubeseal-0.40.0-linux-amd64.tar.gz
    sudo install -m 755 kubeseal /usr/local/bin/kubeseal
    ```
 
@@ -169,7 +169,7 @@ Having set up your Cloud9 environment, you can now install a number of tools tha
 6. Clone the workshop git repo:
    ```
    cd ~/environment
-   git clone https://github.com/aws-samples/multi-cluster-gitops.git
+   git clone https://github.com/aws-samples/eks-multi-cluster-gitops.git
    ```
    
 ## Create a secret in AWS Secret Manager for Sealed Secrets keys
@@ -305,14 +305,9 @@ Please note that Karpenter IAM role itself is yet to be created via GitOps.
 
 ## Allow access to the management cluster from the EKS console
 
-1. Create the RBAC authorization resources needed for granting an IAM entity access to the cluster through the EKS console.
-   ```bash
-   cd ~/environment
-   kubectl apply -f gitops-system/tools-config/eks-console/role.yaml
-   kubectl apply -f gitops-system/tools-config/eks-console/role-binding.yaml
-   ```
+Read-only access to the cluster's resources from the EKS console is granted through the `aws-auth` configuration in the `gitops-system` repo: the `eks-console-dashboard-full-access` `ClusterRole` and its binding (`gitops-system/tools-config/aws-auth/role.yaml` and `gitops-system/tools-config/aws-auth/role-binding.yaml`) are applied by GitOps once the management cluster is bootstrapped. There is no separate `gitops-system/tools-config/eks-console/` directory — the earlier step that applied `eks-console/role.yaml` and `eks-console/role-binding.yaml` referenced a path that does not exist and has been removed. You only need to map the console IAM entity into `aws-auth`:
 
-2. Add a mapping for the IAM entity in `aws-auth` `ConfigMap` using `eksctl`.
+1. Add a mapping for the IAM entity in `aws-auth` `ConfigMap` using `eksctl`.
 
    ```bash
    eksctl create iamidentitymapping \
@@ -326,7 +321,7 @@ Please note that Karpenter IAM role itself is yet to be created via GitOps.
 ## Populate and update the repositories
    
 To populate the repos you created, copy the content of the
-`multi-cluster-gitops/repos` directories to the corresponding repos you
+`eks-multi-cluster-gitops/repos` directories to the corresponding repos you
 created in the previous step:
 ```
 cp -r eks-multi-cluster-gitops/repos/gitops-system/* gitops-system/

@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - aws-ebs-csi-repo.yaml
   - aws-ebs-csi-release.yaml
+  - storageclass-gp3.yaml

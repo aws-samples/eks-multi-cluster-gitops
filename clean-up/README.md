@@ -39,9 +39,11 @@ starting with "product-" using:
     ```
     aws dynamodb delete-table --table-name <table-name>
     ```
-10. Delete the IAM user that was used to interact with the CodeCommit repos from the Cloud9 environment, and from the EKS clusters by the Flux source controller. Also, delete the associated IAM policy. Skip this step if you used CloudFormation to perform the initial setup.
+10. Delete the IAM user that was used to interact with the CodeCommit repos from the Dev_Environment, and from the EKS clusters by the Flux source controller. Also, delete the associated IAM policy. Skip this step if you used CloudFormation to perform the initial setup.
 
-11. If you used CloudFormation to perform the initial setup, delete the corresponding CloudFormation stack:
+11. Remove the Dev_Environment (the VS Code on Amazon EC2 development environment provisioned by `initial-setup/auto/cfn.yaml`). If you used CloudFormation to perform the initial setup, deleting the CloudFormation stack in the next step removes the Dev_Environment and all of its resources — the EC2 instance, the CloudFront distribution, the Secrets Manager secret holding its access credential, the Elastic IP, the security group, and the SSM documents — so no separate action is required here.
+
+12. If you used CloudFormation to perform the initial setup, delete the corresponding CloudFormation stack. This deletes the Dev_Environment along with the CodeCommit repos and IAM resources created by the stack:
     ```
     aws cloudformation delete-stack --stack-name gitops-initial-setup
     ```

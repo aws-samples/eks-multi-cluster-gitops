@@ -133,4 +133,7 @@ spec:
                 eks_cluster_oidc_issuer:
                   description: OIDC issuer for the EKS cluster
                   type: string
+                vpc_id:
+                  description: VPC ID of the workload cluster VPC
+                  type: string
               type: object

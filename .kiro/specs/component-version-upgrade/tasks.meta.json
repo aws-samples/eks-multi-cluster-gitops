@@ -1,0 +1,876 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Create the inventory file and schema": [
+      {
+        "executionId": "d66a37d5-bdff-48f7-a43f-f34d6469e0d2",
+        "chatSessionId": "sess_d4b5d659-6ef7-491a-b7c5-566b6987fa65",
+        "timestamp": 1789507260092
+      },
+      {
+        "executionId": "d66a37d5-bdff-48f7-a43f-f34d6469e0d2",
+        "chatSessionId": "sess_d4b5d659-6ef7-491a-b7c5-566b6987fa65",
+        "timestamp": 1789508541965
+      }
+    ],
+    "1.2 Enumerate and record every Version_Reference": [
+      {
+        "executionId": "d66a37d5-bdff-48f7-a43f-f34d6469e0d2",
+        "chatSessionId": "sess_d4b5d659-6ef7-491a-b7c5-566b6987fa65",
+        "timestamp": 1789508545755
+      },
+      {
+        "executionId": "d66a37d5-bdff-48f7-a43f-f34d6469e0d2",
+        "chatSessionId": "sess_d4b5d659-6ef7-491a-b7c5-566b6987fa65",
+        "timestamp": 1789511833124
+      }
+    ],
+    "1.3 Resolve the two deferred pins and audit status flags and duplicate groups": [
+      {
+        "executionId": "d66a37d5-bdff-48f7-a43f-f34d6469e0d2",
+        "chatSessionId": "sess_d4b5d659-6ef7-491a-b7c5-566b6987fa65",
+        "timestamp": 1789511837460
+      },
+      {
+        "executionId": "d66a37d5-bdff-48f7-a43f-f34d6469e0d2",
+        "chatSessionId": "sess_d4b5d659-6ef7-491a-b7c5-566b6987fa65",
+        "timestamp": 1789513192342
+      }
+    ],
+    "1. Produce the Version Inventory": [
+      {
+        "executionId": "d66a37d5-bdff-48f7-a43f-f34d6469e0d2",
+        "chatSessionId": "sess_d4b5d659-6ef7-491a-b7c5-566b6987fa65",
+        "timestamp": 1789513192383
+      }
+    ],
+    "2.1 Create the suite harness": [
+      {
+        "executionId": "585280b8-1468-4f7b-84f0-8f662289552b",
+        "chatSessionId": "sess_48ba6938-f615-496a-95f5-22611476d352",
+        "timestamp": 1789905172949
+      },
+      {
+        "executionId": "585280b8-1468-4f7b-84f0-8f662289552b",
+        "chatSessionId": "sess_48ba6938-f615-496a-95f5-22611476d352",
+        "timestamp": 1789905860622
+      }
+    ],
+    "2.2 Implement checks 1 and 2 — Kustomize build and schema validation": [
+      {
+        "executionId": "585280b8-1468-4f7b-84f0-8f662289552b",
+        "chatSessionId": "sess_48ba6938-f615-496a-95f5-22611476d352",
+        "timestamp": 1789905867732
+      },
+      {
+        "executionId": "585280b8-1468-4f7b-84f0-8f662289552b",
+        "chatSessionId": "sess_48ba6938-f615-496a-95f5-22611476d352",
+        "timestamp": 1789906929222
+      }
+    ],
+    "2.3 Implement checks 3–7 — registry resolution": [
+      {
+        "executionId": "585280b8-1468-4f7b-84f0-8f662289552b",
+        "chatSessionId": "sess_48ba6938-f615-496a-95f5-22611476d352",
+        "timestamp": 1789905868692
+      },
+      {
+        "executionId": "585280b8-1468-4f7b-84f0-8f662289552b",
+        "chatSessionId": "sess_48ba6938-f615-496a-95f5-22611476d352",
+        "timestamp": 1789906930587
+      }
+    ],
+    "2.4 Implement checks 8 and 12 — CloudFormation validity": [
+      {
+        "executionId": "585280b8-1468-4f7b-84f0-8f662289552b",
+        "chatSessionId": "sess_48ba6938-f615-496a-95f5-22611476d352",
+        "timestamp": 1789905870142
+      },
+      {
+        "executionId": "585280b8-1468-4f7b-84f0-8f662289552b",
+        "chatSessionId": "sess_48ba6938-f615-496a-95f5-22611476d352",
+        "timestamp": 1789906932020
+      }
+    ],
+    "2.5 Implement checks 9, 10 and 11 — consistency, residue, and doc drift": [
+      {
+        "executionId": "585280b8-1468-4f7b-84f0-8f662289552b",
+        "chatSessionId": "sess_48ba6938-f615-496a-95f5-22611476d352",
+        "timestamp": 1789905871538
+      },
+      {
+        "executionId": "585280b8-1468-4f7b-84f0-8f662289552b",
+        "chatSessionId": "sess_48ba6938-f615-496a-95f5-22611476d352",
+        "timestamp": 1789906932939
+      }
+    ],
+    "2.6 Implement check 13 — application build and smoke": [
+      {
+        "executionId": "585280b8-1468-4f7b-84f0-8f662289552b",
+        "chatSessionId": "sess_48ba6938-f615-496a-95f5-22611476d352",
+        "timestamp": 1789905872232
+      },
+      {
+        "executionId": "585280b8-1468-4f7b-84f0-8f662289552b",
+        "chatSessionId": "sess_48ba6938-f615-496a-95f5-22611476d352",
+        "timestamp": 1789906934158
+      }
+    ],
+    "2.7 Implement checks 14 and 15 — AWS-gated modules": [
+      {
+        "executionId": "585280b8-1468-4f7b-84f0-8f662289552b",
+        "chatSessionId": "sess_48ba6938-f615-496a-95f5-22611476d352",
+        "timestamp": 1789906938473
+      },
+      {
+        "executionId": "585280b8-1468-4f7b-84f0-8f662289552b",
+        "chatSessionId": "sess_48ba6938-f615-496a-95f5-22611476d352",
+        "timestamp": 1789907379318
+      }
+    ],
+    "2. Build the verification suite skeleton": [
+      {
+        "executionId": "585280b8-1468-4f7b-84f0-8f662289552b",
+        "chatSessionId": "sess_48ba6938-f615-496a-95f5-22611476d352",
+        "timestamp": 1789907379377
+      }
+    ],
+    "3.1 Apply the entire Flux cutover as a single change": [
+      {
+        "executionId": "265d8aa6-d8a9-440a-a566-9d958912d9cd",
+        "chatSessionId": "sess_40c93a26-9fc0-43d5-b94a-eb7c672ecc2a",
+        "timestamp": 1789920859163
+      },
+      {
+        "executionId": "265d8aa6-d8a9-440a-a566-9d958912d9cd",
+        "chatSessionId": "sess_40c93a26-9fc0-43d5-b94a-eb7c672ecc2a",
+        "timestamp": 1789921329446
+      }
+    ],
+    "3. Flux upgrade and API cutover": [
+      {
+        "executionId": "265d8aa6-d8a9-440a-a566-9d958912d9cd",
+        "chatSessionId": "sess_40c93a26-9fc0-43d5-b94a-eb7c672ecc2a",
+        "timestamp": 1789921329478
+      }
+    ],
+    "3.2 Run verification checks 1, 2 and 9": [
+      {
+        "executionId": "44a5e952-1ed8-46ae-8f9b-9842433006e3",
+        "chatSessionId": "sess_e326dc7d-c081-455e-a862-29b3d7f54a42",
+        "timestamp": 1789921593280
+      },
+      {
+        "executionId": "44a5e952-1ed8-46ae-8f9b-9842433006e3",
+        "chatSessionId": "sess_e326dc7d-c081-455e-a862-29b3d7f54a42",
+        "timestamp": 1789923992576
+      }
+    ],
+    "4.1 Confirm the three `v1alpha1` managed resource group-versions are served": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879292
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931765956
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789932020558
+      }
+    ],
+    "4.2 Decide the OIDC thumbprint derivation and record it": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879337
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789934571773
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789935063108
+      }
+    ],
+    "4.3 Apply the Crossplane version bumps": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879385
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930898082
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931095767
+      }
+    ],
+    "4.4 Implement the thumbprint derivation and verify the connection-details chain": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879423
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789935929841
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789936532278
+      }
+    ],
+    "4.5 Run verification checks 2, 4 and 5, plus the secret-material scan": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879463
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789936545557
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789936932134
+      }
+    ],
+    "5.1 Change both node group AMI types in the composition": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879498
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930898105
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931097162
+      }
+    ],
+    "5.2 Change the Karpenter node AMI family": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879531
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930898374
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931098108
+      }
+    ],
+    "5.3 Run verification checks 1 and 2": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879572
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789932039552
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789934553285
+      }
+    ],
+    "6.1 Set the management cluster version": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879607
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930899323
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931099506
+      }
+    ],
+    "6.2 Rewrite the CloudFormation version parameter and kubectl map": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879647
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931766710
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789932022770
+      }
+    ],
+    "6.3 Set the workload cluster version": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879689
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930900436
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931100243
+      }
+    ],
+    "6.4 Run verification checks 8 and 12": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879735
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789935440472
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789935921380
+      }
+    ],
+    "7. Checkpoint — versions and platform settled": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879766
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789937598977
+      }
+    ],
+    "8.1 Migrate Karpenter to v1": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879804
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931767640
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789932019233
+      }
+    ],
+    "8.2 Upgrade aws-load-balancer-controller 1.4.6 → 3.5.0": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879839
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931113599
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931438357
+      }
+    ],
+    "8.3 Upgrade external-secrets 0.4.4 → 2.10.0": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879877
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931114987
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931438388
+      }
+    ],
+    "8.4 Upgrade the remaining three charts and the Sealed Secrets label": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879913
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931116389
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931439561
+      }
+    ],
+    "8.5 Add published IAM actions to the add-on policy documents": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879952
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931449740
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931747236
+      }
+    ],
+    "8.6 Run verification checks 1, 2, 3, 5 and 9, plus values-schema validation": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930879987
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789934572717
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789935259715
+      }
+    ],
+    "9.1 Confirm the provider exposes an access-config field, or record a blocking finding": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880022
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931117345
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931441022
+      }
+    ],
+    "9.2 Set `API_AND_CONFIG_MAP` at creation on both cluster paths": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880057
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931768783
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789932021952
+      }
+    ],
+    "9.3 Run verification checks 1 and 2": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880090
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789934574108
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789935397676
+      }
+    ],
+    "10.1 Remove Cloud9 from the CloudFormation template": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880124
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789934575035
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789935064233
+      }
+    ],
+    "10.2 Delete the Cloud9 asset files": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880180
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931450527
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931748135
+      }
+    ],
+    "10.3 Add the Dev_Environment stack resources": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880221
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789935929886
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789936533085
+      }
+    ],
+    "10.4 Retarget the SSM orchestration": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880257
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789936546636
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789936933219
+      }
+    ],
+    "10.5 Run verification checks 8, 10 and 12": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880290
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789936944605
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789937585580
+      }
+    ],
+    "11.1 Upgrade the Python API applications": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880324
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931118425
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931442831
+      }
+    ],
+    "11.2 Upgrade the frontend application": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880362
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931451548
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931749069
+      }
+    ],
+    "11.3 Replace mutable image tags in deployment manifests": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880397
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931452596
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789931750361
+      }
+    ],
+    "11.4 Run verification checks 6, 7 and 13": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880436
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789932039580
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789934554381
+      }
+    ],
+    "12.1 Rewrite `initial-setup/README.md`": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880472
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789936945998
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789937350539
+      }
+    ],
+    "12.2 Update the remaining documentation files": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880507
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789937592395
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789937939937
+      }
+    ],
+    "12.3 Update the cluster upgrade scenario": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880547
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789936946956
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789937351445
+      }
+    ],
+    "12.4 Update the clean-up procedure": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880587
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789936948015
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789937352661
+      }
+    ],
+    "12.5 Write the migration log and the four rationale notes": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880624
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789937586586
+      }
+    ],
+    "12.6 Run the full credential-free suite": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880658
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789937943480
+      },
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789938810595
+      },
+      {
+        "executionId": "e9fb6885-5949-4781-a4ae-df734947d35f",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789983140440
+      }
+    ],
+    "13. Checkpoint — offline suite green": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789930880696
+      },
+      {
+        "executionId": "e9fb6885-5949-4781-a4ae-df734947d35f",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789983113886
+      }
+    ],
+    "5. Node OS migration: AL2 → AL2023": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789934553339
+      }
+    ],
+    "11. Sample application upgrade": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789934554415
+      }
+    ],
+    "8. Cluster add-on upgrade": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789935259781
+      }
+    ],
+    "9. Cluster access configuration": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789935397719
+      }
+    ],
+    "6. Kubernetes and Amazon EKS version upgrade": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789935921435
+      }
+    ],
+    "4. Crossplane platform upgrade": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789936932185
+      }
+    ],
+    "10. Bootstrap environment: Cloud9 → VS Code": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789937585626
+      }
+    ],
+    "12. Documentation alignment": [
+      {
+        "executionId": "2069d4cd-cdd4-4c1c-94f6-d09a3ae45120",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789938810656
+      }
+    ],
+    "14. End-to-end run — REQUIRES AN AWS ACCOUNT": [
+      {
+        "executionId": "236ccd88-c977-4cd4-a2e4-9797e1756937",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789986891796
+      }
+    ],
+    "14.1 Execute verification checks 14 and 15 against a real AWS account": [
+      {
+        "executionId": "236ccd88-c977-4cd4-a2e4-9797e1756937",
+        "chatSessionId": "sess_0ab1bf06-b084-4f42-836d-0faa2e731c1e",
+        "timestamp": 1789986893139
+      }
+    ]
+  }
+}

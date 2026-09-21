@@ -1,4 +1,3 @@
 #!/bin/sh
 export FLASK_APP=./app.py
-export FLASK_DEBUG=1
-flask run -h 0.0.0.0
+exec gunicorn --bind 0.0.0.0:8080 app:flask_app

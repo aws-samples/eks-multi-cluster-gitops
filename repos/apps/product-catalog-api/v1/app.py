@@ -16,6 +16,11 @@ flask_app.logger.setLevel(log_level)
 # enable CORS
 CORS(flask_app, resources={r'/*': {'origins': '*'}})
 
+# Top-level health check endpoint served on the exposed port (8080)
+@flask_app.route('/ping')
+def ping():
+    return "healthy"
+
 # Fix of returning swagger.json on HTTP
 @property
 def specs_url(self):

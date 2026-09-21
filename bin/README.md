@@ -86,7 +86,7 @@ Create an application manifests repo:
 ```
 cd ~/environment
 gh repo create --private --clone product-catalog-fe-manifests
-cp -r multi-cluster-gitops/repos/apps-manifests/product-catalog-fe-manifests/* product-catalog-fe-manifests/
+cp -r eks-multi-cluster-gitops/repos/apps-manifests/product-catalog-fe-manifests/* product-catalog-fe-manifests/
 cd product-catalog-fe-manifests
 git add .
 git commit -m "baseline version"
@@ -99,7 +99,7 @@ Add the app `product-catalog-fe` to the `commercial-staging` cluster:
 add-cluster-app.sh \
   ./gitops-workloads \
   commercial-staging product-catalog-fe \
-  multi-cluster-gitops/initial-setup/secrets-template/git-credentials.yaml \
+  eks-multi-cluster-gitops/initial-setup/secrets-template/git-credentials.yaml \
   ~/.ssh/gitops ~/.ssh/gitops.pub \
   "github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=" \
   ./sealed-secrets-keypair-public.pem

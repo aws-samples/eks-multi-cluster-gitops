@@ -1,4 +1,4 @@
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: kubecost
@@ -12,19 +12,30 @@ spec:
   chart:
     spec:
       chart: cost-analyzer
-      version: '2.2.2'
+      version: '2.8.4'
       sourceRef:
         kind: HelmRepository
         name: kubecost-repository
         namespace: flux-system
       interval: 1m
   values:
+    # Pinned to 2.8.4, the highest stable non-transition cost-analyzer in the
+    # OCI registry (oci://public.ecr.aws/kubecost). The 2.9.x line is a
+    # "prepare to upgrade to 3.0" TRANSITION release that hard-requires
+    # federation/transition config (cluster_id in two places plus a global
+    # federated store) and is not a valid standalone fresh-install target.
+    # global.clusterId is still a mandatory value in the 2.x line (introduced
+    # since 2.2.2); set per-cluster via Flux postBuild substitution from the
+    # cluster-info ConfigMap.
+    global:
+      clusterId: ${CLUSTER_NAME}
+      clusterName: ${CLUSTER_NAME}
     kubecostFrontend:
       image: public.ecr.aws/kubecost/frontend
     kubecostModel:
       image: public.ecr.aws/kubecost/cost-model
     forecasting:
-      fullImageName: public.ecr.aws/kubecost/kubecost-modeling:v0.1.6
+      fullImageName: public.ecr.aws/kubecost/kubecost-modeling:v0.1.31
     networkCosts:
       image:
         repository: public.ecr.aws/kubecost/kubecost-network-costs

@@ -5,10 +5,13 @@ kind: ClusterConfig
 metadata:
   name: mgmt
   region: AWS_REGION
-  version: "1.29"
+  version: "1.36"
 
 iam:
   withOIDC: true
+
+accessConfig:
+  authenticationMode: API_AND_CONFIG_MAP
 
 vpc:
   nat:
