@@ -19,6 +19,13 @@ flask_app.logger.setLevel(log_level)
 # enable CORS
 CORS(flask_app, resources={r"/*": {"origins": "*"}})
 
+
+# Top-level health check endpoint served on the exposed port (8080)
+@flask_app.route("/ping")
+def ping():
+    return "healthy"
+
+
 session = boto3.Session()
 dynamodb = session.resource(
     "dynamodb", region_name=os.getenv("PRODUCTS_TABLE_REGION", "eu-west-1")

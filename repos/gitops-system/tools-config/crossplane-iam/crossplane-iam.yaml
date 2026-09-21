@@ -94,7 +94,10 @@ spec:
             "Action": [
               "dynamodb:CreateTable",
               "dynamodb:DeleteTable",
+              "dynamodb:DescribeContinuousBackups",
               "dynamodb:DescribeTable",
+              "dynamodb:DescribeTimeToLive",
+              "dynamodb:ListTagsOfResource",
               "dynamodb:TagResource",
               "dynamodb:UntagResource",
               "dynamodb:UpdateTable"

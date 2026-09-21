@@ -1,4 +1,4 @@
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: aws-load-balancer-controller
@@ -10,13 +10,21 @@ spec:
   chart:
     spec:
       chart: aws-load-balancer-controller
-      version: '1.4.6'
+      version: '3.5.0'
       sourceRef:
         kind: HelmRepository
         name: aws-load-balancer-controller-repository
         namespace: flux-system
       interval: 1m
   values:
+    # v3.5.0 (controller v3) hard-fails at startup fetching the VPC id from
+    # IMDS ("failed to get VPC ID ... ec2imds GetMetadata ... context deadline
+    # exceeded") because the Crossplane-provisioned workload node group has an
+    # IMDS hop limit of 1, so pods cannot reach IMDS. v2 (chart 1.4.6) tolerated
+    # this; v3 does not. Supply region and vpcId explicitly instead. Both are
+    # substituted by Flux postBuild from the per-cluster cluster-info ConfigMap.
+    region: ${AWS_REGION}
+    vpcId: ${VPC_ID}
     serviceAccount:
       create: false
       name: aws-load-balancer-controller

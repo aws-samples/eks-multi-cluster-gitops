@@ -42,6 +42,15 @@ spec:
           toFieldPath: spec.forProvider.manifest.data.CLUSTER_NAME_PSUEDO
           policy:
             fromFieldPath: Required
+        # VPC_ID is consumed by aws-load-balancer-controller v3.5.0, which
+        # hard-fails at startup fetching the VPC id from IMDS when the node's
+        # IMDS hop limit is 1 (the Crossplane-provisioned workload node group).
+        # Sourced from the composed VPC's status.atProvider.vpcId, surfaced onto
+        # the composite as status.vpc_id by the vpc resource's ToCompositeFieldPath.
+        - fromFieldPath: status.vpc_id
+          toFieldPath: spec.forProvider.manifest.data.VPC_ID
+          policy:
+            fromFieldPath: Required
   resources:
     - name: vpc
       base:
@@ -63,6 +72,9 @@ spec:
         - type: ToCompositeFieldPath
           fromFieldPath: status.atProvider.ownerId
           toFieldPath: status.account_id
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.vpcId
+          toFieldPath: status.vpc_id
 
     - name: internetgateway
       base:
@@ -482,6 +494,8 @@ spec:
         kind: Cluster
         spec:
           forProvider:
+            accessConfig:
+              authenticationMode: API_AND_CONFIG_MAP
             roleArnSelector:
               matchLabels:
                 type: eks-cluster-role
@@ -573,8 +587,8 @@ spec:
           transforms:
             - type: map
               map:
-                gpu: AL2_x86_64_GPU
-                non-gpu: AL2_x86_64
+                gpu: AL2023_x86_64_NVIDIA
+                non-gpu: AL2023_x86_64_STANDARD
 
     - name: cluster-oidc-idp
       base:
@@ -586,6 +600,19 @@ spec:
           forProvider:
             clientIDList:
               - sts.amazonaws.com
+            # thumbprintList is required by the OpenIDConnectProvider CRD
+            # (minItems: 1) in provider-aws v0.59.0 and IAM requires each
+            # member to be exactly a 40-char hex SHA-1 thumbprint, so the
+            # field cannot be omitted or left empty. Crossplane patches cannot
+            # compute a SHA-1 from the issuer URL, so a documented constant is
+            # used: the well-known AWS (Starfield Services Root CA G2) OIDC
+            # root-CA thumbprint. For EKS OIDC endpoints AWS validates against
+            # its own trusted-CA store and does not rely on this supplied
+            # value; it only enforces the 40-char format. The Starfield root CA
+            # is long-lived, so a stale-fingerprint failure is not a practical
+            # risk. (The earlier patch that derived this from the issuer URL
+            # produced an AWS-invalid value — "Member must have length equal to
+            # 40" — as found in a live end-to-end run.)
             thumbprintList:
               - '9e99a48a9960b14926bb7f3b02e22da2b0ab7280'
       patches:
@@ -623,6 +650,7 @@ spec:
                 OIDC_PROVIDER: ''
                 CLUSTER_NAME: ''
                 CLUSTER_NAME_PSUEDO: ''
+                VPC_ID: ''
           providerConfigRef:
             name: k8s-providerconfig
       patches:
@@ -732,6 +760,7 @@ spec:
                 OIDC_PROVIDER: ''
                 CLUSTER_NAME: ''
                 CLUSTER_NAME_PSUEDO: ''
+                VPC_ID: ''
           providerConfigRef:
             name: remote-k8s-providerconfig-workload-cluster
       patches:

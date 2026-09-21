@@ -1,4 +1,4 @@
-apiVersion: karpenter.sh/v1beta1
+apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
   name: default
@@ -22,21 +22,24 @@ spec:
           operator: Gt
           values: ["2"]
       nodeClassRef:
-        apiVersion: karpenter.k8s.aws/v1beta1
+        group: karpenter.k8s.aws
         kind: EC2NodeClass
         name: default
+      expireAfter: 720h # 30 * 24h = 720h (moved to template.spec in v1)
   limits:
     cpu: 1000
   disruption:
-    consolidationPolicy: WhenUnderutilized
-    expireAfter: 720h # 30 * 24h = 720h
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 0s # required in v1; 0s preserves v1beta1 WhenUnderutilized (no wait)
 ---
-apiVersion: karpenter.k8s.aws/v1beta1
+apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
 metadata:
   name: default
 spec:
-  amiFamily: AL2 # Amazon Linux 2
+  amiFamily: AL2023 # Amazon Linux 2023 (selects the nodeadm bootstrap mode)
+  amiSelectorTerms:
+    - alias: al2023@latest
   role: karpenter-node-role
   subnetSelectorTerms:
     - tags:

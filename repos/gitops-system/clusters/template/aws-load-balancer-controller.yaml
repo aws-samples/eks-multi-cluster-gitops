@@ -1,5 +1,5 @@
 ---
-apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: aws-load-balancer-controller
@@ -11,6 +11,15 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
+  # aws-load-balancer-controller v3.5.0 needs AWS_REGION and VPC_ID substituted
+  # into its HelmRelease values (it can't reach IMDS to discover the VPC id;
+  # workload node group IMDS hop limit is 1). Sourced per-cluster from the
+  # cluster-info ConfigMap, matching karpenter-config.yaml / kubecost.yaml.
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-info
+        optional: false
   dependsOn:
   - name: aws-load-balancer-controller-iam
   patches:

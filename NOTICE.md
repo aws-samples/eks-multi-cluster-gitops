@@ -811,7 +811,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 
-\*\* "Sealed Secrets" for Kubernetes; version Latest -- https://github.com/bitnami-labs/sealed-secrets
+\*\* "Sealed Secrets" for Kubernetes; version 0.40.0 -- https://github.com/bitnami/sealed-secrets
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/

@@ -1,6 +1,6 @@
 ## Create and prepare the Git repositories
 ### Create Git SSH keys
-1. Create a new IAM user that will be used to interact with the CodeCommit repos from the Cloud9 environment, and from the EKS clusters by the Flux source controller. While the same IAM user is used for all the
+1. Create a new IAM user that will be used to interact with the CodeCommit repos from the Dev_Environment, and from the EKS clusters by the Flux source controller. While the same IAM user is used for all the
    repositories in these instructions, the structure supports using
    different users for different repos.
 
@@ -61,7 +61,7 @@ echo "SSH key id of user gitops: ${SSH_KEY_ID_GITOPS}"
 ```
 
 4. Create/edit `config` in `~/.ssh` to use the SSH key in `gitops` for
-   the Git commands executed on the Cloud9 environment.
+   the Git commands executed on the Dev_Environment.
 ```bash
 cat >~/.ssh/config <<EOF 
 Host git-codecommit.*.amazonaws.com
@@ -73,7 +73,7 @@ EOF
 
 Create the following empty CodeCommit repos in your AWS account: `gitops-system` and
    `gitops-workloads`, and clone them
-   into the Cloud9 environment.
+   into the Dev_Environment.
 
 ```bash
 cd ~/environment
